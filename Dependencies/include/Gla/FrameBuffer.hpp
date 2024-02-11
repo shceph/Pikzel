@@ -10,13 +10,15 @@ namespace Gla
         FrameBuffer(int width, int height);
         ~FrameBuffer();
 
+        void Rescale(int width, int height);
+
         void Bind() const;
         unsigned int GetTextureID() const;
 
-        static void BindToDefaultFB(int window_width, int window_height);
+        static void BindToDefaultFB();
     private:
         unsigned int m_FrameBufferID;
         unsigned int m_TextureID;
-        const int m_Width, m_Height;
+        int m_Width, m_Height;
     };
 } // namespace Gla

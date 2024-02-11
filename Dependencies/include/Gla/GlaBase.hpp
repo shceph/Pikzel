@@ -8,7 +8,10 @@
 
 #define GLA_DEBUG
 
-#define GLAssert(expression)    if (!expression) { std::exit(EXIT_FAILURE); }
+#define GLAssert(expression)    if (!expression) { \
+    std::cout << "Assertion failed: " << #expression << "\nAt line " << __LINE__ << " from file " << __FILE__; \
+    std::exit(EXIT_FAILURE); \
+}
 
 #ifdef GLA_DEBUG
     #define LOG(output)  std::cout << output << '\n';

@@ -12,7 +12,7 @@ const char* GLErrorToString(GLenum error_code)
         case GL_STACK_UNDERFLOW:               return "STACK_UNDERFLOW";
         case GL_OUT_OF_MEMORY:                 return "OUT_OF_MEMORY";
         case GL_INVALID_FRAMEBUFFER_OPERATION: return "INVALID_FRAMEBUFFER_OPERATION";
-        default:                               return ("couldn't recognize the following error code: 0x" + std::to_string(error_code)).c_str();
+        default:                               return "couldn't recognize the following error code: 0x";
     }
 }
 

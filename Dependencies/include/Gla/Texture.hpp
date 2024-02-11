@@ -16,8 +16,6 @@ namespace Gla
 
         inline unsigned int GetID() const { return m_RendererID; }
 
-        enum TextureTypes { GRASS_TEXTURE, GRASS_AND_DIRT_TEXTURE, DIRT_TEXTURE };
-
     protected:
         unsigned int m_RendererID;
     };
