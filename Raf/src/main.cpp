@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <vector>
+#include <memory>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -20,287 +21,29 @@ static void glfwError(int id, const char* description)
     std::cout << "Glfw error: " << description << std::endl;
 }
 
-struct Color
-{
-    float r = 0.0f, g = 0.0f, b = 0.0f, a = 0.0f;
-
-    void operator=(const ImVec4& color)
-    {
-        r = color.x;
-        g = color.y;
-        b = color.z;
-        a = color.w;
-    }
-};
-
-constexpr int CANVAS_HEIGHT = 32;
-constexpr int CANVAS_WIDTH  = 32;
-Color canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
-
-static void EmplaceVertices(std::vector<float>& vertices)
-{
-    vertices.clear();
-
-    constexpr Color bg_colors[2] = {
-        { 0.514f, 0.514f, 0.514f, 1.0f },
-        { 0.788f, 0.788f, 0.788f, 1.0f }
-    };
-
-    /* Background vertices */
-    for (int i = 0; i < CANVAS_HEIGHT + 6; i += 6)
-    {
-        for (int j = 0; j < CANVAS_WIDTH + 6; j += 6)
-        {
-            /* first triangle */
-
-            // upper left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);  // Color is a part of the vertex
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-
-            // upper right corner
-            vertices.push_back((float)j + 6.0f);
-            vertices.push_back((float)i);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-
-            // bottom left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i + 6.0f);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-
-
-            /* second triangle */
-
-            // upper right corner
-            vertices.push_back((float)j + 6.0f);
-            vertices.push_back((float)i);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-
-            // bottom right corner
-            vertices.push_back((float)j + 6.0f);
-            vertices.push_back((float)i + 6.0f);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-
-            // bottom left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i + 6.0f);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].r);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].g);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].b);
-            vertices.push_back(bg_colors[((i + j) / 6) % 2].a);
-        }
-    }
-
-    /* Canvas vertices */
-    for (int i = 0; i < CANVAS_HEIGHT; i++)
-    {
-        for (int j = 0; j < CANVAS_WIDTH; j++)
-        {
-            /* first triangle */
-
-            // upper left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i);
-            vertices.push_back(canvas[i][j].r);  // Color is a part of the vertex
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-            
-            // upper right corner
-            vertices.push_back((float)j + 1.0f);
-            vertices.push_back((float)i);
-            vertices.push_back(canvas[i][j].r);
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-            
-            // bottom left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i + 1.0f);
-            vertices.push_back(canvas[i][j].r);
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-
-
-            /* second triangle */
-
-            // upper right corner
-            vertices.push_back((float)j + 1.0f);
-            vertices.push_back((float)i);
-            vertices.push_back(canvas[i][j].r);
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-
-            // bottom right corner
-            vertices.push_back((float)j + 1.0f);
-            vertices.push_back((float)i + 1.0f);
-            vertices.push_back(canvas[i][j].r);
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-
-            // bottom left corner
-            vertices.push_back((float)j);
-            vertices.push_back((float)i + 1.0f);
-            vertices.push_back(canvas[i][j].r);
-            vertices.push_back(canvas[i][j].g);
-            vertices.push_back(canvas[i][j].b);
-            vertices.push_back(canvas[i][j].a);
-        }
-    }
-}
-
-static void GenerateCircle(int centerX, int centerY, int radius, bool only_outline)
-{
-    if (radius < 1)
-    {
-        return;
-    }
-
-    int x = radius;
-    int y = 0;
-    int err = 0;
-
-    Color tmp_canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
-
-    while (x >= y) {
-        if (centerY + y >= 0 && centerY + y < CANVAS_HEIGHT && centerX + x >= 0 && centerX + x < CANVAS_WIDTH)
-            tmp_canvas[centerY + y][centerX + x] = App::Brush::GetColorRef();
-
-        if (centerY + x >= 0 && centerY + x < CANVAS_HEIGHT && centerX + y >= 0 && centerX + y < CANVAS_WIDTH)
-            tmp_canvas[centerY + x][centerX + y] = App::Brush::GetColorRef();
-
-        if (centerY - y >= 0 && centerY - y < CANVAS_HEIGHT && centerX + x >= 0 && centerX + x < CANVAS_WIDTH)
-            tmp_canvas[centerY - y][centerX + x] = App::Brush::GetColorRef();
-        
-        if (centerY - x >= 0 && centerY - x < CANVAS_HEIGHT && centerX + y >= 0 && centerX + y < CANVAS_WIDTH)
-            tmp_canvas[centerY - x][centerX + y] = App::Brush::GetColorRef();
-
-        if (centerY + y >= 0 && centerY + y < CANVAS_HEIGHT && centerX - x >= 0 && centerX - x < CANVAS_WIDTH)
-            tmp_canvas[centerY + y][centerX - x] = App::Brush::GetColorRef();
-
-        if (centerY + x >= 0 && centerY + x < CANVAS_HEIGHT && centerX - y >= 0 && centerX - y < CANVAS_WIDTH)
-            tmp_canvas[centerY + x][centerX - y] = App::Brush::GetColorRef();
-
-        if (centerY - y >= 0 && centerY - y < CANVAS_HEIGHT && centerX - x >= 0 && centerX - x < CANVAS_WIDTH)
-            tmp_canvas[centerY - y][centerX - x] = App::Brush::GetColorRef();
-
-        if (centerY - x >= 0 && centerY - x < CANVAS_HEIGHT && centerX - y >= 0 && centerX - y < CANVAS_WIDTH)
-            tmp_canvas[centerY - x][centerX - y] = App::Brush::GetColorRef();
-
-        if (err <= 0) {
-            y += 1;
-            err += 2 * y + 1;
-        }
-        if (err > 0) {
-            x -= 1;
-            err -= 2 * x + 1;
-        }
-    }
-
-    if (!only_outline)
-    {
-        for (int j = 0; j < CANVAS_WIDTH; j++)
-        {
-            for (int i = 0; i < CANVAS_HEIGHT; i++)
-            {
-                if (tmp_canvas[i][j].a == 0.0f)
-                    continue;
-
-                for (int k = i + 1; k < CANVAS_HEIGHT; k++)
-                {
-                    if (tmp_canvas[k][j].a == 0.0f)
-                        continue;
-
-                    for (int l = i + 1; l < k; l++)
-                        tmp_canvas[l][j] = App::Brush::GetColorRef();
-
-                    break;
-                }
-            }
-        }
-    }
-
-    for (int i = 0; i < CANVAS_HEIGHT; i++)
-    {
-        for (int j = 0; j < CANVAS_WIDTH; j++)
-        {
-            if (tmp_canvas[i][j].a != 0.0f)
-                canvas[i][j] = tmp_canvas[i][j];
-        }
-    }
-}
+static bool update_vertex_buffer = true;
 
 static void HandleEvents(GLFWwindow* window)
 {
-#pragma message(": Try using glfwPollEvents in case there is a bug you think is realted to this")
     glfwWaitEvents();
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT))
     {
-        double cursor_x, cursor_y;
-        glfwGetCursorPos(window, &cursor_x, &cursor_y);
-
-        ImVec2 canvas_upperleft     = App::UI::GetCanvasUpperleftCoords();
-        ImVec2 canvas_bottomtright  = App::UI::GetCanvasBottomRightCoords();
-
-        cursor_y += ((canvas_bottomtright.y - canvas_upperleft.y) / CANVAS_HEIGHT);
-
-        if (cursor_x > canvas_upperleft.x && cursor_x < canvas_bottomtright.x &&
-            cursor_y > canvas_upperleft.y && cursor_y < canvas_bottomtright.y)
-        {
-            int canvas_x = (cursor_x - canvas_upperleft.x) / ((canvas_bottomtright.x - canvas_upperleft.x) / CANVAS_WIDTH);
-            int canvas_y = (cursor_y - canvas_upperleft.y) / ((canvas_bottomtright.y - canvas_upperleft.y) / CANVAS_HEIGHT);
-
-            if (canvas_x < 0 || canvas_x >= CANVAS_WIDTH ||
-                canvas_y < 0 || canvas_y >= CANVAS_HEIGHT)
-            {
-                LOG("Out of range");
-                return;
-            }
-
-            if (App::Brush::GetBrushRadius() == 1)
-            {
-                canvas[canvas_y][canvas_x].r = App::Brush::GetColorRef().x;
-                canvas[canvas_y][canvas_x].g = App::Brush::GetColorRef().y;
-                canvas[canvas_y][canvas_x].b = App::Brush::GetColorRef().z;
-                canvas[canvas_y][canvas_x].a = App::Brush::GetColorRef().w;
-            }
-            else
-            {
-                GenerateCircle(canvas_x, canvas_y, App::Brush::GetBrushRadius(), false);
-            }
-        }
+        update_vertex_buffer = true;
+        App::Layers::DoCurrentTool();
     }
 }
 
 int main(int argc, const char* argv[])
 {
-    /* Initialize the library */
+    /* Initialize the GLFW */
     if (!glfwInit())
         return -1;
 
     glfwSetErrorCallback(&glfwError);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     int window_width = 1280;
@@ -313,6 +56,7 @@ int main(int argc, const char* argv[])
     {
         std::cout << "Failed to create window\n";
         glfwTerminate();
+        std::cin.get();
         return -1;
     }
 
@@ -322,12 +66,13 @@ int main(int argc, const char* argv[])
 
     glfwMaximizeWindow(window);
 
+    /* Initialize GLEW */
     if (glewInit() != GLEW_OK)
     {
         std::cout << "Glew init error\n";
     }
 
-    std::cout << glGetString(GL_VERSION) << '\n';
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
 
     GLCall(glEnable(GL_DEPTH_TEST));
     GLCall(glDepthFunc(GL_GREATER));
@@ -337,7 +82,7 @@ int main(int argc, const char* argv[])
 
     App::UI::ImGuiInit(window);
 
-    glm::mat4 proj = glm::ortho(0.0f, (float)CANVAS_WIDTH, 0.0f, (float)CANVAS_HEIGHT);
+    glm::mat4 proj = glm::ortho(0.0f, (float)App::CANVAS_WIDTH, 0.0f, (float)App::CANVAS_HEIGHT);
 
     {  // Made this block so all the OpenGL objects would get destroyed before calling glfwTerminate.
         
@@ -348,7 +93,29 @@ int main(int argc, const char* argv[])
 
         Gla::Renderer renderer;
 
-        //constexpr int VB_SIZE = CANVAS_WIDTH * CANVAS_HEIGHT * (2 + 4) * 6 * sizeof(float);
+        Gla::Texture2D brush_tool_texture("assets/brush_tool.png", Gla::GLMinMagFilter::NEAREST, true);
+        Gla::Texture2D eraser_tool_texture("assets/eraser_tool.png", Gla::GLMinMagFilter::NEAREST);
+        Gla::Texture2D color_picker_tool_texture("assets/color_picker_tool.png", Gla::GLMinMagFilter::NEAREST);
+        Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png", Gla::GLMinMagFilter::NEAREST);
+        
+        Gla::Texture2D eye_opened_texture("assets/eye_opened.png", Gla::GLMinMagFilter::LINEAR);
+        Gla::Texture2D eye_closed_texture("assets/eye_closed.png", Gla::GLMinMagFilter::LINEAR);
+        Gla::Texture2D lock_locked_texture("assets/lock_locked.png", Gla::GLMinMagFilter::LINEAR);
+        Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png", Gla::GLMinMagFilter::LINEAR);
+
+        App::UI::SetupToolTextures(
+            brush_tool_texture.GetID(),
+            eraser_tool_texture.GetID(),
+            color_picker_tool_texture.GetID(),
+            bucket_tool_texture.GetID()
+        );
+
+        App::UI::SetupLayerToolTextures(
+            eye_opened_texture.GetID(),
+            eye_closed_texture.GetID(),
+            lock_locked_texture.GetID(),
+            lock_unlocked_texture.GetID()
+        );
 
         Gla::VertexArray va;
         Gla::VertexBuffer vb(nullptr, 0);
@@ -365,6 +132,8 @@ int main(int argc, const char* argv[])
         /* Loop until the user closes the window */
         while (!glfwWindowShouldClose(window))
         {
+            App::UI::Update();
+
             App::UI::NewFrame();
 
             App::UI::RenderUI();
@@ -382,11 +151,14 @@ int main(int argc, const char* argv[])
                 imgui_window_fb.Rescale((int)canvas_lenght, (int)canvas_lenght);
                 mesh.Bind();
 
-                // TODO: should optimize vertex updating later by putting it out of the main loop
-                EmplaceVertices(vertices);
-                //GLAssert(vertices.size() * sizeof(float) == VB_SIZE);
-                vb.UpdateSizeIfShould((unsigned int)(vertices.size() * sizeof(float)));
-                vb.UpdateData(vertices.data(), vertices.size() * sizeof(float));
+                if (update_vertex_buffer || App::UI::ShouldUpdateVertexBuffer())
+                {
+                    App::Layers::EmplaceVertices(vertices);
+                    vb.UpdateSizeIfNeeded((unsigned int)(vertices.size() * sizeof(float)));
+                    vb.UpdateData(vertices.data(), vertices.size() * sizeof(float));
+
+                    update_vertex_buffer = false;
+                }
 
                 renderer.Clear();
                 renderer.DrawArrays(GL_TRIANGLES, vertices.size() / 6);
@@ -396,8 +168,6 @@ int main(int argc, const char* argv[])
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
 
-            /* Poll for and process events */
-            //glfwPollEvents();
             HandleEvents(window);
         }
     }

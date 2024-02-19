@@ -36,7 +36,7 @@ namespace Gla
         m_Size = size;
     }
 
-    void VertexBuffer::UpdateSizeIfShould(unsigned int needed_size)
+    void VertexBuffer::UpdateSizeIfNeeded(unsigned int needed_size)
     {
         if (needed_size > m_Size) {
             UpdateSize(needed_size);

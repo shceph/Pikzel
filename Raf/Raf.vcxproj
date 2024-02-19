@@ -178,7 +178,8 @@
     <ClCompile Include="..\Dependencies\include\imgui\imgui_widgets.cpp" />
     <ClCompile Include="..\Dependencies\include\stb\stb_image.cpp" />
     <ClCompile Include="src\Application.cpp" />
-    <ClCompile Include="src\Brush.cpp" />
+    <ClCompile Include="src\Layer.cpp" />
+    <ClCompile Include="src\Tool.cpp" />
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -209,8 +210,11 @@
     <ClInclude Include="..\Dependencies\include\imgui\imstb_textedit.h" />
     <ClInclude Include="..\Dependencies\include\imgui\imstb_truetype.h" />
     <ClInclude Include="..\Dependencies\include\stb\stb_image.h" />
+    <ClInclude Include="..\Dependencies\include\stb\stb_image_write.h" />
     <ClInclude Include="src\Application.hpp" />
-    <ClInclude Include="src\Brush.hpp" />
+    <ClInclude Include="src\Definitions.hpp" />
+    <ClInclude Include="src\Layer.hpp" />
+    <ClInclude Include="src\Tool.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

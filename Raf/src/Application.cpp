@@ -1,12 +1,17 @@
 #include "Application.hpp"
+#include "Layer.hpp"
 
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
+#include <imgui_internal.h>
 
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+
+#include <stb/stb_image.h>
+#include <stb/stb_image_write.h>
 
 namespace App
 {
@@ -17,14 +22,24 @@ namespace App
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
-        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
         ImGui::StyleColorsDark();
         ImGui_ImplGlfw_InitForOpenGL(window, true);
         ImGui_ImplOpenGL3_Init();
+
+        selected_item_outline_color = ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab);
+    }
+
+    void UI::Update()
+    {
+        do_tool = true;
+        update_vertex_buffer = false;
     }
 
     void UI::NewFrame()
@@ -57,10 +72,10 @@ namespace App
 	{
         ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
 
-        ImGui::BeginMainMenuBar();
-        ImGui::EndMainMenuBar();
-
-        RenderBrushWindow();
+        RenderMainMenuBar();
+        RenderColorWindow();
+        RenderToolWindow();
+        RenderLayerWindow();
 	}
 
     void UI::RenderDrawWindow(unsigned int framebuffer_texture_id, const char* window_name)
@@ -108,40 +123,132 @@ namespace App
         canvas_bottomright_coords.y = upper_left_y + canvas_lenght;
     }
 
-    void UI::RenderBrushWindow()
+    void UI::SetupToolTextures(unsigned int brush_tex_id, unsigned int eraser_tex_id, unsigned int color_pick_tex_id, unsigned int bucket_tex_id)
     {
-        ImGui::Begin("Brush");
-        ImGui::ColorPicker4("Current color", &(Brush::GetColorRef().x));
+        brush_tool_texture_id           = (ImTextureID)brush_tex_id;
+        eraser_tool_texture_id          = (ImTextureID)eraser_tex_id;
+        color_picker_tool_texture_id    = (ImTextureID)color_pick_tex_id;
+        bucket_tool_texture_id          = (ImTextureID)bucket_tex_id;
+    }
+
+    void UI::SetupLayerToolTextures(unsigned int eye_opened_id, unsigned int eye_closed_id, unsigned int lock_locked_id, unsigned int lock_unlocked_id)
+    {
+        eye_opened_texture_id       = (ImTextureID)eye_opened_id;
+        eye_closed_texture_id       = (ImTextureID)eye_closed_id;
+        lock_locked_texture_id      = (ImTextureID)lock_locked_id;
+        lock_unlocked_texture_id    = (ImTextureID)lock_unlocked_id;
+    }
+
+    bool UI::ShouldUpdateVertexBuffer()
+    {
+        return update_vertex_buffer;
+    }
+
+    bool UI::DoTool()
+    {
+        return do_tool;
+    }
+
+    void UI::RenderMainMenuBar()
+    {
+        ImGui::BeginMainMenuBar();
+
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem("Open"))
+            {
+                // Handle "Open" action
+            }
+            if (ImGui::MenuItem("Save"))
+            {
+                // Handle "Save" action
+            }
+
+            ImGui::EndMenu();
+        }
+
+        //if (ImGui::BeginMenu("Edit"))
+        //{
+        //    if (ImGui::MenuItem("Cut"))
+        //    {
+        //        // Handle "Cut" action
+        //    }
+        //    if (ImGui::MenuItem("Copy"))
+        //    {
+        //        // Handle "Copy" action
+        //    }
+        //    if (ImGui::MenuItem("Paste"))
+        //    {
+        //        // Handle "Paste" action
+        //    }
+        //    ImGui::EndMenu();
+        //}
+
+        ImGui::EndMainMenuBar();
+    }
+
+    void UI::RenderColorWindow()
+    {
+        ImGui::Begin("Color");
+        ImGui::NewLine();
+
+        ImGui::ColorPicker4("Current color", &(Tool::GetColorRef().x), ImGuiColorEditFlags_NoAlpha);
 
         ImGui::NewLine();
 
         ImGuiColorEditFlags flags =
             ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoInputs;
 
-        if (ImGui::ColorButton("Color 1", Brush::GetColor1(), flags))
+        int _selected_color_slot = Tool::GetSelectedColorSlot();
+
+        if (_selected_color_slot == Tool::COLOR_SLOT_1)
+            BeginOutline();
+
+        if (ImGui::ColorButton("Color 1", Tool::GetColor1(), flags))
         {
-            Brush::SetCurrentColorToColor1();
+            Tool::SetCurrentColorToColor1();
         }
+
+        if (_selected_color_slot == Tool::COLOR_SLOT_1)
+            EndOutline();
 
         ImGui::SameLine(0.0f, 10.0f);
         ImGui::Text("Color 1");
 
-        if (ImGui::ColorButton("Color 2", Brush::GetColor2(), flags))
+        if (_selected_color_slot == Tool::COLOR_SLOT_2)
+            BeginOutline();
+
+        if (ImGui::ColorButton("Color 2", Tool::GetColor2(), flags))
         {
-            Brush::SetCurrentColorToColor2();
+            Tool::SetCurrentColorToColor2();
         }
+
+        if (_selected_color_slot == Tool::COLOR_SLOT_2)
+            EndOutline();
 
         ImGui::SameLine(0.0f, 10.0f);
         ImGui::Text("Color 2");
 
-        RenderColorPalette(Brush::GetColorRef());
-
-        ImGui::NewLine();
-        ImGui::NewLine();
-
-        ImGui::SliderInt("Brush radius", &Brush::brush_radius, 1, 10);
+        RenderColorPalette(Tool::GetColorRef());
 
         ImGui::End();
+
+        //ImGui::NewLine();
+        //ImGui::NewLine();
+
+        //if (ImGui::ImageButton(brush_tool_texture_id, { 20.0f, 20.0f }))
+        //    Tool::SetToolType(Tool::ToolType::BRUSH);
+        //
+        //ImGui::SameLine(0.0f, 4.0f);
+
+        //if (ImGui::ImageButton(eraser_tool_texture_id, { 20.0f, 20.0f }))
+        //    Tool::SetToolType(Tool::ToolType::ERASER);
+
+        //ImGui::NewLine();
+
+        //ImGui::SliderInt("Brush radius", &Tool::brush_radius, 1, 10);
+
+        //ImGui::End();
     }
 
     void UI::RenderColorPalette(ImVec4& color)
@@ -189,5 +296,226 @@ namespace App
 
             ImGui::PopID();
         }
+    }
+
+    void UI::RenderToolWindow()
+    {
+        ImGui::Begin("Tools");
+        ImGui::NewLine();
+
+        ToolType tool_type = Tool::GetToolType();  // Need to get the value here because it may change below
+
+        /* BRUSH */
+        if (tool_type == BRUSH)
+            BeginOutline();
+
+        if (ImGui::ImageButton(brush_tool_texture_id, { 20.0f, 20.0f }))
+            Tool::SetToolType(BRUSH);
+
+        if (tool_type == BRUSH)
+            EndOutline();
+
+        /* ERASER */
+        ImGui::SameLine(0.0f, 4.0f);
+
+        if (tool_type == ERASER)
+            BeginOutline();
+
+        if (ImGui::ImageButton(eraser_tool_texture_id, { 20.0f, 20.0f }))
+            Tool::SetToolType(ERASER);
+
+        if (tool_type == ERASER)
+            EndOutline();
+
+        /* COLOR PICKER */
+        ImGui::SameLine(0.0f, 4.0f);
+
+        if (tool_type == COLOR_PICKER)
+            BeginOutline();
+
+        if (ImGui::ImageButton(color_picker_tool_texture_id, { 20.0f, 20.0f }))
+            Tool::SetToolType(COLOR_PICKER);
+
+        if (tool_type == COLOR_PICKER)
+            EndOutline();
+
+        /* BUCKET */
+        ImGui::SameLine(0.0f, 4.0f);
+
+        if (tool_type == BUCKET)
+            BeginOutline();
+
+        if (ImGui::ImageButton(bucket_tool_texture_id, { 20.0f, 20.0f }))
+            Tool::SetToolType(BUCKET);
+
+        if (tool_type == BUCKET)
+            EndOutline();
+
+        ImGui::NewLine();
+
+        ImGui::PushItemWidth(100.0f);
+        ImGui::InputInt(" Brush radius", &Tool::brush_radius, 1, 10);
+        ImGui::PopItemWidth();
+
+        if (Tool::brush_radius < 1) {
+            Tool::brush_radius = 1;
+        }
+
+        ImGui::End();
+    }
+
+    void UI::RenderLayerWindow()
+    {
+        ImGui::Begin("Layers");
+
+        constexpr int NO_LAYER_RIGHT_CLICKED = -1;
+        static int right_clicked_layer_index = NO_LAYER_RIGHT_CLICKED;
+
+        if (ImGui::Button("Add a layer"))
+            Layers::AddLayer();
+
+        auto it = Layers::layers.begin();
+
+        for (int i = 0; i < Layers::layers.size(); i++)
+        {
+            Layer& layer_traversed = *it;
+            it++;
+
+            // Many ImGui tools/widgets need a unique id to prevent some internal ImGui conflicts and bugs
+            std::string str_id_for_widgets = "Layer " + std::to_string(i + 1);
+
+            ImTextureID visibility_tex = (layer_traversed.IsVisible() ? eye_opened_texture_id : eye_closed_texture_id);
+            ImTextureID lock_tex = (layer_traversed.IsLocked() ? lock_locked_texture_id : lock_unlocked_texture_id);
+
+            ImGui::Separator();
+
+            // Adding "_v" to the id so other widgets would't have the same id (which would be just str_id_for_widgets)
+            // Doing the same with other widgets as well
+            if (ImGui::ImageButton((str_id_for_widgets + "_v").c_str(), visibility_tex, { 20.0f, 20.0f }))
+            {
+                update_vertex_buffer = true;
+                layer_traversed.SwitchVisibilityState();
+            }
+
+            ImGui::SameLine(0.0f, 1.0f);
+
+            if (ImGui::ImageButton((str_id_for_widgets + "_l").c_str(), lock_tex, { 20.0f, 20.0f }))
+            {
+                update_vertex_buffer = true;
+                layer_traversed.SwitchLockState();
+            }
+
+            constexpr float item_height = 26.0f;
+
+            // Checks if the layer traversed is the current selected layer. If so, draws borders around the layer button
+            bool this_is_selected_layer = (Layers::current_layer_index == i);
+            if (this_is_selected_layer)
+                BeginOutline();
+
+            ImGui::SameLine(0.0f, 10.0f);
+            if (ImGui::Button(layer_traversed.GetName().c_str(), { 100.0f, item_height }))
+                Layers::current_layer_index = i;
+
+            if (this_is_selected_layer)
+                EndOutline();
+
+            if (right_clicked_layer_index == -1 && ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                right_clicked_layer_index = i;
+
+            ImGui::SameLine(0.0f, 10.0f);
+            ImGui::PushItemWidth(100.0f);
+            ImGui::PushID(i);
+            ImGui::SliderInt("Opacity", &layer_traversed.m_Opacity, 0, 255);
+            ImGui::PopID();
+            ImGui::PopItemWidth();
+
+            ImGui::SameLine(0.0f, 10.0f);
+            if (ImGui::ArrowButton((str_id_for_widgets + "_abu").c_str(), ImGuiDir_Up))  // Move layer up button
+            {
+                update_vertex_buffer = true;  // Need to update the vb because the layer order changes
+                Layers::MoveUp(i);
+            }
+
+            ImGui::SameLine(0.0f, 1.0f);
+            if (ImGui::ArrowButton((str_id_for_widgets + "_abd").c_str(), ImGuiDir_Down))  // Move layer down button
+            {
+                update_vertex_buffer = true;
+                Layers::MoveDown(i);
+            }
+        }
+
+        static bool open_the_change_lay_name_popup = false;
+
+        constexpr std::size_t BUFF_SIZE = 20;
+        static char buff[BUFF_SIZE] = "";  // A buffer used for the input box in the popup for changing a layer's name
+
+        if (right_clicked_layer_index != NO_LAYER_RIGHT_CLICKED && ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+            ImGui::OpenPopup("LayerPopup");
+
+        if (ImGui::BeginPopup("LayerPopup"))
+        {
+            if (ImGui::MenuItem("Change layer name"))
+            {
+                // Setting buffer string to the name of the layer the user wants to change
+                // so that string would be the string displayed when opening the popup
+                const std::string& right_clicked_layer_name = Layers::AtIndex(right_clicked_layer_index).m_LayerName;
+                strncpy_s(buff, right_clicked_layer_name.c_str(), std::min(BUFF_SIZE - 1, right_clicked_layer_name.size()));
+                open_the_change_lay_name_popup = true;
+            }
+
+            ImGui::EndPopup();
+        }
+
+        if (open_the_change_lay_name_popup)
+        {
+            ImGui::OpenPopup("Change layer name");
+        }
+        
+        if (ImGui::BeginPopupModal("Change layer name", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            do_tool = false;  // Don't wanna edit canvas if this popup is opened
+            ImGui::InputText("##input", buff, IM_ARRAYSIZE(buff));
+
+            if (ImGui::Button("OK"))
+            {
+                if (strlen(buff) != 0)
+                    Layers::AtIndex(right_clicked_layer_index).m_LayerName = buff;
+
+                ImGui::CloseCurrentPopup();
+                open_the_change_lay_name_popup = false;
+                right_clicked_layer_index = NO_LAYER_RIGHT_CLICKED;
+            }
+
+            ImGui::SameLine(0.0f, 10.0f);
+
+            if (ImGui::Button("Cancel"))
+            {
+                ImGui::CloseCurrentPopup();
+                open_the_change_lay_name_popup = false;
+                right_clicked_layer_index = NO_LAYER_RIGHT_CLICKED;
+            }
+
+            ImGui::EndPopup();
+        }
+
+        ImGui::End();
+    }
+
+    // Don't forget to call EndOutline!
+    void UI::BeginOutline(ImVec4& outline_color /*= selected_item_outline_color*/)
+    {
+        ImGui::GetStyle().FrameBorderSize = 1.0f;
+        ImGui::PushStyleColor(ImGuiCol_Border, outline_color);
+    }
+
+    void UI::EndOutline()
+    {
+        ImGui::GetStyle().FrameBorderSize = 0.0f;
+        ImGui::PopStyleColor();
+    }
+
+    void Save()
+    {
+        //stbi_write_png("saved.png", CANVAS_WIDTH, CANVAS_HEIGHT, Layers::GetCanvas().data(), )
     }
 }

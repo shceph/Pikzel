@@ -79,10 +79,10 @@ namespace Gla
 
     /* Texture2D */
 
-    Texture2D::Texture2D(const std::string &path, GLMinMagFilter texture_min_filter /*= LINEAR*/)
+    Texture2D::Texture2D(const std::string &path, GLMinMagFilter texture_min_filter /*= LINEAR*/, bool flip_vertically /*= false*/)
         : m_FilePath(path), m_LocalBuffer(nullptr), m_Width(0), m_Height(0), m_BPP(0)
     {
-        stbi_set_flip_vertically_on_load(1);  // Flips because opengl loads images from bottom left
+        stbi_set_flip_vertically_on_load(flip_vertically);  // Flips because opengl loads images from bottom left
         m_LocalBuffer = stbi_load(path.c_str(), &m_Width, &m_Height, &m_BPP, 4);
 
         #ifdef GLA_DEBUG

@@ -34,7 +34,7 @@ namespace Gla
     class Texture2D : public Texture
     {
     public:
-        Texture2D(const std::string& path, GLMinMagFilter texture_min_filter = LINEAR);
+        Texture2D(const std::string& path, GLMinMagFilter texture_min_filter = LINEAR, bool flip_vertically = false);
         ~Texture2D();
 
         void Bind(unsigned int slot = 0) const;

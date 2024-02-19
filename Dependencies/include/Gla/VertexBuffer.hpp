@@ -15,7 +15,7 @@ namespace Gla
 
         void UpdateData(const void *data, unsigned int size, unsigned int offset = 0);
         void UpdateSize(unsigned int size);
-        void UpdateSizeIfShould(unsigned int needed_size);
+        void UpdateSizeIfNeeded(unsigned int needed_size);
 
         void Bind() const;
         void Unbind() const;
