@@ -11,7 +11,11 @@
 #include <iostream>
 
 #include <stb/stb_image.h>
+#define STBI_MSC_SECURE_CRT
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#define __STDC_LIB_EXT1__
 #include <stb/stb_image_write.h>
+#undef __STDC_LIB_EXT1__
 
 namespace App
 {
@@ -38,7 +42,7 @@ namespace App
 
     void UI::Update()
     {
-        do_tool = true;
+        should_do_tool = true;
         update_vertex_buffer = false;
     }
 
@@ -76,15 +80,14 @@ namespace App
         RenderColorWindow();
         RenderToolWindow();
         RenderLayerWindow();
+
+        if (render_save_error_popup)
+            RenderSaveErrorPopup();
 	}
 
     void UI::RenderDrawWindow(unsigned int framebuffer_texture_id, const char* window_name)
     {
         ImGui::Begin(window_name);
-
-        // TODO: For some reason, the function below doesn't set the minimum size
-        // should check it out
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(100.0f, 100.0f));
 
         // we access the ImGui window size
         float window_width = ImGui::GetContentRegionAvail().x;
@@ -109,7 +112,7 @@ namespace App
             ImVec2(upper_left_x + canvas_lenght, upper_left_y + canvas_lenght)
         );
 
-        ImGui::PopStyleVar();
+        //ImGui::PopStyleVar();
         ImGui::End();
 
         draw_window_upperleft_corner_coords.x = pos.x;
@@ -144,9 +147,9 @@ namespace App
         return update_vertex_buffer;
     }
 
-    bool UI::DoTool()
+    bool UI::ShouldDoTool()
     {
-        return do_tool;
+        return should_do_tool;
     }
 
     void UI::RenderMainMenuBar()
@@ -155,36 +158,62 @@ namespace App
 
         if (ImGui::BeginMenu("File"))
         {
-            if (ImGui::MenuItem("Open"))
-            {
-                // Handle "Open" action
-            }
             if (ImGui::MenuItem("Save"))
             {
-                // Handle "Save" action
+                render_layer_save_popup = true;
             }
 
             ImGui::EndMenu();
         }
 
-        //if (ImGui::BeginMenu("Edit"))
-        //{
-        //    if (ImGui::MenuItem("Cut"))
-        //    {
-        //        // Handle "Cut" action
-        //    }
-        //    if (ImGui::MenuItem("Copy"))
-        //    {
-        //        // Handle "Copy" action
-        //    }
-        //    if (ImGui::MenuItem("Paste"))
-        //    {
-        //        // Handle "Paste" action
-        //    }
-        //    ImGui::EndMenu();
-        //}
-
         ImGui::EndMainMenuBar();
+
+        if (render_layer_save_popup)
+            RenderLayerSavePopup();
+    }
+
+    void UI::RenderLayerSavePopup()
+    {
+        should_do_tool = false;  // Don't want to draw with a popup opened
+
+        static char destination_str[256];
+        static char file_name_str[64];
+
+        ImGui::OpenPopup("Save");
+
+        if (ImGui::BeginPopupModal("Save", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static int magnify_factor = 1;
+
+            ImGui::Text("Destination:");
+            ImGui::InputText("##dest_input", destination_str, IM_ARRAYSIZE(destination_str));
+            ImGui::Text("Picture name:");
+            ImGui::InputText("##picname_input", file_name_str, IM_ARRAYSIZE(file_name_str));
+            ImGui::Text("Magnify factor:");
+            ImGui::InputInt("##mag_input", &magnify_factor);
+
+            if (ImGui::Button("Save"))
+            {
+                std::string destination = destination_str;
+                destination += '/';
+                destination += file_name_str;
+
+                Save(magnify_factor, destination);
+
+                render_layer_save_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine(0.0f, 10.0f);
+
+            if (ImGui::Button("Cancel"))
+            {
+                render_layer_save_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
     }
 
     void UI::RenderColorWindow()
@@ -232,23 +261,6 @@ namespace App
         RenderColorPalette(Tool::GetColorRef());
 
         ImGui::End();
-
-        //ImGui::NewLine();
-        //ImGui::NewLine();
-
-        //if (ImGui::ImageButton(brush_tool_texture_id, { 20.0f, 20.0f }))
-        //    Tool::SetToolType(Tool::ToolType::BRUSH);
-        //
-        //ImGui::SameLine(0.0f, 4.0f);
-
-        //if (ImGui::ImageButton(eraser_tool_texture_id, { 20.0f, 20.0f }))
-        //    Tool::SetToolType(Tool::ToolType::ERASER);
-
-        //ImGui::NewLine();
-
-        //ImGui::SliderInt("Brush radius", &Tool::brush_radius, 1, 10);
-
-        //ImGui::End();
     }
 
     void UI::RenderColorPalette(ImVec4& color)
@@ -444,6 +456,7 @@ namespace App
             }
         }
 
+        // Code bellow renders popups for changing a layer's name
         static bool open_the_change_lay_name_popup = false;
 
         constexpr std::size_t BUFF_SIZE = 20;
@@ -470,10 +483,10 @@ namespace App
         {
             ImGui::OpenPopup("Change layer name");
         }
-        
+
         if (ImGui::BeginPopupModal("Change layer name", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
         {
-            do_tool = false;  // Don't wanna edit canvas if this popup is opened
+            should_do_tool = false;  // Don't wanna edit canvas if this popup is opened
             ImGui::InputText("##input", buff, IM_ARRAYSIZE(buff));
 
             if (ImGui::Button("OK"))
@@ -498,7 +511,29 @@ namespace App
             ImGui::EndPopup();
         }
 
-        ImGui::End();
+        ImGui::End();  // "Layers"
+    }
+
+    void UI::RenderSaveErrorPopup()
+    {
+        should_do_tool = false;  // Don't want to draw with a popup opened
+
+        ImGui::OpenPopup("Error: Failed to save");
+
+        if (ImGui::BeginPopupModal("Error: Failed to save", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            static int magnify_factor = 1;
+
+            ImGui::Text("Failed to save the picture. Check your destination, picture name and magnify factor");
+
+            if (ImGui::Button("OK"))
+            {
+                render_save_error_popup = false;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
     }
 
     // Don't forget to call EndOutline!
@@ -514,8 +549,73 @@ namespace App
         ImGui::PopStyleColor();
     }
 
-    void Save()
+    static bool SaveImageToPNG(const char* filename, int width, int height, int num_channels, const unsigned char* data)
     {
-        //stbi_write_png("saved.png", CANVAS_WIDTH, CANVAS_HEIGHT, Layers::GetCanvas().data(), )
+        return stbi_write_png(filename, width, height, num_channels, data, width * num_channels);
+    }
+
+    void Save(int magnify_factor, std::string save_dest)
+    {
+        constexpr int CHANNEL_COUNT = 4;
+        int arr_height = CANVAS_HEIGHT * magnify_factor;
+        int arr_width = CANVAS_HEIGHT * magnify_factor * CHANNEL_COUNT;
+        std::vector<unsigned char> image_data(arr_height * arr_width);
+
+        const CanvasData& canvas_displayed = Layers::GetDisplayedCanvas();
+        
+        for (int i = 0; i < CANVAS_HEIGHT; i++)
+        {
+            for (int j = 0; j < CANVAS_WIDTH; j++)
+            {
+                if (canvas_displayed[i][j].a > 1.0f)
+                {
+                    for (int k = 0; k < magnify_factor; k++)
+                    {
+                        for (int l = 0; l < magnify_factor; l++)
+                        {
+                            image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 0] = (unsigned char)0;
+                            image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 1] = (unsigned char)0;
+                            image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 2] = (unsigned char)0;
+                            image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 3] = (unsigned char)0;
+                        }
+                    }
+
+                    continue;
+                }
+
+                for (int k = 0; k < magnify_factor; k++)
+                {
+                    for (int l = 0; l < magnify_factor; l++)
+                    {
+                        image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 0] = (unsigned char)(canvas_displayed[i][j].r * 255);
+                        image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 1] = (unsigned char)(canvas_displayed[i][j].g * 255);
+                        image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 2] = (unsigned char)(canvas_displayed[i][j].b * 255);
+                        image_data[(i * magnify_factor + k) * arr_width + j * magnify_factor * CHANNEL_COUNT + l * CHANNEL_COUNT + 3] = (unsigned char)(canvas_displayed[i][j].a * 255);
+                    }
+                }
+            }
+        }
+
+        int height = CANVAS_HEIGHT * magnify_factor;
+        int width  = CANVAS_WIDTH * magnify_factor;
+
+        if (!SaveImageToPNG(save_dest.c_str(), width, height, CHANNEL_COUNT, image_data.data()))
+        {
+            UI::render_save_error_popup = true;
+        }
+        
+        //if (!stbi_write_png("saved_.png", width, height, 3, image_data.data(), 0))
+        //{
+        //    std::cout << "Failed saving the project!\n";
+        //}
+
+        //// Example image data
+        //int width = 32;
+        //int height = 32;
+        //int num_channels = 4; // Assuming RGBA image
+        //std::vector<unsigned char> imageData(width * height * num_channels, 255); // Example: all white image
+
+        //// Save the image to a PNG file
+        //SaveImageToPNG("output.png", width, height, num_channels, imageData.data());
     }
 }

@@ -2,6 +2,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#define GLEW_STATIC
 #include <GL/glew.h>
 #define GLFW_STATIC
 #include <GLFW/glfw3.h>
@@ -36,21 +37,20 @@ static void HandleEvents(GLFWwindow* window)
 
 int main(int argc, const char* argv[])
 {
-    /* Initialize the GLFW */
     if (!glfwInit())
         return -1;
 
     glfwSetErrorCallback(&glfwError);
 
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    //glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     int window_width = 1280;
     int window_height = 700;
 
     /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "PixelCraft", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(window_width, window_height, "PixelCraft", nullptr, nullptr);
 
     if (!window)
     {
@@ -60,13 +60,11 @@ int main(int argc, const char* argv[])
         return -1;
     }
 
-    /* Make the window's context current */
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
 
     glfwMaximizeWindow(window);
 
-    /* Initialize GLEW */
     if (glewInit() != GLEW_OK)
     {
         std::cout << "Glew init error\n";
@@ -154,7 +152,7 @@ int main(int argc, const char* argv[])
                 if (update_vertex_buffer || App::UI::ShouldUpdateVertexBuffer())
                 {
                     App::Layers::EmplaceVertices(vertices);
-                    vb.UpdateSizeIfNeeded((unsigned int)(vertices.size() * sizeof(float)));
+                    vb.UpdateSizeIfNeeded(vertices.size() * sizeof(float));
                     vb.UpdateData(vertices.data(), vertices.size() * sizeof(float));
 
                     update_vertex_buffer = false;
@@ -162,6 +160,7 @@ int main(int argc, const char* argv[])
 
                 renderer.Clear();
                 renderer.DrawArrays(GL_TRIANGLES, vertices.size() / 6);
+
                 Gla::FrameBuffer::BindToDefaultFB();
             }
 

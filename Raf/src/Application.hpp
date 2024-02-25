@@ -3,6 +3,7 @@
 #include <imgui.h>
 #include <GLFW/glfw3.h>
 
+#include "Definitions.hpp"
 #include "Tool.hpp"
 #include "Layer.hpp"
 
@@ -22,22 +23,24 @@ namespace App
 		static void SetupLayerToolTextures(unsigned int eye_opened_id, unsigned int eye_closed_id, unsigned int lock_locked_id, unsigned int lock_unlocked_id);
 
 		static bool ShouldUpdateVertexBuffer();
-		static bool DoTool();
+		static bool ShouldDoTool();
 
-		constexpr static const ImVec2& GetDrawWinUpperleftCoords()		{ return draw_window_upperleft_corner_coords; }
-		constexpr static const ImVec2& GetDrawWinDimensions()			{ return draw_window_dimensions; }
+		inline static const ImVec2& GetDrawWinUpperleftCoords()		{ return draw_window_upperleft_corner_coords; }
+		inline static const ImVec2& GetDrawWinDimensions()			{ return draw_window_dimensions; }
 
-		constexpr static const ImVec2& GetCanvasUpperleftCoords()		{ return canvas_upperleft_coords; }
-		constexpr static const ImVec2& GetCanvasBottomRightCoords()		{ return canvas_bottomright_coords; }
+		inline static const ImVec2& GetCanvasUpperleftCoords()		{ return canvas_upperleft_coords; }
+		inline static const ImVec2& GetCanvasBottomRightCoords()	{ return canvas_bottomright_coords; }
 
-		constexpr static GLFWwindow* GetWindowPointer()	{ return window; }
+		inline static GLFWwindow* GetWindowPointer()	{ return window; }
 
 	private:
 		static void RenderMainMenuBar();
+		static void RenderLayerSavePopup();
 		static void RenderColorWindow();
 		static void RenderColorPalette(ImVec4& color);
 		static void RenderToolWindow();
 		static void RenderLayerWindow();
+		static void RenderSaveErrorPopup();
 
 		static void BeginOutline(ImVec4& outline_color = selected_item_outline_color);
 		static void EndOutline();
@@ -62,8 +65,12 @@ namespace App
 
 		// Says whether the vertex buffer should be updated, or the canvas state, in other words
 		inline static bool update_vertex_buffer = false;
-		inline static bool do_tool = false;
+		inline static bool should_do_tool = false;
+		inline static bool render_layer_save_popup = false;
+		inline static bool render_save_error_popup = false;
+
+		friend void Save(int, std::string);
 	};
 
-	void Save();
+	void Save(int magnify_factor, std::string save_dest);
 }

@@ -12,10 +12,14 @@ namespace App
 
     struct Color
     {
-        float r = 0.0f, g = 0.0f, b = 0.0f, a = 1.1f;
+        float r = 0.0f, g = 0.0f, b = 0.0f;
+        float a = 1.1f;  // Alpha value greater than 1.0f means there's no color
 
         void operator=(const ImVec4& color);
-        bool operator==(const Color& other);
+        bool operator==(const Color& other)  const;
+        bool operator==(const ImVec4& color) const;
+
+        static Color BlendColor(Color col1, Color col2);
     };
 
     using CanvasData = std::vector<std::vector<Color>>;
@@ -25,18 +29,19 @@ namespace App
     public:
         Layer(int width, int height);
         void DoCurrentTool();
-        void EmplaceVertices(std::vector<float>& vertices);
+        void EmplaceVertices(std::vector<float>& vertices);  // Places the vertices containing the canvas data for my shader program
 
-        constexpr bool IsVisible() const { return m_Visible; }
-        constexpr bool IsLocked()  const { return m_Locked;  }
+        inline bool IsVisible() const { return m_Visible; }
+        inline bool IsLocked()  const { return m_Locked;  }
 
-        constexpr void SwitchVisibilityState()  { m_Visible = !m_Visible; }
-        constexpr void SwitchLockState()        { m_Locked = !m_Locked; }
+        inline void SwitchVisibilityState()  { m_Visible = !m_Visible; }
+        inline void SwitchLockState()        { m_Locked = !m_Locked; }
 
-        constexpr const std::string& GetName() const { return m_LayerName; }
+        inline const std::string& GetName() const { return m_LayerName; }
 
     private:
         void DrawCircle(int center_x, int center_y, int radius, bool only_outline);
+        void Fill(int x, int y, Color clicked_color);
 
         int m_Width, m_Height;
         CanvasData m_Canvas;
@@ -63,7 +68,7 @@ namespace App
 
         static Layer& AtIndex(int index);
 
-        static CanvasData& GetCanvas();
+        static const CanvasData GetDisplayedCanvas();
         static int GetLayerCount() { return layers.size(); }
 
     private:

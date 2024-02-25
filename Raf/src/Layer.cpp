@@ -23,17 +23,52 @@ namespace App
         a = color.w;
     }
 
-    bool Color::operator==(const Color& other)
+    bool Color::operator==(const Color& other) const
     {
-        if (r == other.r &&
-            g == other.g &&
-            b == other.b &&
-            a == other.a)
+        constexpr int tolerance = 0.0025f;
+
+        if (std::abs(r - other.r) <= tolerance &&
+            std::abs(g - other.g) <= tolerance &&
+            std::abs(b - other.b) <= tolerance &&
+            std::abs(a - other.a) <= tolerance)
         {
             return true;
         }
 
         return false;
+    }
+
+    bool Color::operator==(const ImVec4& other) const
+    {
+        constexpr int tolerance = 0.0025f;
+
+        if (std::abs(r - other.x) <= tolerance &&
+            std::abs(g - other.y) <= tolerance &&
+            std::abs(b - other.z) <= tolerance &&
+            std::abs(a - other.w) <= tolerance)
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    Color Color::BlendColor(Color src_color, Color dst_color)
+    {
+        if (src_color.a > 1.0f)  // Remember that alpha > 1.0f means there's no color. If there is no source color, just return the dest color
+            return dst_color;
+
+        Color result_color;
+
+        // Calculate resulting alpha
+        result_color.a = 1.0f - (1.0f - dst_color.a) * (1.0f - src_color.a);
+
+        // Blend RGB channels
+        result_color.r = (dst_color.r * dst_color.a / result_color.a) + (src_color.r * src_color.a * (1.0f - dst_color.a) / result_color.a);
+        result_color.g = (dst_color.g * dst_color.a / result_color.a) + (src_color.g * src_color.a * (1.0f - dst_color.a) / result_color.a);
+        result_color.b = (dst_color.b * dst_color.a / result_color.a) + (src_color.b * src_color.a * (1.0f - dst_color.a) / result_color.a);
+
+        return result_color;
     }
 
     Layer::Layer(int width, int height) :
@@ -73,17 +108,26 @@ namespace App
             }
 
             if (Tool::GetToolType() == COLOR_PICKER)
-            {   // TODO: later, when i make the canvas array that is what is actually drawn, I should pick the color from there
-                const Color& picked_color = m_Canvas[canvas_y][canvas_x];
+            {
+                auto displayed_canvas = Layers::GetDisplayedCanvas();
+                const Color& picked_color = displayed_canvas[canvas_y][canvas_x];
 
-                if (picked_color.a > 1.0f)  // If alpha is greater than 1.0f nothing is drawn there and we don't want to pick a nonexistent color
+                if (picked_color.a > 1.0f || picked_color.a <= 0.0025f)  // If alpha is greater than 1.0f nothing is drawn there and we don't want to pick a nonexistent color
                     return;
 
                 Tool::current_color->x = picked_color.r;
                 Tool::current_color->y = picked_color.g;
                 Tool::current_color->z = picked_color.b;
-                //Tool::current_color->w = picked_color.a;
 
+                return;
+            }
+
+            if (Tool::GetToolType() == BUCKET)
+            {
+                //auto displayed_canvas = Layers::GetDisplayedCanvas();
+                const Color& clicked_color = m_Canvas[canvas_y][canvas_x];
+
+                Fill(canvas_x, canvas_y, clicked_color);
                 return;
             }
 
@@ -185,8 +229,6 @@ namespace App
 
         std::vector<std::vector<Color>> tmp_canvas(CANVAS_HEIGHT, std::vector<Color>(CANVAS_WIDTH));
 
-        //Color tmp_canvas[CANVAS_HEIGHT][CANVAS_WIDTH];
-
         constexpr Color delete_color = { 0.666f, 0.666f, 0.666f, 1.1f };
         constexpr Color no_color = { 0.0f, 0.0f, 0.0f, 1.1f };
         Color draw_color = delete_color;  // default value
@@ -196,30 +238,127 @@ namespace App
             draw_color = Tool::GetColorRef();
         }
 
-        while (x >= y) {
-            if (center_y + y >= 0 && center_y + y < CANVAS_HEIGHT && center_x + x >= 0 && center_x + x < CANVAS_WIDTH)
-                tmp_canvas[center_y + y][center_x + x] = draw_color;
+        while (x >= y)
+        {
+            int x_coord = center_x + x, y_coord = center_y + y;
 
-            if (center_y + x >= 0 && center_y + x < CANVAS_HEIGHT && center_x + y >= 0 && center_x + y < CANVAS_WIDTH)
-                tmp_canvas[center_y + x][center_x + y] = draw_color;
+            // Checks if a coordinate is out of scope
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
 
-            if (center_y - y >= 0 && center_y - y < CANVAS_HEIGHT && center_x + x >= 0 && center_x + x < CANVAS_WIDTH)
-                tmp_canvas[center_y - y][center_x + x] = draw_color;
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
 
-            if (center_y - x >= 0 && center_y - x < CANVAS_HEIGHT && center_x + y >= 0 && center_x + y < CANVAS_WIDTH)
-                tmp_canvas[center_y - x][center_x + y] = draw_color;
+            tmp_canvas[y_coord][x_coord] = draw_color;
 
-            if (center_y + y >= 0 && center_y + y < CANVAS_HEIGHT && center_x - x >= 0 && center_x - x < CANVAS_WIDTH)
-                tmp_canvas[center_y + y][center_x - x] = draw_color;
 
-            if (center_y + x >= 0 && center_y + x < CANVAS_HEIGHT && center_x - y >= 0 && center_x - y < CANVAS_WIDTH)
-                tmp_canvas[center_y + x][center_x - y] = draw_color;
+            x_coord = center_x + y, y_coord = center_y + x;
 
-            if (center_y - y >= 0 && center_y - y < CANVAS_HEIGHT && center_x - x >= 0 && center_x - x < CANVAS_WIDTH)
-                tmp_canvas[center_y - y][center_x - x] = draw_color;
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
 
-            if (center_y - x >= 0 && center_y - x < CANVAS_HEIGHT && center_x - y >= 0 && center_x - y < CANVAS_WIDTH)
-                tmp_canvas[center_y - x][center_x - y] = draw_color;
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x + x, y_coord = center_y - y;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x + y, y_coord = center_y - x;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x - x, y_coord = center_y + y;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x - y, y_coord = center_y + x;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x - x, y_coord = center_y - y;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
+
+
+            x_coord = center_x - y, y_coord = center_y - x;
+
+            if (y_coord < 0)
+                y_coord = 0;
+            else if (y_coord >= CANVAS_HEIGHT)
+                y_coord = CANVAS_HEIGHT - 1;
+
+            if (x_coord < 0)
+                x_coord = 0;
+            else if (x_coord >= CANVAS_WIDTH)
+                x_coord = CANVAS_WIDTH - 1;
+
+            tmp_canvas[y_coord][x_coord] = draw_color;
 
             if (err <= 0)
             {
@@ -227,7 +366,7 @@ namespace App
                 err += 2 * y + 1;
             }
             if (err > 0)
-{
+            {
                 x -= 1;
                 err -= 2 * x + 1;
             }
@@ -291,6 +430,26 @@ namespace App
         }
     }
 
+    void Layer::Fill(int x, int y, Color clicked_color)
+    {
+        if (x < 0 || x >= CANVAS_WIDTH || y < 0 || y >= CANVAS_HEIGHT)
+            return;
+
+        if (m_Canvas[y][x] != clicked_color || m_Canvas[y][x] == Tool::GetColorRef())
+            return;
+
+        m_Canvas[y][x] = Tool::GetColorRef();
+
+        Fill(x + 1, y, clicked_color);
+        Fill(x - 1, y, clicked_color);
+        Fill(x, y + 1, clicked_color);
+        Fill(x, y - 1, clicked_color);
+        Fill(x + 1, y + 1, clicked_color);
+        Fill(x - 1, y - 1, clicked_color);
+        Fill(x + 1, y - 1, clicked_color);
+        Fill(x - 1, y + 1, clicked_color);
+    }
+
     Layer& Layers::GetCurrentLayer()
     {
         assert(current_layer_index >= 0 && current_layer_index < layers.size());
@@ -304,7 +463,7 @@ namespace App
 
     void Layers::DoCurrentTool()
     {
-        if (!UI::DoTool())
+        if (!UI::ShouldDoTool())
             return;
 
         GetCurrentLayer().DoCurrentTool();
@@ -312,7 +471,7 @@ namespace App
 
     void Layers::AddLayer()
     {
-        layers.emplace_back(CANVAS_WIDTH, CANVAS_HEIGHT);
+        layers.emplace_back(CANVAS_HEIGHT, CANVAS_WIDTH);
     }
 
     void Layers::MoveUp(int layer_index)
@@ -434,9 +593,29 @@ namespace App
         return *it;
     }
 
-    // TODO: Should make a canvas variable in Layers that's the actual canvas displayed; with all the layers mixed together and use it for saving the project
-    CanvasData& Layers::GetCanvas()
+    const CanvasData Layers::GetDisplayedCanvas()
     {
-        return GetCurrentLayer().m_Canvas;
+        CanvasData displayed_canvas(CANVAS_HEIGHT, std::vector<Color>(CANVAS_WIDTH));
+
+        for (auto rit = layers.rbegin(); rit != layers.rend(); rit++)
+        {
+            Layer& layer_traversed = *rit;
+            
+            for (int i = 0; i < CANVAS_HEIGHT; i++)
+            {
+                for (int j = 0; j < CANVAS_WIDTH; j++)
+                {
+                    Color dst_color = { layer_traversed.m_Canvas[i][j].r, layer_traversed.m_Canvas[i][j].g,
+                    layer_traversed.m_Canvas[i][j].b, (float)layer_traversed.m_Opacity / 255.0f };
+
+                    if (layer_traversed.m_Canvas[i][j].a > 1.0f)  // Alpha greater than 1.0f means there's no color
+                        dst_color.a = 0.0f;
+
+                    displayed_canvas[i][j] = Color::BlendColor(displayed_canvas[i][j], dst_color);
+                }
+            }
+        }
+
+        return displayed_canvas;
     }
 }
