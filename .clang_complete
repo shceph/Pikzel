@@ -1,0 +1,7 @@
+-Ivendor/glew/include
+-Ivendor/glfw/include
+-Ivendor/glm
+-Ivendor/stb
+-Ivendor/stb/stb
+-Ibuild/vendor/stb/include
+-Ibuild/vendor/imgui/include

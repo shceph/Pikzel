@@ -1,0 +1,33 @@
+# {
+#   "CompileFlags": {
+#     "Add": [
+#       "-std=c++20",
+#       "-Wall",
+#       "-Wextra",
+#       "-Wno-unused-include",
+#       "-IC:/Stefan/Programi/C++/Pikzel/vendor/glew/include",
+#       "-IC:/Stefan/Programi/C++/Pikzel/vendor/glfw/include",
+#       "-IC:/Stefan/Programi/C++/Pikzel/vendor/glm",
+#       "-IC:/Stefan/Programi/C++/Pikzel/vendor/stb",
+#       "-IC:/Stefan/Programi/C++/Pikzel/vendor/stb/stb",
+#       "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/stb/include",
+#       "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/imgui/include",
+#     ],
+#   }
+# }
+
+CompileFlags:
+  Add: 
+    - "-std=c++20"
+    - "-Wall"
+    - "-Wextra"
+    - "-IC:/Stefan/Programi/C++/Pikzel/vendor/glew/include"
+    - "-IC:/Stefan/Programi/C++/Pikzel/vendor/glfw/include"
+    - "-IC:/Stefan/Programi/C++/Pikzel/vendor/glm"
+    - "-IC:/Stefan/Programi/C++/Pikzel/vendor/stb"
+    - "-IC:/Stefan/Programi/C++/Pikzel/vendor/stb/stb"
+    - "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/stb/include"
+    - "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/imgui/include"
+Diagnostics:
+  Suppress: 
+    - "unused-include"
