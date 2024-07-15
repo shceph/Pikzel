@@ -17,12 +17,14 @@
 #include "Gla/Mesh.hpp"
 
 #include <iostream>
+#include <string>
 #include <vector>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Application.hpp"
+#include "Layer.hpp"
 
 namespace
 {
@@ -135,7 +137,7 @@ void HandleEvents(GLFWwindow *window)
 /* bool update_vertex_buffer = true; */
 } // namespace
 
-int main()
+auto main() -> int
 {
     std::cout << "C++ standard: " << __cplusplus << '\n';
 

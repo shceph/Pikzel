@@ -15,18 +15,25 @@ Checks: >
   # -google-readability-namespace-comments,
   # -google-runtime-int,
   # -google-runtime-references,
-  -misc-non-private-member-variables-in-classes,
 
-  # Assimp and glm require me to break these rules
-  -cppcoreguidelines-non-private-member-variables-in-classes,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-union-access,
+  # -cppcoreguidelines-non-private-member-variables-in-classes,
+  # -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  # -cppcoreguidelines-pro-type-union-access,
   -hicpp-signed-bitwise,
 
   # -readability-named-parameter,
   # -readability-braces-around-statements,
   -readability-magic-numbers,
   -cppcoreguidelines-avoid-magic-numbers,
+
+  # Have structs with public members
+
+  -misc-non-private-member-variables-in-classes,
+
+  # ImGui requires me to break these
+
+  -hicpp-vararg,
+  -cppcoreguidelines-pro-type-vararg,
 
 # Turn all the warnings from the checks above into errors.
 # WarningsAsErrors: "*"

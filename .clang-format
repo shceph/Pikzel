@@ -25,8 +25,9 @@ SpacesInParentheses: false
 SpacesInAngles: false
 SpacesInSquareBrackets: false
 
-AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: true
+AllowShortBlocksOnASingleLine: Always
 
 ReflowComments: true
 SortIncludes: true
@@ -34,5 +35,10 @@ SortIncludes: true
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false
 AlignEscapedNewlines: Left
+
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+QualifierAlignment: Left
 
 Language: Cpp

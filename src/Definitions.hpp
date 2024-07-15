@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef _DEBUG
+#ifndef NDEBUG
 #define MY_ASSERT(x) assert(x)
 #else
 #define MY_ASSERT(x) {}

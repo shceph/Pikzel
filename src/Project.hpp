@@ -4,22 +4,22 @@
 
 namespace App
 {
-	class Project
-	{
-	public:
-		static void New(int canvas_heigth, int canvas_width);
-		static void Open(std::string project_file_dest);
-		static void SaveAsImage(int magnify_factor, std::string save_dest);
-		static void SaveAsProject(std::string save_dest);
-		static void CloseCurrentProject();
+class Project
+{
+  public:
+    static void New(int canvas_heigth, int canvas_width);
+    static void Open(const std::string& project_file_dest);
+    static void SaveAsImage(int magnify_factor, const std::string& save_dest);
+    static void SaveAsProject(const std::string& save_dest);
+    static void CloseCurrentProject();
 
-		inline static bool IsOpened()		{ return s_ProjectOpened; }
-		inline static int  CanvasHeight()	{ return s_CanvasHeight;  }
-		inline static int  CanvasWidth()	{ return s_CanvasWidth;   }
+    inline static auto IsOpened() -> bool { return sProjectOpened; }
+    inline static auto CanvasHeight() -> int { return sCanvasHeight; }
+    inline static auto CanvasWidth() -> int { return sCanvasWidth; }
 
-	private:
-		inline static bool s_ProjectOpened = false;
-		inline static int  s_CanvasHeight  = 0;
-		inline static int  s_CanvasWidth   = 0;
-	};
-}
+  private:
+    inline static bool sProjectOpened = false;
+    inline static int sCanvasHeight = 0;
+    inline static int sCanvasWidth = 0;
+};
+} // namespace App

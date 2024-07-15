@@ -1,83 +1,89 @@
 #pragma once
 
 #include <imgui.h>
+#include <list>
 #include <string>
 #include <vector>
-#include <list>
 
 namespace App
 {
-    constexpr int CANVAS_HEIGHT = 32;
-    constexpr int CANVAS_WIDTH = 32;
+constexpr int kCanvasHeight = 32;
+constexpr int kCanvasWidth = 32;
 
-    struct Color
+struct Color
+{
+    float r = 0.0F, g = 0.0F, b = 0.0F;
+    float a = 1.1F; // Alpha value greater than 1.0f means there's no color
+
+    auto operator=(const ImVec4& color) -> Color&;
+    auto operator==(const Color& other) const -> bool;
+    auto operator==(const ImVec4& other) const -> bool;
+
+    static auto BlendColor(Color src_color, Color dst_color) -> Color;
+    static auto FromImVec4(ImVec4 color) -> Color;
+};
+
+using CanvasData = std::vector<std::vector<Color>>;
+
+class Layer
+{
+  public:
+    Layer();
+    void DoCurrentTool();
+    // Places the vertices containing the canvas data for my shader program
+    void EmplaceVertices(std::vector<float>& vertices);
+
+    [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
+    [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
+
+    inline void SwitchVisibilityState() { mVisible = !mVisible; }
+    inline void SwitchLockState() { mLocked = !mLocked; }
+
+    [[nodiscard]] inline auto GetName() const -> const std::string&
     {
-        float r = 0.0f, g = 0.0f, b = 0.0f;
-        float a = 1.1f;  // Alpha value greater than 1.0f means there's no color
+        return mLayerName;
+    }
 
-        void operator=(const ImVec4& color);
-        bool operator==(const Color& other)  const;
-        bool operator==(const ImVec4& color) const;
+  private:
+    void DrawCircle(int center_x, int center_y, int radius, bool only_outline);
+    void Fill(int x_coord, int y_coord, Color clicked_color);
 
-        static Color BlendColor(Color col1, Color col2);
-        static Color FromImVec4(const ImVec4 color);
-    };
+    CanvasData mCanvas;
 
-    using CanvasData = std::vector<std::vector<Color>>;
+    bool mVisible = true, mLocked = false;
+    int mOpacity = 255;
 
-    class Layer
+    std::string mLayerName;
+
+    friend class UI;
+    friend class Layers;
+};
+
+class Layers
+{
+  public:
+    static auto GetCurrentLayer() -> Layer&;
+
+    static void DoCurrentTool();
+    static void MoveUp(std::size_t layer_index);
+    static void MoveDown(std::size_t layer_index);
+    static void AddLayer();
+    static void EmplaceVertices(std::vector<float>& vertices);
+    static void ResetDataToDefault();
+
+    static auto AtIndex(std::size_t index) -> Layer&;
+
+    static auto GetDisplayedCanvas() -> CanvasData;
+    inline static auto GetLayerCount() -> std::size_t
     {
-    public:
-        Layer();
-        void DoCurrentTool();
-        // Places the vertices containing the canvas data for my shader program
-        void EmplaceVertices(std::vector<float>& vertices);
+        return GetLayers().size();
+    }
 
-        inline bool IsVisible() const { return m_Visible; }
-        inline bool IsLocked()  const { return m_Locked;  }
+  private:
+    static auto GetLayers() -> std::list<Layer>&;
+    inline static std::size_t sCurrentLayerIndex = 0;
 
-        inline void SwitchVisibilityState()  { m_Visible = !m_Visible; }
-        inline void SwitchLockState()        { m_Locked = !m_Locked; }
-
-        inline const std::string& GetName() const { return m_LayerName; }
-
-    private:
-        void DrawCircle(int center_x, int center_y, int radius, bool only_outline);
-        void Fill(int x, int y, Color clicked_color);
-
-        CanvasData m_Canvas;
-
-        bool m_Visible = true, m_Locked = false;
-        int m_Opacity = 255;
-
-        std::string m_LayerName;
-
-        friend class UI;
-        friend class Layers;
-    };
-
-    class Layers
-    {
-    public:
-        static Layer& GetCurrentLayer();
-
-        static void DoCurrentTool();
-        static void MoveUp(int layer_index);
-        static void MoveDown(int layer_index);
-        static void AddLayer();
-        static void EmplaceVertices(std::vector<float>& vertices);
-        static void ResetDataToDefault();
-
-        static Layer& AtIndex(int index);
-
-        static const CanvasData GetDisplayedCanvas();
-        inline static std::size_t GetLayerCount() { return s_Layers.size(); }
-
-    private:
-        inline static std::list<Layer> s_Layers;
-        inline static int s_CurrentLayerIndex = 0;
-
-        friend class UI;
-        friend class Layer;
-    };
-}
+    friend class UI;
+    friend class Layer;
+};
+} // namespace App

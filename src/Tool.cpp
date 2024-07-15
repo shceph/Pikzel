@@ -4,13 +4,13 @@ namespace App
 {
     void Tool::ResetDataToDefault()
     {
-        s_Color1 = { 0.0f, 0.0f, 0.0f, 1.0f };
-        s_Color2 = { 0.0f, 0.0f, 0.0f, 1.0f };
-        s_CurrentColor = &s_Color1;
+        GetColor1() = { 0.0F, 0.0F, 0.0F, 1.0F };
+        GetColor2() = { 0.0F, 0.0F, 0.0F, 1.0F };
+        sCurrentColor = &GetColor1();
 
-        s_CurrentToolType = BRUSH;
+        sCurrentToolType = kBrush;
 
-        s_BrushRadius = 1;
-        s_SelectedColorSlot = COLOR_SLOT_1;
+        sBrushRadius = 1;
+        sSelectedColorSlot = kColorSlot1;
     }
-}
+}  // namespace App
