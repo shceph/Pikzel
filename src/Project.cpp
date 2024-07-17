@@ -5,6 +5,7 @@
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_write.h>
+#include <stb/stb_image_resize2.h>
 
 #include <fstream>
 #include <iostream>
@@ -19,7 +20,7 @@ static auto SaveImageToPNG(const char* filename, int width, int height,
                           width * num_channels) != 0;
 }
 
-void Project::New(int canvas_height, int canvas_width)
+void Project::New(Vec2Int canvas_dims)
 {
     if (sProjectOpened)
     {
@@ -29,11 +30,12 @@ void Project::New(int canvas_height, int canvas_width)
         // if they continue;
     }
 
-    sCanvasHeight = canvas_height;
-    sCanvasWidth = canvas_width;
+    sCanvasWidth = canvas_dims.x;
+    sCanvasHeight = canvas_dims.y;
 
     sProjectOpened = true;
 
+    Tool::SetDataToDefault();
     Layers::AddLayer();
 }
 
@@ -49,7 +51,7 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
     std::vector<unsigned char> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
-    const CanvasData& canvas_displayed = Layers::GetDisplayedCanvas();
+    const CanvasData canvas_displayed = Layers::GetDisplayedCanvas();
 
     for (int i = 0; i < sCanvasHeight; i++)
     {
@@ -143,7 +145,7 @@ void Project::SaveAsProject(const std::string& save_dest)
 void Project::CloseCurrentProject()
 {
     Layers::ResetDataToDefault();
-    Tool::ResetDataToDefault();
+    Tool::SetDataToDefault();
     sProjectOpened = false;
 }
 } // namespace App

@@ -69,7 +69,7 @@ class Tool
         sBrushRadius = radius;
     }
 
-    static void ResetDataToDefault();
+    static void SetDataToDefault();
 
     constexpr static int kColorSlot1 = 1, kColorSlot2 = 2;
 

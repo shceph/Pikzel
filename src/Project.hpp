@@ -1,13 +1,16 @@
 #pragma once
 
+#include <glm/vec2.hpp>
 #include <string>
 
 namespace App
 {
+using Vec2Int = glm::vec<2, int>;
+
 class Project
 {
   public:
-    static void New(int canvas_heigth, int canvas_width);
+    static void New(Vec2Int canvas_dims);
     static void Open(const std::string& project_file_dest);
     static void SaveAsImage(int magnify_factor, const std::string& save_dest);
     static void SaveAsProject(const std::string& save_dest);

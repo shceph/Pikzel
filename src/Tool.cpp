@@ -2,7 +2,7 @@
 
 namespace App
 {
-    void Tool::ResetDataToDefault()
+    void Tool::SetDataToDefault()
     {
         GetColor1() = { 0.0F, 0.0F, 0.0F, 1.0F };
         GetColor2() = { 0.0F, 0.0F, 0.0F, 1.0F };

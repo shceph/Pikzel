@@ -103,7 +103,6 @@ void UI::RenderNoProjectWindow()
     ImGui::Begin("No project window");
 
     if (ImGui::Selectable("New project")) { sRenderNewProjectPopup = true; }
-
     if (ImGui::Selectable("Open a project")) {}
 
     ImGui::End();
@@ -115,6 +114,7 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name)
 {
     ImGui::Begin(window_name);
+    sDrawWindowRendered = true;
 
     // ImGui window size
     float window_width = ImGui::GetContentRegionAvail().x;
@@ -179,6 +179,12 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
     GetCanvasUpperleftCoords().y = upper_left.y;
     GetCanvasBottomRightCoords().x = bottom_right.x;
     GetCanvasBottomRightCoords().y = bottom_right.y;
+}
+
+void UI::Update()
+{
+    sDrawWindowRendered = false;
+    SetVertexBuffUpdateToFalse();
 }
 
 void UI::SetupToolTextures(unsigned int brush_tex_id,
@@ -729,7 +735,7 @@ void UI::RenderNewProjectPopup()
 
         if (ImGui::Button("OK"))
         {
-            Project::New(height, width);
+            Project::New({width, height});
             sRenderNewProjectPopup = false;
             sUpdateVertexBuffer = true;
         }

@@ -8,13 +8,13 @@
 /* #include <GLFW/glfw3.h> */
 /* #include "Gla/Gla.hpp" */
 
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
+#include "Gla/FrameBuffer.hpp"
+#include "Gla/Mesh.hpp"
 #include "Gla/Renderer.hpp"
 #include "Gla/VertexArray.hpp"
 #include "Gla/VertexBuffer.hpp"
-#include "Gla/FrameBuffer.hpp"
-#include "Gla/Mesh.hpp"
+#include <GL/glew.h>
+#include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <string>
@@ -28,10 +28,11 @@
 
 namespace
 {
+#ifndef NDEBUG
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
                               GLenum severity, GLsizei /*length*/,
-                              const GLchar *message, const void * /*userParam*/)
+                              const GLchar* message, const void* /*userParam*/)
 {
     // Convert GLenum source, type, severity to strings for better readability
     std::string source_str = "[Unknown]";
@@ -118,14 +119,18 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
               << "\n  Severity: " << severity_str << "\n  ID: " << errorId
               << "\n  Message: " << message << '\n';
 }
-//void GlfwError(int /*id*/, const char *description)
-/* { */
-/*     std::cout << "Glfw error: " << description << '\n'; */
-/* } */
 
-void HandleEvents(GLFWwindow *window)
+void GlfwError(int err_id, const char* message)
+{
+    std::cerr << "Error id: " << err_id << "\nError message: " << message
+              << '\n';
+}
+#endif
+
+void HandleEvents(GLFWwindow* window)
 {
     glfwWaitEvents();
+    /* glfwPollEvents(); */
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS &&
         App::Project::IsOpened())
@@ -133,20 +138,16 @@ void HandleEvents(GLFWwindow *window)
         App::Layers::DoCurrentTool();
     }
 }
-
-/* bool update_vertex_buffer = true; */
 } // namespace
 
 auto main() -> int
 {
+    if (glfwInit() == 0) { return -1; }
+
+#ifndef NDEBUG
+    glfwSetErrorCallback(&GlfwError);
     std::cout << "C++ standard: " << __cplusplus << '\n';
-
-    if (glfwInit() == 0)
-    {
-        return -1;
-    }
-
-    /* glfwSetErrorCallback(&GlfwError); */
+#endif
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -155,7 +156,7 @@ auto main() -> int
     constexpr int kWindowHeight = 700;
 
     /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow *window = glfwCreateWindow(kWindowWidth, kWindowHeight,
+    GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight,
                                           "PixelCraft", nullptr, nullptr);
 
     if (window == nullptr)
@@ -171,10 +172,7 @@ auto main() -> int
 
     glfwMaximizeWindow(window);
 
-    if (glewInit() != GLEW_OK)
-    {
-        std::cout << "Glew init error\n";
-    }
+    if (glewInit() != GLEW_OK) { std::cout << "Glew init error\n"; }
 
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
 
@@ -260,15 +258,29 @@ auto main() -> int
                         0.0F, static_cast<float>(App::Project::CanvasWidth()),
                         0.0F, static_cast<float>(App::Project::CanvasHeight()));
                     shader.SetUniformMat4f("u_ViewProjection", proj);
-                    App::UI::SetVertexBuffUpdateToTrue(); // Setting up the
-                                                          // vertex vector fot
-                                                          // the first time
+                    // Setting up the vertex vector for the first time
+                    App::UI::SetVertexBuffUpdateToTrue();
                 }
             }
 
             App::UI::RenderAndEndFrame();
 
-            if (App::Project::IsOpened())
+            if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
+		  {
+			 App::Layers::DrawToTempLayer();
+			 App::UI::SetVertexBuffUpdateToTrue();
+		  }
+
+            if (App::UI::ShouldUpdateVertexBuffer())
+            {
+                mesh.Bind();
+                App::Layers::EmplaceVertices(vertices);
+                vbo.UpdateSizeIfNeeded(vertices.size() * sizeof(float));
+                vbo.UpdateData(vertices.data(),
+                               vertices.size() * sizeof(float));
+            }
+
+            if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
             {
                 ImVec2 draw_window_dims = App::UI::GetDrawWinDimensions();
                 imgui_window_fb.Bind();
@@ -276,23 +288,13 @@ auto main() -> int
                                         static_cast<int>(draw_window_dims.y));
                 mesh.Bind();
 
-                if (App::UI::ShouldUpdateVertexBuffer())
-                {
-                    App::Layers::EmplaceVertices(vertices);
-                    vbo.UpdateSizeIfNeeded(vertices.size() * sizeof(float));
-                    vbo.UpdateData(vertices.data(),
-                                   vertices.size() * sizeof(float));
-
-                    /* update_vertex_buffer = false; */
-                }
-
                 renderer.Clear();
                 renderer.DrawArrays(Gla::TRIANGLES, vertices.size() / 6);
 
                 Gla::FrameBuffer::BindToDefaultFB();
             }
 
-            App::UI::SetVertexBuffUpdateToFalse();
+            App::UI::Update();
 
             /* Swap front and back buffers */
             glfwSwapBuffers(window);

@@ -18,6 +18,7 @@ class UI
     static void RenderNoProjectWindow();
     static void RenderDrawWindow(unsigned int framebuffer_texture_id,
                                  const char* window_name);
+    static void Update();
 
     static void SetupToolTextures(unsigned int brush_tex_id,
                                   unsigned int eraser_tex_id,
@@ -30,6 +31,8 @@ class UI
 
     static auto ShouldUpdateVertexBuffer() -> bool;
     static auto ShouldDoTool() -> bool;
+
+    static auto IsDrawWindowRendered() -> bool { return sDrawWindowRendered; }
 
     inline static auto GetDrawWinUpperleftCoords() -> ImVec2&
     {
@@ -109,12 +112,13 @@ class UI
 
     // Says whether the vertex buffer should be updated, or the canvas state, in
     // other words
-    inline static bool sUpdateVertexBuffer = true;
+    inline static bool sUpdateVertexBuffer = false;
     inline static bool sShouldDoTool = false;
     inline static bool sRenderSaveAsImgPopup = false;
     inline static bool sRenderSaveAsPrjPopup = false;
     inline static bool sRenderSaveErrorPopup = false;
     inline static bool sRenderNewProjectPopup = false;
+    inline static bool sDrawWindowRendered = false;
 
     friend void Project::SaveAsImage(int, const std::string&);
 };

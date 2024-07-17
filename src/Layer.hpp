@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Project.hpp"
+
 #include <imgui.h>
 #include <list>
 #include <string>
@@ -28,10 +30,11 @@ using CanvasData = std::vector<std::vector<Color>>;
 class Layer
 {
   public:
-    Layer();
+    Layer() noexcept;
     void DoCurrentTool();
     // Places the vertices containing the canvas data for my shader program
-    void EmplaceVertices(std::vector<float>& vertices);
+    void EmplaceVertices(std::vector<float>& vertices,
+                         bool use_color_alpha = false);
 
     [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
     [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
@@ -44,8 +47,11 @@ class Layer
         return mLayerName;
     }
 
+    static auto CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool;
+
   private:
-    void DrawCircle(int center_x, int center_y, int radius, bool only_outline);
+    void DrawCircle(Vec2Int center, int radius, bool only_outline,
+                    Color delete_color = {0.0F, 0.0F, 0.0F, 1.1F});
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;
@@ -70,6 +76,7 @@ class Layers
     static void AddLayer();
     static void EmplaceVertices(std::vector<float>& vertices);
     static void ResetDataToDefault();
+    static void DrawToTempLayer();
 
     static auto AtIndex(std::size_t index) -> Layer&;
 
@@ -81,6 +88,11 @@ class Layers
 
   private:
     static auto GetLayers() -> std::list<Layer>&;
+    static auto GetTempLayer() -> Layer&
+    {
+        static Layer tmp_lay;
+        return tmp_lay;
+    }
     inline static std::size_t sCurrentLayerIndex = 0;
 
     friend class UI;

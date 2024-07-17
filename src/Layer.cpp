@@ -1,10 +1,10 @@
 #include "Layer.hpp"
 
+
 #include "Application.hpp"
 #include "Definitions.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
-#include <cmath>
 
 #include <algorithm>
 #include <array>
@@ -12,6 +12,7 @@
 #include <queue>
 #include <ranges>
 #include <vector>
+#include <cmath>
 
 // Normalize alpha from range [0, 255] to range [0.0, 1.0]
 static auto NormalizeAlpha(int alpha) -> float
@@ -82,7 +83,7 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
     return {color.x, color.y, color.z, color.w};
 }
 
-Layer::Layer()
+Layer::Layer() noexcept
     : mCanvas(Project::CanvasHeight(),
               std::vector<Color>(Project::CanvasWidth())),
       mLayerName("Layer " + std::to_string(Layers::GetLayerCount() + 1))
@@ -94,81 +95,51 @@ void Layer::DoCurrentTool()
     // We also don't want to edit the canvas if it isn't visible
     if (mLocked || !mVisible) { return; }
 
-    double cursor_x = NAN;
-    double cursor_y = NAN;
-    glfwGetCursorPos(UI::GetWindowPointer(), &cursor_x,
-                     &cursor_y); // Cursor position relative to the Glfw window
-    int window_x = 0;
-    int window_y = 0;
-    glfwGetWindowPos(
-        UI::GetWindowPointer(), &window_x,
-        &window_y);       // Position of the window relative to the screen
-    cursor_x += window_x; // Getting cursor position relative to the screen
-    cursor_y += window_y;
+    Vec2Int canvas;
+    if (!CanvasCoordsFromCursorPos(canvas)) { return; }
 
-    ImVec2 canvas_upperleft = UI::GetCanvasUpperleftCoords();
-    ImVec2 canvas_bottomtright = UI::GetCanvasBottomRightCoords();
+    UI::SetVertexBuffUpdateToTrue();
 
-    if (cursor_x > canvas_upperleft.x && cursor_x < canvas_bottomtright.x &&
-        cursor_y > canvas_upperleft.y && cursor_y < canvas_bottomtright.y)
+    if (Tool::GetToolType() == kColorPicker)
     {
-        int canvas_x =
-            static_cast<int>((cursor_x - canvas_upperleft.x) /
-                             ((canvas_bottomtright.x - canvas_upperleft.x) /
-                              static_cast<float>(Project::CanvasWidth())));
-        int canvas_y =
-            static_cast<int>((cursor_y - canvas_upperleft.y) /
-                             ((canvas_bottomtright.y - canvas_upperleft.y) /
-                              static_cast<float>(Project::CanvasHeight())));
+        auto displayed_canvas = Layers::GetDisplayedCanvas();
+        const Color& picked_color = displayed_canvas[canvas.y][canvas.x];
 
-        if (canvas_x < 0 || canvas_x >= Project::CanvasWidth() ||
-            canvas_y < 0 || canvas_y >= Project::CanvasHeight())
-        {
+        if (picked_color.a > 1.0F || picked_color.a <= 0.0025F)
+        { // If alpha is greater than 1.0f nothing is drawn
+            // there and we don't want to pick a nonexistent
+            // color
             return;
         }
 
-        UI::SetVertexBuffUpdateToTrue();
+        Tool::sCurrentColor->x = picked_color.r;
+        Tool::sCurrentColor->y = picked_color.g;
+        Tool::sCurrentColor->z = picked_color.b;
 
-        if (Tool::GetToolType() == kColorPicker)
-        {
-            auto displayed_canvas = Layers::GetDisplayedCanvas();
-            const Color& picked_color = displayed_canvas[canvas_y][canvas_x];
-
-            if (picked_color.a > 1.0F || picked_color.a <= 0.0025F)
-            { // If alpha is greater than 1.0f nothing is drawn
-                // there and we don't want to pick a nonexistent
-                // color
-                return;
-            }
-
-            Tool::sCurrentColor->x = picked_color.r;
-            Tool::sCurrentColor->y = picked_color.g;
-            Tool::sCurrentColor->z = picked_color.b;
-
-            return;
-        }
-
-        if (Tool::GetToolType() == kBucket)
-        {
-            const Color& clicked_color = mCanvas[canvas_y][canvas_x];
-
-            Fill(canvas_x, canvas_y, clicked_color);
-            return;
-        }
-
-        if (Tool::GetBrushRadius() == 1)
-        {
-            if (Tool::GetToolType() == ToolType::kEraser)
-            { // Alpha greater than 1.0f means nothing gets drawn
-                mCanvas[canvas_y][canvas_x] = ImVec4{0.0F, 0.0F, 0.0F, 1.1F};
-            }
-            else { mCanvas[canvas_y][canvas_x] = Tool::GetColorRef(); }
-        }
-        else { DrawCircle(canvas_x, canvas_y, Tool::GetBrushRadius(), false); }
+        return;
     }
+
+    if (Tool::GetToolType() == kBucket)
+    {
+        const Color& clicked_color = mCanvas[canvas.y][canvas.x];
+
+        Fill(canvas.x, canvas.y, clicked_color);
+        return;
+    }
+
+    if (Tool::GetBrushRadius() == 1)
+    {
+        if (Tool::GetToolType() == ToolType::kEraser)
+        { // Alpha greater than 1.0f means nothing gets drawn
+            mCanvas[canvas.y][canvas.x] = ImVec4{0.0F, 0.0F, 0.0F, 1.1F};
+        }
+        else { mCanvas[canvas.y][canvas.x] = Tool::GetColorRef(); }
+    }
+    else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), false); }
 }
 
-void Layer::EmplaceVertices(std::vector<float>& vertices)
+void Layer::EmplaceVertices(std::vector<float>& vertices,
+                            bool use_color_alpha /*= false*/)
 {
     if (!mVisible) { return; }
 
@@ -178,8 +149,14 @@ void Layer::EmplaceVertices(std::vector<float>& vertices)
         {
             /* first triangle */
 
-            float alpha_val =
-                mCanvas[i][j].a > 1.0F ? 0.0F : NormalizeAlpha(mOpacity);
+            float alpha_val = NAN;
+
+            if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
+            else
+            {
+                alpha_val =
+                    mCanvas[i][j].a > 1.0F ? 0.0F : NormalizeAlpha(mOpacity);
+            }
 
             // upper left corner
             vertices.push_back(static_cast<float>(j));
@@ -235,15 +212,17 @@ void Layer::EmplaceVertices(std::vector<float>& vertices)
     }
 }
 
-void Layer::DrawCircle(int center_x, int center_y, int radius,
-                       bool only_outline)
+void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
+                       Color delete_color /*= {0.0F, 0.0F, 0.0F, 1.0F}*/)
 {
     if (radius < 1) { return; }
 
-    /* constexpr Color kNoColor{0.0F, 0.0F, 0.0F, 1.1F}; */
-    constexpr Color kDeleteColor{0.0F, 0.0F, 0.0F, 1.1F};
+    CanvasData& canvas = mCanvas;
+    Vec2Int dims = {Project::CanvasWidth(), Project::CanvasHeight()};
 
-    Color draw_color = kDeleteColor;
+    /* constexpr Color kDeleteColor{0.0F, 0.0F, 0.0F, 1.1F}; */
+
+    Color draw_color = delete_color;
 
     if (Tool::GetToolType() != ToolType::kEraser)
     {
@@ -251,15 +230,15 @@ void Layer::DrawCircle(int center_x, int center_y, int radius,
     }
 
     // Circle equation
-    for (int x_coord = std::max(0, center_x - radius + 1);
-         x_coord < std::min(Project::CanvasWidth(), center_x + radius);
+    for (int x_coord = std::max(0, center.x - radius + 1);
+         x_coord < std::min(Project::CanvasWidth(), center.x + radius);
          x_coord++)
     {
-        int x_relative = x_coord - center_x;
+        int x_relative = x_coord - center.x;
         double y1_coord = std::sqrt(radius * radius - x_relative * x_relative);
         double y2_coord = -y1_coord;
-        y1_coord += center_y;
-        y2_coord += center_y;
+        y1_coord += center.y;
+        y2_coord += center.y;
 
         // If the number is round floor and ceil don't change anything
         if (y1_coord == static_cast<int>(y1_coord)) { y1_coord--; }
@@ -280,11 +259,11 @@ void Layer::DrawCircle(int center_x, int center_y, int radius,
             y2_ceil = Project::CanvasHeight() - 1;
         }
 
-        mCanvas[y1_floor][x_coord] = draw_color;
-        mCanvas[y2_ceil][x_coord] = draw_color;
+        canvas[y1_floor][x_coord] = draw_color;
+        canvas[y2_ceil][x_coord] = draw_color;
 
-        if (only_outline && x_coord != std::max(0, center_x - radius + 1) &&
-            x_coord != std::min(Project::CanvasWidth(), center_x + radius) - 1)
+        if (only_outline && x_coord != std::max(0, center.x - radius + 1) &&
+            x_coord != std::min(Project::CanvasWidth(), center.x + radius) - 1)
         {
             continue;
         }
@@ -292,7 +271,7 @@ void Layer::DrawCircle(int center_x, int center_y, int radius,
         for (int y_coord = static_cast<int>(y2_ceil) + 1; y_coord < y1_floor;
              y_coord++)
         {
-            mCanvas[y_coord][x_coord] = draw_color;
+            canvas[y_coord][x_coord] = draw_color;
         }
     }
 }
@@ -342,9 +321,45 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
     }
 }
 
+auto Layer::CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool
+{
+    double cursor_x = NAN;
+    double cursor_y = NAN;
+    // Cursor position relative to the Glfw window
+    glfwGetCursorPos(UI::GetWindowPointer(), &cursor_x, &cursor_y);
+
+    int window_x = 0;
+    int window_y = 0;
+    // Position of the window relative to the screen
+    glfwGetWindowPos(UI::GetWindowPointer(), &window_x, &window_y);
+
+    cursor_x += window_x; // Getting cursor position relative to the screen
+    cursor_y += window_y;
+
+    ImVec2 canvas_upperleft = UI::GetCanvasUpperleftCoords();
+    ImVec2 canvas_bottomtright = UI::GetCanvasBottomRightCoords();
+
+    if (cursor_x <= canvas_upperleft.x || cursor_x >= canvas_bottomtright.x ||
+        cursor_y <= canvas_upperleft.y || cursor_y >= canvas_bottomtright.y)
+    {
+        return false;
+    }
+
+    coords.x = static_cast<int>((cursor_x - canvas_upperleft.x) /
+                                ((canvas_bottomtright.x - canvas_upperleft.x) /
+                                 static_cast<float>(Project::CanvasWidth())));
+    coords.y = static_cast<int>((cursor_y - canvas_upperleft.y) /
+                                ((canvas_bottomtright.y - canvas_upperleft.y) /
+                                 static_cast<float>(Project::CanvasHeight())));
+
+    return coords.x >= 0 && coords.x < Project::CanvasWidth() &&
+           coords.y >= 0 && coords.y < Project::CanvasHeight();
+}
+
 auto Layers::GetCurrentLayer() -> Layer&
 {
-    MY_ASSERT(sCurrentLayerIndex >= 0 && sCurrentLayerIndex < GetLayers().size());
+    MY_ASSERT(sCurrentLayerIndex >= 0 &&
+              sCurrentLayerIndex < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, sCurrentLayerIndex);
@@ -472,6 +487,8 @@ void Layers::EmplaceVertices(std::vector<float>& vertices)
     {
         layer.EmplaceVertices(vertices);
     }
+
+    GetTempLayer().EmplaceVertices(vertices, true);
 }
 
 auto Layers::AtIndex(std::size_t index) -> Layer&
@@ -488,6 +505,30 @@ void Layers::ResetDataToDefault()
 {
     GetLayers().clear();
     sCurrentLayerIndex = 0;
+}
+
+void Layers::DrawToTempLayer()
+{
+    constexpr Color kNoColor = {0.0F, 0.0F, 0.0F, 0.0F};
+    constexpr Color kDeleteColor = {1.0F, 1.0F, 1.0F, 0.4F};
+
+    auto& tmp_layer = GetTempLayer();
+
+    for (std::size_t i = 0;
+         i < static_cast<std::size_t>(Project::CanvasHeight()); i++)
+    {
+        for (std::size_t j = 0;
+             j < static_cast<std::size_t>(Project::CanvasWidth()); j++)
+        {
+            tmp_layer.mCanvas[i][j] = kNoColor;
+        }
+    }
+
+    Vec2Int canvas_coords;
+    if (!Layer::CanvasCoordsFromCursorPos(canvas_coords)) { return; }
+
+    tmp_layer.DrawCircle(canvas_coords, Tool::GetBrushRadius(), false,
+                         kDeleteColor);
 }
 
 auto Layers::GetDisplayedCanvas() -> CanvasData
