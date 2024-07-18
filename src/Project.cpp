@@ -4,8 +4,8 @@
 #include "Tool.hpp"
 
 #include <stb/stb_image.h>
-#include <stb/stb_image_write.h>
 #include <stb/stb_image_resize2.h>
+#include <stb/stb_image_write.h>
 
 #include <fstream>
 #include <iostream>
@@ -57,33 +57,33 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
     {
         for (int j = 0; j < sCanvasWidth; j++)
         {
-            if (canvas_displayed[i][j].a > 1.0F)
-            {
-                for (int k = 0; k < magnify_factor; k++)
-                {
-                    for (int l = 0; l < magnify_factor; l++)
-                    {
-                        image_data[(i * magnify_factor + k) * arr_width +
-                                   j * magnify_factor * kChannelCount +
-                                   l * kChannelCount + 0] =
-                            static_cast<unsigned char>(0);
-                        image_data[(i * magnify_factor + k) * arr_width +
-                                   j * magnify_factor * kChannelCount +
-                                   l * kChannelCount + 1] =
-                            static_cast<unsigned char>(0);
-                        image_data[(i * magnify_factor + k) * arr_width +
-                                   j * magnify_factor * kChannelCount +
-                                   l * kChannelCount + 2] =
-                            static_cast<unsigned char>(0);
-                        image_data[(i * magnify_factor + k) * arr_width +
-                                   j * magnify_factor * kChannelCount +
-                                   l * kChannelCount + 3] =
-                            static_cast<unsigned char>(0);
-                    }
-                }
+            /* if (canvas_displayed[i][j].a > 1.0F) */
+            /* { */
+            /*     for (int k = 0; k < magnify_factor; k++) */
+            /*     { */
+            /*         for (int l = 0; l < magnify_factor; l++) */
+            /*         { */
+            /*             image_data[(i * magnify_factor + k) * arr_width + */
+            /*                        j * magnify_factor * kChannelCount + */
+            /*                        l * kChannelCount + 0] = */
+            /*                 static_cast<unsigned char>(0); */
+            /*             image_data[(i * magnify_factor + k) * arr_width + */
+            /*                        j * magnify_factor * kChannelCount + */
+            /*                        l * kChannelCount + 1] = */
+            /*                 static_cast<unsigned char>(0); */
+            /*             image_data[(i * magnify_factor + k) * arr_width + */
+            /*                        j * magnify_factor * kChannelCount + */
+            /*                        l * kChannelCount + 2] = */
+            /*                 static_cast<unsigned char>(0); */
+            /*             image_data[(i * magnify_factor + k) * arr_width + */
+            /*                        j * magnify_factor * kChannelCount + */
+            /*                        l * kChannelCount + 3] = */
+            /*                 static_cast<unsigned char>(0); */
+            /*         } */
+            /*     } */
 
-                continue;
-            }
+            /*     continue; */
+            /* } */
 
             for (int k = 0; k < magnify_factor; k++)
             {
@@ -92,23 +92,19 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
                     image_data[(i * magnify_factor + k) * arr_width +
                                j * magnify_factor * kChannelCount +
                                l * kChannelCount + 0] =
-                        static_cast<unsigned char>(canvas_displayed[i][j].r *
-                                                   255);
+                        canvas_displayed[i][j].r;
                     image_data[(i * magnify_factor + k) * arr_width +
                                j * magnify_factor * kChannelCount +
                                l * kChannelCount + 1] =
-                        static_cast<unsigned char>(canvas_displayed[i][j].g *
-                                                   255);
+                        canvas_displayed[i][j].g;
                     image_data[(i * magnify_factor + k) * arr_width +
                                j * magnify_factor * kChannelCount +
                                l * kChannelCount + 2] =
-                        static_cast<unsigned char>(canvas_displayed[i][j].b *
-                                                   255);
+                        canvas_displayed[i][j].b;
                     image_data[(i * magnify_factor + k) * arr_width +
                                j * magnify_factor * kChannelCount +
                                l * kChannelCount + 3] =
-                        static_cast<unsigned char>(canvas_displayed[i][j].a *
-                                                   255);
+                        canvas_displayed[i][j].a;
                 }
             }
         }

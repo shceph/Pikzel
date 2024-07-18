@@ -14,8 +14,7 @@ constexpr int kCanvasWidth = 32;
 
 struct Color
 {
-    float r = 0.0F, g = 0.0F, b = 0.0F;
-    float a = 1.1F; // Alpha value greater than 1.0f means there's no color
+    uint8_t r = 0, g = 0, b = 0, a = 0;
 
     auto operator=(const ImVec4& color) -> Color&;
     auto operator==(const Color& other) const -> bool;
@@ -23,6 +22,12 @@ struct Color
 
     static auto BlendColor(Color src_color, Color dst_color) -> Color;
     static auto FromImVec4(ImVec4 color) -> Color;
+};
+
+struct Vertex
+{
+    float pos_x{}, pos_y{};
+    Color color;
 };
 
 using CanvasData = std::vector<std::vector<Color>>;
@@ -33,7 +38,7 @@ class Layer
     Layer() noexcept;
     void DoCurrentTool();
     // Places the vertices containing the canvas data for my shader program
-    void EmplaceVertices(std::vector<float>& vertices,
+    void EmplaceVertices(std::vector<Vertex>& vertices,
                          bool use_color_alpha = false);
 
     [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
@@ -51,7 +56,7 @@ class Layer
 
   private:
     void DrawCircle(Vec2Int center, int radius, bool only_outline,
-                    Color delete_color = {0.0F, 0.0F, 0.0F, 1.1F});
+                    Color delete_color = {0, 0, 0, 0});
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;
@@ -74,7 +79,7 @@ class Layers
     static void MoveUp(std::size_t layer_index);
     static void MoveDown(std::size_t layer_index);
     static void AddLayer();
-    static void EmplaceVertices(std::vector<float>& vertices);
+    static void EmplaceVertices(std::vector<Vertex>& vertices);
     static void ResetDataToDefault();
     static void DrawToTempLayer();
 
@@ -87,7 +92,11 @@ class Layers
     }
 
   private:
-    static auto GetLayers() -> std::list<Layer>&;
+    static auto GetLayers() -> std::list<Layer>&
+    {
+	   static std::list<Layer> layers;
+	   return layers;
+    }
     static auto GetTempLayer() -> Layer&
     {
         static Layer tmp_lay;

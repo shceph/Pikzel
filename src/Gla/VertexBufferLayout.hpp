@@ -20,9 +20,10 @@ namespace Gla
                 case GL_FLOAT:          return sizeof(GLfloat);
                 case GL_UNSIGNED_INT:   return sizeof(GLuint);
                 case GL_BYTE:           return sizeof(GLbyte);
+			 case GL_UNSIGNED_BYTE:  return sizeof(GLubyte);
+			 default:				GLAssert(false);
             }
             
-            GLAssert(false);
             return 0;
         }
     };
@@ -34,7 +35,7 @@ namespace Gla
             : m_Stride(0) {}
 
         template <typename T>
-        void Push(unsigned int count);
+        void Push(unsigned int count, unsigned int normalized = GL_FALSE);
 
         inline const std::vector<VertexBufferElement> GetElements() const { return m_Elements; };
         inline unsigned int GetStride() const { return m_Stride; };

@@ -1,6 +1,5 @@
 #include "Layer.hpp"
 
-
 #include "Application.hpp"
 #include "Definitions.hpp"
 #include "Project.hpp"
@@ -8,79 +7,80 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <list>
 #include <queue>
 #include <ranges>
 #include <vector>
-#include <cmath>
 
-// Normalize alpha from range [0, 255] to range [0.0, 1.0]
-static auto NormalizeAlpha(int alpha) -> float
-{
-    return static_cast<float>(alpha) / 255.0F;
-}
+/* // Normalize alpha from range [0, 255] to range [0.0, 1.0] */
+/* static auto NormalizeAlpha(int alpha) -> float */
+/* { */
+/*     return static_cast<float>(alpha) / 255.0F; */
+/* } */
 
 namespace App
 {
 auto Color::operator=(const ImVec4& color) -> Color&
 {
-    r = color.x;
-    g = color.y;
-    b = color.z;
-    a = color.w;
+    r = static_cast<uint8_t>(color.x * 255);
+    g = static_cast<uint8_t>(color.y * 255);
+    b = static_cast<uint8_t>(color.z * 255);
+    a = static_cast<uint8_t>(color.w * 255);
     return *this;
 }
 
 auto Color::operator==(const Color& other) const -> bool
 {
-    constexpr float kTolerance = 0.0025F;
-
-    return std::abs(r - other.r) <= kTolerance &&
-           std::abs(g - other.g) <= kTolerance &&
-           std::abs(b - other.b) <= kTolerance &&
-           std::abs(a - other.a) <= kTolerance;
+    return other.r == r && other.g == g && other.b == b && other.a == a;
 }
+/* auto Color::operator==(const Color& other) const -> bool */
+/* { */
+/*     constexpr float kTolerance = 0.0025F; */
+
+/*     return std::abs(r - other.r) <= kTolerance && */
+/*            std::abs(g - other.g) <= kTolerance && */
+/*            std::abs(b - other.b) <= kTolerance && */
+/*            std::abs(a - other.a) <= kTolerance; */
+/* } */
 
 auto Color::operator==(const ImVec4& other) const -> bool
 {
     constexpr float kTolerance = 0.0025F;
 
-    return std::abs(r - other.x) <= kTolerance &&
-           std::abs(g - other.y) <= kTolerance &&
-           std::abs(b - other.z) <= kTolerance &&
-           std::abs(a - other.w) <= kTolerance;
+    return std::abs(static_cast<float>(r) / 0xff - other.x) <= kTolerance &&
+           std::abs(static_cast<float>(g) / 0xff - other.y) <= kTolerance &&
+           std::abs(static_cast<float>(b) / 0xff - other.z) <= kTolerance &&
+           std::abs(static_cast<float>(a) / 0xff - other.w) <= kTolerance;
 }
 
 auto Color::BlendColor(Color src_color, Color dst_color) -> Color
 {
-    if (src_color.a > 1.0F)
-    { // Remember that alpha > 1.0f means there's no color. If there is
-        // no source color, just return the dest color
-        return dst_color;
-    }
+    if (src_color.a == 0xff) { return dst_color; }
 
     Color result_color;
 
-    // Calculate resulting alpha
-    result_color.a = 1.0F - (1.0F - dst_color.a) * (1.0F - src_color.a);
+    result_color.a = 0xff - (0xff - dst_color.a) * (0xff - src_color.a);
 
-    // Blend RGB channels
     result_color.r =
         (dst_color.r * dst_color.a / result_color.a) +
-        (src_color.r * src_color.a * (1.0F - dst_color.a) / result_color.a);
+        (src_color.r * src_color.a * (0xff - dst_color.a) / result_color.a);
     result_color.g =
         (dst_color.g * dst_color.a / result_color.a) +
-        (src_color.g * src_color.a * (1.0F - dst_color.a) / result_color.a);
+        (src_color.g * src_color.a * (0xff - dst_color.a) / result_color.a);
     result_color.b =
         (dst_color.b * dst_color.a / result_color.a) +
-        (src_color.b * src_color.a * (1.0F - dst_color.a) / result_color.a);
+        (src_color.b * src_color.a * (0xff - dst_color.a) / result_color.a);
 
     return result_color;
 }
 
 auto Color::FromImVec4(const ImVec4 color) -> Color
 {
-    return {color.x, color.y, color.z, color.w};
+    return {static_cast<uint8_t>(color.x * 0xff),
+            static_cast<uint8_t>(color.y * 0xff),
+            static_cast<uint8_t>(color.z * 0xff),
+            static_cast<uint8_t>(color.w * 0xff)};
 }
 
 Layer::Layer() noexcept
@@ -105,16 +105,11 @@ void Layer::DoCurrentTool()
         auto displayed_canvas = Layers::GetDisplayedCanvas();
         const Color& picked_color = displayed_canvas[canvas.y][canvas.x];
 
-        if (picked_color.a > 1.0F || picked_color.a <= 0.0025F)
-        { // If alpha is greater than 1.0f nothing is drawn
-            // there and we don't want to pick a nonexistent
-            // color
-            return;
-        }
+        if (picked_color.a == 0) { return; }
 
-        Tool::sCurrentColor->x = picked_color.r;
-        Tool::sCurrentColor->y = picked_color.g;
-        Tool::sCurrentColor->z = picked_color.b;
+        Tool::sCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
+        Tool::sCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
+        Tool::sCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
 
         return;
     }
@@ -130,84 +125,52 @@ void Layer::DoCurrentTool()
     if (Tool::GetBrushRadius() == 1)
     {
         if (Tool::GetToolType() == ToolType::kEraser)
-        { // Alpha greater than 1.0f means nothing gets drawn
-            mCanvas[canvas.y][canvas.x] = ImVec4{0.0F, 0.0F, 0.0F, 1.1F};
+        {
+            mCanvas[canvas.y][canvas.x] = Color{0, 0, 0, 0};
         }
         else { mCanvas[canvas.y][canvas.x] = Tool::GetColorRef(); }
     }
     else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), false); }
 }
 
-void Layer::EmplaceVertices(std::vector<float>& vertices,
+void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
                             bool use_color_alpha /*= false*/)
 {
-    if (!mVisible) { return; }
+    if (!mVisible || mOpacity == 0) { return; }
 
     for (int i = 0; i < Project::CanvasHeight(); i++)
     {
         for (int j = 0; j < Project::CanvasWidth(); j++)
         {
-            /* first triangle */
+            if (mCanvas[i][j].a == 0) { continue; }
 
-            float alpha_val = NAN;
-
+            uint8_t alpha_val = 0;
             if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
-            else
-            {
-                alpha_val =
-                    mCanvas[i][j].a > 1.0F ? 0.0F : NormalizeAlpha(mOpacity);
-            }
+            else { alpha_val = mOpacity; }
 
+            Color color_used = mCanvas[i][j];
+            color_used.a = alpha_val;
+
+            /* first triangle */
             // upper left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(
-                mCanvas[i][j].r); // Color is a part of the vertex
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
-
+            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
+                                  color_used);
             // upper right corner
-            vertices.push_back(static_cast<float>(j) + 1.0F);
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(mCanvas[i][j].r);
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
-
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i), color_used);
             // bottom left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i) + 1.0F);
-            vertices.push_back(mCanvas[i][j].r);
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
-
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 1, color_used);
             /* second triangle */
-
             // upper right corner
-            vertices.push_back(static_cast<float>(j) + 1.0F);
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(mCanvas[i][j].r);
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
-
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i), color_used);
             // bottom right corner
-            vertices.push_back(static_cast<float>(j) + 1.0F);
-            vertices.push_back(static_cast<float>(i) + 1.0F);
-            vertices.push_back(mCanvas[i][j].r);
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
-
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i) + 1, color_used);
             // bottom left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i) + 1.0F);
-            vertices.push_back(mCanvas[i][j].r);
-            vertices.push_back(mCanvas[i][j].g);
-            vertices.push_back(mCanvas[i][j].b);
-            vertices.push_back(alpha_val);
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 1, color_used);
         }
     }
 }
@@ -217,16 +180,14 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
 {
     if (radius < 1) { return; }
 
-    CanvasData& canvas = mCanvas;
     Vec2Int dims = {Project::CanvasWidth(), Project::CanvasHeight()};
-
-    /* constexpr Color kDeleteColor{0.0F, 0.0F, 0.0F, 1.1F}; */
 
     Color draw_color = delete_color;
 
     if (Tool::GetToolType() != ToolType::kEraser)
     {
         draw_color = Tool::GetColorRef();
+        draw_color.a = 0xff;
     }
 
     // Circle equation
@@ -259,8 +220,8 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
             y2_ceil = Project::CanvasHeight() - 1;
         }
 
-        canvas[y1_floor][x_coord] = draw_color;
-        canvas[y2_ceil][x_coord] = draw_color;
+        mCanvas[y1_floor][x_coord] = draw_color;
+        mCanvas[y2_ceil][x_coord] = draw_color;
 
         if (only_outline && x_coord != std::max(0, center.x - radius + 1) &&
             x_coord != std::min(Project::CanvasWidth(), center.x + radius) - 1)
@@ -271,7 +232,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
         for (int y_coord = static_cast<int>(y2_ceil) + 1; y_coord < y1_floor;
              y_coord++)
         {
-            canvas[y_coord][x_coord] = draw_color;
+            mCanvas[y_coord][x_coord] = draw_color;
         }
     }
 }
@@ -416,13 +377,15 @@ void Layers::MoveDown(std::size_t layer_index)
     else if (sCurrentLayerIndex == layer_index + 1) { sCurrentLayerIndex--; }
 }
 
-void Layers::EmplaceVertices(std::vector<float>& vertices)
+void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
 {
     vertices.clear();
 
-    constexpr std::array<Color, 2> kBgColors = {
-        Color{0.514F, 0.514F, 0.514F, 1.0F},
-        Color{0.788F, 0.788F, 0.788F, 1.0F}};
+    constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
+                                                Color{201, 201, 201, 255}};
+
+    /* Color{0.514F, 0.514F, 0.514F, 1.0F}, */
+    /* Color{0.788F, 0.788F, 0.788F, 1.0F}}; */
 
     /* Background vertices */
     for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
@@ -430,56 +393,30 @@ void Layers::EmplaceVertices(std::vector<float>& vertices)
         for (int j = 0; j < Project::CanvasWidth() + 6; j += 6)
         {
             /* first triangle */
-
             // upper left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
-
+            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
             // upper right corner
-            vertices.push_back(static_cast<float>(j) + 6.0F);
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
-
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
             // bottom left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i) + 6.0F);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
-
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
             /* second triangle */
-
             // upper right corner
-            vertices.push_back(static_cast<float>(j) + 6.0F);
-            vertices.push_back(static_cast<float>(i));
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
-
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
             // bottom right corner
-            vertices.push_back(static_cast<float>(j) + 6.0F);
-            vertices.push_back(static_cast<float>(i) + 6.0F);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
-
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
             // bottom left corner
-            vertices.push_back(static_cast<float>(j));
-            vertices.push_back(static_cast<float>(i) + 6.0F);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).r);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).g);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).b);
-            vertices.push_back(kBgColors.at(((i + j) / 6) % 2).a);
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
         }
     }
 
@@ -509,8 +446,15 @@ void Layers::ResetDataToDefault()
 
 void Layers::DrawToTempLayer()
 {
-    constexpr Color kNoColor = {0.0F, 0.0F, 0.0F, 0.0F};
-    constexpr Color kDeleteColor = {1.0F, 1.0F, 1.0F, 0.4F};
+    constexpr Color kNoColor = {0, 0, 0, 0};
+    constexpr Color kDeleteColor = {255, 255, 255, 110};
+
+    auto curr_tool = Tool::GetToolType();
+
+    if (curr_tool != ToolType::kBrush && curr_tool != ToolType::kEraser)
+    {
+        return;
+    }
 
     auto& tmp_layer = GetTempLayer();
 
@@ -546,26 +490,13 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
                     layer_traversed.mCanvas[i][j].r,
                     layer_traversed.mCanvas[i][j].g,
                     layer_traversed.mCanvas[i][j].b,
-                    static_cast<float>(layer_traversed.mOpacity) / 255.0F};
+                    static_cast<uint8_t>(layer_traversed.mOpacity)};
 
-                // Alpha greater than 1.0f means there's no color
-                if (layer_traversed.mCanvas[i][j].a > 1.0F)
-                {
-                    dst_color.a = 0.0F;
-                }
-
-                displayed_canvas[i][j] =
                     Color::BlendColor(displayed_canvas[i][j], dst_color);
             }
         }
     }
 
     return displayed_canvas;
-}
-
-auto Layers::GetLayers() -> std::list<Layer>&
-{
-    static std::list<Layer> layers;
-    return layers;
 }
 } // namespace App

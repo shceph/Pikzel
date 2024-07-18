@@ -193,7 +193,7 @@ auto main() -> int
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
 
-        std::vector<float> vertices;
+        std::vector<App::Vertex> vertices;
 
         Gla::FrameBuffer imgui_window_fb(kWindowWidth, kWindowHeight);
         Gla::FrameBuffer::BindToDefaultFB();
@@ -230,7 +230,7 @@ auto main() -> int
         Gla::VertexBuffer vbo(nullptr, 0);
         Gla::VertexBufferLayout layout;
         layout.Push<float>(2);
-        layout.Push<float>(4);
+        layout.Push<uint8_t>(4, GL_TRUE);
         vao.AddBuffer(vbo, layout);
         Gla::Shader shader("shader/VertShader.vert", "shader/FragShader.frag");
         shader.Bind();
@@ -266,18 +266,18 @@ auto main() -> int
             App::UI::RenderAndEndFrame();
 
             if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
-		  {
-			 App::Layers::DrawToTempLayer();
-			 App::UI::SetVertexBuffUpdateToTrue();
-		  }
+            {
+                App::Layers::DrawToTempLayer();
+                App::UI::SetVertexBuffUpdateToTrue();
+            }
 
             if (App::UI::ShouldUpdateVertexBuffer())
             {
                 mesh.Bind();
                 App::Layers::EmplaceVertices(vertices);
-                vbo.UpdateSizeIfNeeded(vertices.size() * sizeof(float));
+                vbo.UpdateSizeIfNeeded(vertices.size() * sizeof(App::Vertex));
                 vbo.UpdateData(vertices.data(),
-                               vertices.size() * sizeof(float));
+                               vertices.size() * sizeof(App::Vertex));
             }
 
             if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
@@ -289,7 +289,7 @@ auto main() -> int
                 mesh.Bind();
 
                 renderer.Clear();
-                renderer.DrawArrays(Gla::TRIANGLES, vertices.size() / 6);
+                renderer.DrawArrays(Gla::TRIANGLES, vertices.size());
 
                 Gla::FrameBuffer::BindToDefaultFB();
             }
