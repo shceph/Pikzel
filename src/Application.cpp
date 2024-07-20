@@ -38,6 +38,14 @@ void UI::ImGuiInit(GLFWwindow* _window)
 
     GetSelectedItemOutlineColor() =
         ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab);
+
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.FrameRounding = 5.0F;
+    style.GrabRounding = 5.0F;
+    style.WindowRounding = 5.0F;
+    style.ScrollbarRounding = 5.0F;
+    style.FrameBorderSize = 1.0F;
+    style.WindowBorderSize = 1.0F;
 }
 
 void UI::ImGuiCleanup()
@@ -104,6 +112,8 @@ void UI::RenderNoProjectWindow()
 void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name)
 {
+    // TODO(scheph): A lot of code in this function does not need to run every
+    // frame as it currenlty does. Fix that
     ImGui::Begin(window_name);
     sDrawWindowRendered = true;
 

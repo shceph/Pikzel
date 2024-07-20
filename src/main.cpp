@@ -2,12 +2,6 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-/* #define GLEW_STATIC */
-/* #include <GL/glew.h> */
-/* #define GLFW_STATIC */
-/* #include <GLFW/glfw3.h> */
-/* #include "Gla/Gla.hpp" */
-
 #include "Gla/FrameBuffer.hpp"
 #include "Gla/Mesh.hpp"
 #include "Gla/Renderer.hpp"

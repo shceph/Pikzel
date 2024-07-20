@@ -1,0 +1,210 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Source Files\imgui">
+      <UniqueIdentifier>{ce56385a-9751-4579-abd0-2b294b27db1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\imgui">
+      <UniqueIdentifier>{11b5dfeb-8303-4860-a8d2-7b12b1790672}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Gla">
+      <UniqueIdentifier>{0b5fc470-0188-4c6a-aafe-b7db85fab18f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\Gla">
+      <UniqueIdentifier>{e10b3e74-abdc-4865-bc0d-7fd0265f2425}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\GL">
+      <UniqueIdentifier>{a75892f4-e837-4af9-992e-ae26dfad8b51}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\stb">
+      <UniqueIdentifier>{9df1cd8e-ad4f-4080-9523-9070024ef9a3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\stb">
+      <UniqueIdentifier>{ea1e0156-4d6e-4067-8cb6-40cb805ee422}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_demo.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_draw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_impl_glfw.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_impl_opengl3.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_tables.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\imgui\imgui_widgets.cpp">
+      <Filter>Source Files\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\FrameBuffer.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\GlaBase.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\IndexBuffer.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\Renderer.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\Shader.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\Texture.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\UniformBuffer.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\VertexArray.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\VertexBuffer.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\Gla\VertexBufferLayout.cpp">
+      <Filter>Source Files\Gla</Filter>
+    </ClCompile>
+    <ClCompile Include="..\Dependencies\include\stb\stb_image.cpp">
+      <Filter>Source Files\stb</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Application.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Tool.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Layer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Project.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\Dependencies\include\imgui\imgui_impl_glfw.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imgui_impl_opengl3.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imgui_internal.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imstb_rectpack.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imstb_textedit.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imstb_truetype.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imconfig.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imgui.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\imgui\imgui_impl_opengl3_loader.h">
+      <Filter>Header Files\imgui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\IndexBuffer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Mesh.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Renderer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Shader.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Texture.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Timer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\UniformBuffer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\VertexArray.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\VertexBuffer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\VertexBufferLayout.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\FrameBuffer.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\Gla.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\Gla\GlaBase.hpp">
+      <Filter>Header Files\Gla</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\GL\eglew.h">
+      <Filter>Header Files\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\GL\glew.h">
+      <Filter>Header Files\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\GL\glxew.h">
+      <Filter>Header Files\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\GL\wglew.h">
+      <Filter>Header Files\GL</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\stb\stb_image.h">
+      <Filter>Header Files\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Application.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Tool.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Layer.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Definitions.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Dependencies\include\stb\stb_image_write.h">
+      <Filter>Header Files\stb</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Project.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
