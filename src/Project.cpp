@@ -13,12 +13,6 @@
 
 namespace App
 {
-static auto SaveImageToPNG(const char* filename, int width, int height,
-                           int num_channels, const unsigned char* data) -> bool
-{
-    return stbi_write_png(filename, width, height, num_channels, data,
-                          width * num_channels) != 0;
-}
 
 void Project::New(Vec2Int canvas_dims)
 {
@@ -48,7 +42,7 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
     constexpr int kChannelCount = 4;
     int arr_height = sCanvasHeight * magnify_factor;
     int arr_width = sCanvasWidth * magnify_factor * kChannelCount;
-    std::vector<unsigned char> image_data(
+    std::vector<uint8_t> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
     const CanvasData canvas_displayed = Layers::GetDisplayedCanvas();
@@ -57,36 +51,9 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
     {
         for (int j = 0; j < sCanvasWidth; j++)
         {
-            /* if (canvas_displayed[i][j].a > 1.0F) */
-            /* { */
-            /*     for (int k = 0; k < magnify_factor; k++) */
-            /*     { */
-            /*         for (int l = 0; l < magnify_factor; l++) */
-            /*         { */
-            /*             image_data[(i * magnify_factor + k) * arr_width + */
-            /*                        j * magnify_factor * kChannelCount + */
-            /*                        l * kChannelCount + 0] = */
-            /*                 static_cast<unsigned char>(0); */
-            /*             image_data[(i * magnify_factor + k) * arr_width + */
-            /*                        j * magnify_factor * kChannelCount + */
-            /*                        l * kChannelCount + 1] = */
-            /*                 static_cast<unsigned char>(0); */
-            /*             image_data[(i * magnify_factor + k) * arr_width + */
-            /*                        j * magnify_factor * kChannelCount + */
-            /*                        l * kChannelCount + 2] = */
-            /*                 static_cast<unsigned char>(0); */
-            /*             image_data[(i * magnify_factor + k) * arr_width + */
-            /*                        j * magnify_factor * kChannelCount + */
-            /*                        l * kChannelCount + 3] = */
-            /*                 static_cast<unsigned char>(0); */
-            /*         } */
-            /*     } */
-
-            /*     continue; */
-            /* } */
-
             for (int k = 0; k < magnify_factor; k++)
             {
+                // NOLINTNEXTLINE(readability-identifier-length)
                 for (int l = 0; l < magnify_factor; l++)
                 {
                     image_data[(i * magnify_factor + k) * arr_width +
@@ -110,11 +77,17 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
         }
     }
 
+    /*stbir_resize_uint8_srgb(&canvas_displayed[0][0].r, sCanvasWidth,
+                            sCanvasHeight, sCanvasWidth * kChannelCount,
+                            image_data.data(), sCanvasWidth * magnify_factor,
+                            sCanvasHeight * magnify_factor, arr_width,
+                            stbir_pixel_layout::STBIR_RGBA);*/
+
     int height = sCanvasHeight * magnify_factor;
     int width = sCanvasWidth * magnify_factor;
 
-    if (!SaveImageToPNG(save_dest.c_str(), width, height, kChannelCount,
-                        image_data.data()))
+    if (stbi_write_png(save_dest.c_str(), width, height, kChannelCount,
+                       image_data.data(), width * kChannelCount) == 0)
     {
         UI::sRenderSaveErrorPopup = true;
     }

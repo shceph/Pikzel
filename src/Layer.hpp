@@ -20,7 +20,7 @@ struct Color
     auto operator==(const Color& other) const -> bool;
     auto operator==(const ImVec4& other) const -> bool;
 
-    static auto BlendColor(Color src_color, Color dst_color) -> Color;
+    static auto BlendColor(Color color1, Color color2) -> Color;
     static auto FromImVec4(ImVec4 color) -> Color;
 };
 
@@ -57,6 +57,8 @@ class Layer
   private:
     void DrawCircle(Vec2Int center, int radius, bool only_outline,
                     Color delete_color = {0, 0, 0, 0});
+    void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
+    void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;

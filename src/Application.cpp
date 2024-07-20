@@ -10,13 +10,6 @@
 
 #include <GLFW/glfw3.h>
 
-/* #include <stb/stb_image.h> */
-/* #define STBI_MSC_SECURE_CRT */
-/* #define STB_IMAGE_WRITE_IMPLEMENTATION */
-/* #define __STDC_LIB_EXT1__ */
-/* #include <stb/stb_image_write.h> */
-/* #undef __STDC_LIB_EXT1__ */
-
 #include <array>
 #include <bit>
 #include <string>
@@ -90,9 +83,7 @@ void UI::RenderUI()
     RenderContextMenu();
 
     if (sRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
-
     if (sRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
-
     if (sRenderSaveErrorPopup) { RenderSaveErrorPopup(); }
 }
 
@@ -170,15 +161,10 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
 
     ImGui::End();
 
-    GetDrawWinUpperleftCoords().x = pos.x;
-    GetDrawWinUpperleftCoords().y = pos.y;
-    GetDrawWinDimensions().x = window_width;
-    GetDrawWinDimensions().y = window_height;
-
-    GetCanvasUpperleftCoords().x = upper_left.x;
-    GetCanvasUpperleftCoords().y = upper_left.y;
-    GetCanvasBottomRightCoords().x = bottom_right.x;
-    GetCanvasBottomRightCoords().y = bottom_right.y;
+    GetDrawWinUpperleftCoords() = pos;
+    GetDrawWinDimensions() = {window_width, window_height};
+    GetCanvasUpperleftCoords() = upper_left;
+    GetCanvasBottomRightCoords() = bottom_right;
 }
 
 void UI::Update()
@@ -256,7 +242,6 @@ void UI::RenderSaveAsImagePopup()
 {
     sShouldDoTool = false; // Don't want to draw with a popup opened
 
-    /* static char destination_str[256]; */
     static std::array<char, 256> destination_str;
     static std::array<char, 64> file_name_str;
     static int magnify_factor = 1;
@@ -303,7 +288,6 @@ void UI::RenderSaveAsProjectPopup()
 {
     sShouldDoTool = false; // Don't want to draw with a popup opened
 
-    /* static char destination_str[256]; */
     static std::array<char, 256> destination_str;
     static std::array<char, 64> file_name_str;
     static int magnify_factor = 1;
@@ -459,8 +443,7 @@ void UI::RenderToolWindow()
     ImGui::Begin("Tools");
     ImGui::NewLine();
 
-    ToolType tool_type = Tool::GetToolType(); // Need to get the value here
-                                              // because it may change below
+    ToolType tool_type = Tool::GetToolType();
 
     /* kBrush */
     if (tool_type == kBrush) { BeginOutline(); }
@@ -511,7 +494,8 @@ void UI::RenderToolWindow()
     ImGui::NewLine();
 
     ImGui::PushItemWidth(100.0F);
-    ImGui::InputInt(" Brush size", &Tool::sBrushRadius, 1, 10);
+    /* ImGui::InputInt(" Brush size", &Tool::sBrushRadius, 1, 10); */
+    ImGui::SliderInt(" Brush size", &Tool::sBrushRadius, 1, 1000);
     ImGui::PopItemWidth();
 
     if (Tool::sBrushRadius < 1) { Tool::sBrushRadius = 1; }
@@ -551,8 +535,9 @@ void UI::RenderLayerWindow()
         // Adding "_v" to the id so other widgets wouldn't have the same id
         // (which would be just str_id_for_widgets) Doing the same with other
         // widgets as well
+        constexpr ImVec2 kImageButtonDims{14.0F, 14.0F};
         if (ImGui::ImageButton((str_id_for_widgets + "_v").c_str(),
-                               visibility_tex, {20.0F, 20.0F}))
+                               visibility_tex, kImageButtonDims))
         {
             sUpdateVertexBuffer = true;
             layer_traversed.SwitchVisibilityState();
@@ -561,13 +546,13 @@ void UI::RenderLayerWindow()
         ImGui::SameLine(0.0F, 1.0F);
 
         if (ImGui::ImageButton((str_id_for_widgets + "_l").c_str(), lock_tex,
-                               {20.0F, 20.0F}))
+                               kImageButtonDims))
         {
             sUpdateVertexBuffer = true;
             layer_traversed.SwitchLockState();
         }
 
-        constexpr float kItemHeight = 26.0F;
+        constexpr float kItemHeight = 20.0F;
 
         // Checks if the layer traversed is the current selected layer. If so,
         // draws borders around the layer button
@@ -627,9 +612,6 @@ void UI::RenderContextMenu()
     static bool open_the_change_lay_name_popup = false;
 
     static std::string buff;
-    /* static char buff[kBuffSize] = ""; // A buffer used for the input box in
-     * the */
-    // popup for changing a layer's name
 
     if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
     {
@@ -640,11 +622,7 @@ void UI::RenderContextMenu()
     {
         if (ImGui::MenuItem("Change layer name"))
         {
-            // Setting buffer string to the name of the layer the user wants to
-            // change so that string would be the string displayed when opening
-            // the popup
             buff = Layers::GetCurrentLayer().mLayerName;
-            /* buff.reserve(kBuffSize); */
             open_the_change_lay_name_popup = true;
         }
 
@@ -661,7 +639,6 @@ void UI::RenderContextMenu()
     {
         // Don't wanna edit canvas if this popup is opened
         sShouldDoTool = false;
-        /* ImGui::InputText("##input", buff.data(), kBuffSize); */
         ImGui::InputText("##input", &buff);
 
         if (ImGui::Button("OK"))
@@ -673,7 +650,6 @@ void UI::RenderContextMenu()
 
             ImGui::CloseCurrentPopup();
             open_the_change_lay_name_popup = false;
-            /* right_clicked_layer_index = kNoLayerRightClicked; */
         }
 
         ImGui::SameLine(0.0F, 10.0F);
@@ -682,7 +658,6 @@ void UI::RenderContextMenu()
         {
             ImGui::CloseCurrentPopup();
             open_the_change_lay_name_popup = false;
-            /* right_clicked_layer_index = kNoLayerRightClicked; */
         }
 
         ImGui::EndPopup();

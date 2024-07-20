@@ -5,19 +5,16 @@
 #include "Project.hpp"
 #include "Tool.hpp"
 
+#include <glm/geometric.hpp>
+
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cmath>
 #include <list>
 #include <queue>
 #include <ranges>
 #include <vector>
-
-/* // Normalize alpha from range [0, 255] to range [0.0, 1.0] */
-/* static auto NormalizeAlpha(int alpha) -> float */
-/* { */
-/*     return static_cast<float>(alpha) / 255.0F; */
-/* } */
 
 namespace App
 {
@@ -34,15 +31,6 @@ auto Color::operator==(const Color& other) const -> bool
 {
     return other.r == r && other.g == g && other.b == b && other.a == a;
 }
-/* auto Color::operator==(const Color& other) const -> bool */
-/* { */
-/*     constexpr float kTolerance = 0.0025F; */
-
-/*     return std::abs(r - other.r) <= kTolerance && */
-/*            std::abs(g - other.g) <= kTolerance && */
-/*            std::abs(b - other.b) <= kTolerance && */
-/*            std::abs(a - other.a) <= kTolerance; */
-/* } */
 
 auto Color::operator==(const ImVec4& other) const -> bool
 {
@@ -54,25 +42,29 @@ auto Color::operator==(const ImVec4& other) const -> bool
            std::abs(static_cast<float>(a) / 0xff - other.w) <= kTolerance;
 }
 
-auto Color::BlendColor(Color src_color, Color dst_color) -> Color
+auto Color::BlendColor(Color color1, Color color2) -> Color
 {
-    if (src_color.a == 0xff) { return dst_color; }
+    Color result;
 
-    Color result_color;
+    float alpha1 = static_cast<float>(color1.a) / 255.0F;
+    float alpha2 = static_cast<float>(color2.a) / 255.0F;
+    float result_alpha = alpha1 + alpha2 * (1 - alpha1);
 
-    result_color.a = 0xff - (0xff - dst_color.a) * (0xff - src_color.a);
+    result.r = static_cast<uint8_t>(
+        (static_cast<float>(color1.r) * alpha1 +
+         static_cast<float>(color2.r) * alpha2 * (1 - alpha1)) /
+        result_alpha);
+    result.g = static_cast<uint8_t>(
+        (static_cast<float>(color1.g) * alpha1 +
+         static_cast<float>(color2.g) * alpha2 * (1 - alpha1)) /
+        result_alpha);
+    result.b = static_cast<uint8_t>(
+        (static_cast<float>(color1.b) * alpha1 +
+         static_cast<float>(color2.b) * alpha2 * (1 - alpha1)) /
+        result_alpha);
+    result.a = static_cast<uint8_t>(result_alpha * 255);
 
-    result_color.r =
-        (dst_color.r * dst_color.a / result_color.a) +
-        (src_color.r * src_color.a * (0xff - dst_color.a) / result_color.a);
-    result_color.g =
-        (dst_color.g * dst_color.a / result_color.a) +
-        (src_color.g * src_color.a * (0xff - dst_color.a) / result_color.a);
-    result_color.b =
-        (dst_color.b * dst_color.a / result_color.a) +
-        (src_color.b * src_color.a * (0xff - dst_color.a) / result_color.a);
-
-    return result_color;
+    return result;
 }
 
 auto Color::FromImVec4(const ImVec4 color) -> Color
@@ -116,11 +108,14 @@ void Layer::DoCurrentTool()
 
     if (Tool::GetToolType() == kBucket)
     {
-        const Color& clicked_color = mCanvas[canvas.y][canvas.x];
-
+        Color clicked_color = mCanvas[canvas.y][canvas.x];
         Fill(canvas.x, canvas.y, clicked_color);
         return;
     }
+
+    constexpr auto kMaxTimeInterval = std::chrono::milliseconds(200);
+    static auto time_last_drawn = std::chrono::steady_clock::now();
+    static auto position_last_drawn = canvas;
 
     if (Tool::GetBrushRadius() == 1)
     {
@@ -131,6 +126,16 @@ void Layer::DoCurrentTool()
         else { mCanvas[canvas.y][canvas.x] = Tool::GetColorRef(); }
     }
     else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), false); }
+
+    if (glm::distance<2, float>(glm::vec2(canvas),
+                                glm::vec2(position_last_drawn)) > 1 &&
+        std::chrono::steady_clock::now() - time_last_drawn <= kMaxTimeInterval)
+    {
+        DrawLine(canvas, position_last_drawn, Tool::GetBrushRadius() * 2);
+    }
+
+    time_last_drawn = std::chrono::steady_clock::now();
+    position_last_drawn = canvas;
 }
 
 void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
@@ -176,7 +181,7 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
 }
 
 void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
-                       Color delete_color /*= {0.0F, 0.0F, 0.0F, 1.0F}*/)
+                       Color delete_color /*= {0, 0, 0, 0}*/)
 {
     if (radius < 1) { return; }
 
@@ -189,6 +194,29 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
         draw_color = Tool::GetColorRef();
         draw_color.a = 0xff;
     }
+
+    if (radius == 1)
+    {
+        mCanvas[center.y][center.x] = draw_color;
+        return;
+    }
+
+    const int width = Project::CanvasWidth();
+    const int height = Project::CanvasHeight();
+    for (int xcrd = -radius; xcrd <= radius; xcrd++)
+    {
+        for (int ycrd = -radius; ycrd <= radius; ycrd++)
+        {
+            if (xcrd * xcrd + ycrd * ycrd < radius * radius)
+            {
+                int real_x = std::clamp(xcrd + center.x, 0, width - 1);
+                int real_y = std::clamp(ycrd + center.y, 0, height - 1);
+                mCanvas[real_y][real_x] = draw_color;
+            }
+        }
+    }
+
+    return;
 
     // Circle equation
     for (int x_coord = std::max(0, center.x - radius + 1);
@@ -237,6 +265,69 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
     }
 }
 
+void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness)
+{
+    if (thickness == 1)
+    {
+        DrawLine(point_a, point_b);
+        return;
+    }
+
+    int radius = thickness / 2;
+    int diff_x = std::abs(point_a.x - point_b.x);
+    int diff_y = std::abs(point_a.y - point_b.y);
+    int sign_x = (point_a.x < point_b.x) ? 1 : -1;
+    int sign_y = (point_a.y < point_b.y) ? 1 : -1;
+    int err = diff_x - diff_y;
+
+    while (point_a != point_b)
+    {
+        int err2 = err;
+
+        if (err2 > -diff_y)
+        {
+            err -= diff_y;
+            point_a.x += sign_x;
+        }
+
+        if (err2 < diff_x)
+        {
+            err += diff_x;
+            point_a.y += sign_y;
+        }
+
+        DrawCircle(point_a, radius, false);
+    }
+}
+
+void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b)
+{
+    int diff_x = std::abs(point_a.x - point_b.x);
+    int diff_y = std::abs(point_a.y - point_b.y);
+    int sign_x = (point_a.x < point_b.x) ? 1 : -1;
+    int sign_y = (point_a.y < point_b.y) ? 1 : -1;
+    int err = diff_x - diff_y;
+
+    while (point_a != point_b)
+    {
+        int err2 = err;
+
+        if (err2 > -diff_y)
+        {
+            err -= diff_y;
+            point_a.x += sign_x;
+        }
+
+        if (err2 < diff_x)
+        {
+            err += diff_x;
+            point_a.y += sign_y;
+        }
+
+        mCanvas[point_a.x][point_a.y] = Tool::GetColorRef();
+    }
+}
+
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
 {
     if (x_coord < 0 || x_coord >= Project::CanvasWidth() || y_coord < 0 ||
@@ -247,8 +338,7 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
 
     auto& fill_color = Tool::GetColorRef();
 
-    std::queue<std::pair<int, int>>
-        pixel_queue; // Queue of pixels waiting to be filled
+    std::queue<std::pair<int, int>> pixel_queue;
     pixel_queue.emplace(y_coord, x_coord);
 
     while (!pixel_queue.empty())
@@ -262,7 +352,6 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
         {
             mCanvas[row][col] = fill_color;
 
-            // Enqueue neighboring pixels
             if (col + 1 < Project::CanvasWidth())
             {
                 pixel_queue.emplace(row, col + 1);
@@ -282,6 +371,7 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
     }
 }
 
+// Returns false if the cursor isn't inside the canvas
 auto Layer::CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool
 {
     double cursor_x = NAN;
@@ -490,9 +580,11 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
                     layer_traversed.mCanvas[i][j].r,
                     layer_traversed.mCanvas[i][j].g,
                     layer_traversed.mCanvas[i][j].b,
-                    static_cast<uint8_t>(layer_traversed.mOpacity)};
+                    layer_traversed.mCanvas[i][j].a == 0
+                        ? layer_traversed.mCanvas[i][j].a
+                        : static_cast<uint8_t>(layer_traversed.mOpacity)};
 
-                    Color::BlendColor(displayed_canvas[i][j], dst_color);
+                Color::BlendColor(displayed_canvas[i][j], dst_color);
             }
         }
     }
