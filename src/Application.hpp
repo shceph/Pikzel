@@ -7,6 +7,22 @@
 
 namespace App
 {
+class Camera
+{
+  public:
+    static void AddToZoom(double val_to_add);
+    static void SetCenter(Vec2Int center);
+    static void MoveCenter(Vec2Int offset);
+    inline static auto GetZoomValue() -> double { return sZoomValue; }
+    inline static auto GetCenter() -> Vec2Int { return sZoomCenter; }
+
+  private:
+    inline static double sZoomValue = 0.0;
+    inline static Vec2Int sZoomCenter;
+    constexpr static double kZoomMin = 0.0;
+    constexpr static double kZoomMax = 0.93;
+};
+
 class UI
 {
   public:
@@ -90,13 +106,7 @@ class UI
         return sel_itm_outline_col;
     }
 
-    // static void Save(int, std::string);
-
     inline static GLFWwindow* sWindow;
-    /* inline static ImVec2 sDrawWindowUpperleftCornerCoords; */
-    /* inline static ImVec2 sDrawWindowDimensions; */
-    /* inline static ImVec2 sCanvasUpperleftCoords; */
-    /* inline static ImVec2 sCanvasBottomrightCoords; */
 
     inline static ImTextureID sBrushToolTextureID = nullptr;
     inline static ImTextureID sEraserToolTextureID = nullptr;

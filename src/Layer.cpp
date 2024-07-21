@@ -125,7 +125,7 @@ void Layer::DoCurrentTool()
         }
         else { mCanvas[canvas.y][canvas.x] = Tool::GetColorRef(); }
     }
-    else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), false); }
+    else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), true); }
 
     if (glm::distance<2, float>(glm::vec2(canvas),
                                 glm::vec2(position_last_drawn)) > 1 &&
@@ -180,12 +180,10 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
     }
 }
 
-void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
+void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
                        Color delete_color /*= {0, 0, 0, 0}*/)
 {
     if (radius < 1) { return; }
-
-    Vec2Int dims = {Project::CanvasWidth(), Project::CanvasHeight()};
 
     Color draw_color = delete_color;
 
@@ -201,22 +199,25 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
         return;
     }
 
-    const int width = Project::CanvasWidth();
-    const int height = Project::CanvasHeight();
-    for (int xcrd = -radius; xcrd <= radius; xcrd++)
-    {
-        for (int ycrd = -radius; ycrd <= radius; ycrd++)
-        {
-            if (xcrd * xcrd + ycrd * ycrd < radius * radius)
-            {
-                int real_x = std::clamp(xcrd + center.x, 0, width - 1);
-                int real_y = std::clamp(ycrd + center.y, 0, height - 1);
-                mCanvas[real_y][real_x] = draw_color;
-            }
-        }
-    }
+    Vec2Int dims = {Project::CanvasWidth(), Project::CanvasHeight()};
 
-    return;
+    if (fill)
+    {
+	   for (int xcrd = -radius; xcrd <= radius; xcrd++)
+	   {
+		  for (int ycrd = -radius; ycrd <= radius; ycrd++)
+		  {
+			 if (xcrd * xcrd + ycrd * ycrd < radius * radius)
+			 {
+				int real_x = std::clamp(xcrd + center.x, 0, dims.x - 1);
+				int real_y = std::clamp(ycrd + center.y, 0, dims.y - 1);
+				mCanvas[real_y][real_x] = draw_color;
+			 }
+		  }
+	   }
+
+	   return;
+    }
 
     // Circle equation
     for (int x_coord = std::max(0, center.x - radius + 1);
@@ -250,18 +251,6 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool only_outline,
 
         mCanvas[y1_floor][x_coord] = draw_color;
         mCanvas[y2_ceil][x_coord] = draw_color;
-
-        if (only_outline && x_coord != std::max(0, center.x - radius + 1) &&
-            x_coord != std::min(Project::CanvasWidth(), center.x + radius) - 1)
-        {
-            continue;
-        }
-
-        for (int y_coord = static_cast<int>(y2_ceil) + 1; y_coord < y1_floor;
-             y_coord++)
-        {
-            mCanvas[y_coord][x_coord] = draw_color;
-        }
     }
 }
 
@@ -296,7 +285,7 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness)
             point_a.y += sign_y;
         }
 
-        DrawCircle(point_a, radius, false);
+        DrawCircle(point_a, radius, true);
     }
 }
 
@@ -402,6 +391,20 @@ auto Layer::CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool
     coords.y = static_cast<int>((cursor_y - canvas_upperleft.y) /
                                 ((canvas_bottomtright.y - canvas_upperleft.y) /
                                  static_cast<float>(Project::CanvasHeight())));
+
+    double zoom_val = Camera::GetZoomValue();
+    if (zoom_val != 0)
+    {
+	   double inv_zoom = 1 - zoom_val;
+	   int new_width = static_cast<int>(Project::CanvasWidth() * inv_zoom);
+	   int new_height = static_cast<int>(Project::CanvasHeight() * inv_zoom);
+	   coords.x = static_cast<int>(coords.x * inv_zoom);
+	   coords.y = static_cast<int>(coords.y * inv_zoom);
+	   coords.x += (Project::CanvasWidth() - new_width) / 2;
+	   coords.y += (Project::CanvasHeight() - new_height) / 2;
+    }
+
+    coords += Camera::GetCenter() - Project::GetCanvasDims() / 2;
 
     return coords.x >= 0 && coords.x < Project::CanvasWidth() &&
            coords.y >= 0 && coords.y < Project::CanvasHeight();
@@ -561,7 +564,7 @@ void Layers::DrawToTempLayer()
     Vec2Int canvas_coords;
     if (!Layer::CanvasCoordsFromCursorPos(canvas_coords)) { return; }
 
-    tmp_layer.DrawCircle(canvas_coords, Tool::GetBrushRadius(), false,
+    tmp_layer.DrawCircle(canvas_coords, Tool::GetBrushRadius(), true,
                          kDeleteColor);
 }
 

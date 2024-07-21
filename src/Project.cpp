@@ -13,7 +13,6 @@
 
 namespace App
 {
-
 void Project::New(Vec2Int canvas_dims)
 {
     if (sProjectOpened)
@@ -31,6 +30,7 @@ void Project::New(Vec2Int canvas_dims)
 
     Tool::SetDataToDefault();
     Layers::AddLayer();
+    Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
 }
 
 void Project::Open(const std::string& /*project_file_dest*/)

@@ -28,6 +28,3 @@ CompileFlags:
     - "-IC:/Stefan/Programi/C++/Pikzel/vendor/stb/stb"
     - "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/stb/include"
     - "-IC:/Stefan/Programi/C++/Pikzel/build/vendor/imgui/include"
-Diagnostics:
-  Suppress: 
-    - "unused-include"

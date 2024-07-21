@@ -19,6 +19,10 @@ class Project
     inline static auto IsOpened() -> bool { return sProjectOpened; }
     inline static auto CanvasHeight() -> int { return sCanvasHeight; }
     inline static auto CanvasWidth() -> int { return sCanvasWidth; }
+    inline static auto GetCanvasDims() -> Vec2Int
+    {
+        return {sCanvasWidth, sCanvasHeight};
+    }
 
   private:
     inline static bool sProjectOpened = false;

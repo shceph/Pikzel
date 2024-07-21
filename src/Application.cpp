@@ -13,9 +13,25 @@
 #include <array>
 #include <bit>
 #include <string>
+#include <algorithm>
 
 namespace App
 {
+void Camera::AddToZoom(double val_to_add)
+{
+    sZoomValue = std::clamp(sZoomValue + val_to_add, kZoomMin, kZoomMax);
+}
+
+void Camera::SetCenter(Vec2Int center)
+{
+    sZoomCenter = center;
+}
+
+void Camera::MoveCenter(Vec2Int offset)
+{
+    sZoomCenter += offset;
+}
+
 void UI::ImGuiInit(GLFWwindow* _window)
 {
     sWindow = _window;
@@ -40,12 +56,13 @@ void UI::ImGuiInit(GLFWwindow* _window)
         ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab);
 
     ImGuiStyle& style = ImGui::GetStyle();
-    style.FrameRounding = 5.0F;
-    style.GrabRounding = 5.0F;
-    style.WindowRounding = 5.0F;
-    style.ScrollbarRounding = 5.0F;
+    style.FrameRounding = 3.0F;
+    style.GrabRounding = 3.0F;
+    style.WindowRounding = 3.0F;
+    style.ScrollbarRounding = 3.0F;
     style.FrameBorderSize = 1.0F;
-    style.WindowBorderSize = 1.0F;
+    /* style.WindowBorderSize = 1.0F; */
+    style.ScaleAllSizes(1.5);
 }
 
 void UI::ImGuiCleanup()
@@ -67,8 +84,8 @@ void UI::RenderAndEndFrame()
     // Update and Render additional Platform Windows
     // (Platform functions may change the current OpenGL context, so we
     // save/restore it to make it easier to paste this code elsewhere.
-    //  For this specific demo app we could also call
-    //  glfwMakeContextCurrent(window) directly)
+    // For this specific demo app we could also call
+    // glfwMakeContextCurrent(window) directly)
     if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0)
     {
         GLFWwindow* backup_current_context = glfwGetCurrentContext();
@@ -88,7 +105,6 @@ void UI::RenderUI()
     RenderColorWindow();
     RenderToolWindow();
     RenderLayerWindow();
-    RenderContextMenu();
 
     if (sRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
     if (sRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
@@ -503,7 +519,7 @@ void UI::RenderToolWindow()
 
     ImGui::NewLine();
 
-    ImGui::PushItemWidth(100.0F);
+    ImGui::PushItemWidth(200.0F);
     /* ImGui::InputInt(" Brush size", &Tool::sBrushRadius, 1, 10); */
     ImGui::SliderInt(" Brush size", &Tool::sBrushRadius, 1, 1000);
     ImGui::PopItemWidth();
@@ -516,9 +532,6 @@ void UI::RenderToolWindow()
 void UI::RenderLayerWindow()
 {
     ImGui::Begin("Layers");
-
-    constexpr size_t kNoLayerRightClicked = SIZE_MAX;
-    static size_t right_clicked_layer_index = kNoLayerRightClicked;
 
     if (ImGui::Button("Add a layer")) { Layers::AddLayer(); }
 
@@ -562,28 +575,18 @@ void UI::RenderLayerWindow()
             layer_traversed.SwitchLockState();
         }
 
-        constexpr float kItemHeight = 20.0F;
-
         // Checks if the layer traversed is the current selected layer. If so,
         // draws borders around the layer button
         bool this_is_selected_layer = (Layers::sCurrentLayerIndex == i);
         if (this_is_selected_layer) { BeginOutline(); }
 
         ImGui::SameLine(0.0F, 10.0F);
-        if (ImGui::Button(layer_traversed.GetName().c_str(),
-                          {100.0F, kItemHeight}))
+        if (ImGui::Button(layer_traversed.GetName().c_str(), {100.0F, 0.0F}))
         {
             Layers::sCurrentLayerIndex = i;
         }
 
         if (this_is_selected_layer) { EndOutline(); }
-
-        if (right_clicked_layer_index == kNoLayerRightClicked &&
-            ImGui::IsItemHovered() &&
-            ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-        {
-            right_clicked_layer_index = i;
-        }
 
         ImGui::SameLine(0.0F, 10.0F);
         ImGui::PushItemWidth(100.0F);
@@ -614,8 +617,14 @@ void UI::RenderLayerWindow()
             Layers::MoveDown(static_cast<int>(i));
         }
     }
+
+    RenderContextMenu();
+
+    ImGui::End();
 }
 
+// Don't forget to call this function before ImGui::End() as this function uses
+// ImGui::IsWindowHovered()
 void UI::RenderContextMenu()
 {
     // Code bellow renders popups for changing a layer's name
@@ -623,12 +632,13 @@ void UI::RenderContextMenu()
 
     static std::string buff;
 
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+    if (ImGui::IsWindowHovered() &&
+        ImGui::IsMouseClicked(ImGuiMouseButton_Right))
     {
         ImGui::OpenPopup("LayerPopup");
     }
 
-    if (ImGui::BeginPopup("LayerPopup"))
+    if (ImGui::BeginPopupContextItem("LayerPopup"))
     {
         if (ImGui::MenuItem("Change layer name"))
         {
@@ -672,8 +682,6 @@ void UI::RenderContextMenu()
 
         ImGui::EndPopup();
     }
-
-    ImGui::End(); // "Layers"
 }
 
 void UI::RenderSaveErrorPopup()

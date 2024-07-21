@@ -1,25 +1,17 @@
-# Configure clang-tidy for this project.
-
 Checks: >
-  *,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-llvm-*,-llvmlibc-*,-altera-*,
+  # *, misc-*, -fuchsia-*,-google-*,-zircon-*,-abseil-*,-llvm-*,-llvmlibc-*,-altera-*,
 
-  # -*,
-  # bugprone-*,
-  # modernize-*,
-  # performance-*,
-  # portability-*,
-  # readability-*,
-  # cppcoreguidelines-*,
-  # hicpp-*,
-  # cert-*,
-  # misc-*,
-  # google-*,
-  # -google-readability-namespace-comments,
-  # -google-runtime-int,
-  # -google-runtime-references,
-
-  # -cppcoreguidelines-non-private-member-variables-in-classes,
-  # -cppcoreguidelines-pro-bounds-pointer-arithmetic,
+  -*,
+  bugprone-*,
+  modernize-*,
+  performance-*,
+  portability-*,
+  readability-*,
+  cppcoreguidelines-*,
+  hicpp-*,
+  cert-*,
+  misc-*,
+  google-*,
 
   -cppcoreguidelines-pro-type-union-access,
   -hicpp-signed-bitwise,

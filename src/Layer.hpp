@@ -55,7 +55,7 @@ class Layer
     static auto CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool;
 
   private:
-    void DrawCircle(Vec2Int center, int radius, bool only_outline,
+    void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);

@@ -10,6 +10,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -22,6 +23,7 @@
 
 namespace
 {
+
 #ifndef NDEBUG
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
@@ -121,6 +123,34 @@ void GlfwError(int err_id, const char* message)
 }
 #endif
 
+void GlfwScrollCallback(GLFWwindow* /*window*/, double /*xoffset*/,
+                        double yoffset)
+{
+    App::Camera::AddToZoom(yoffset / 30);
+}
+
+void GlfwCursorPosCallback(GLFWwindow* window, double x_pos, double y_pos)
+{
+    constexpr auto kAllowedDelay = std::chrono::milliseconds(25);
+    static double old_x = x_pos;
+    static double old_y = y_pos;
+    static auto last_time_clicked = std::chrono::steady_clock::now();
+
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) ==
+            GLFW_PRESS &&
+        std::chrono::steady_clock::now() - last_time_clicked <= kAllowedDelay)
+    {
+        double offset_x = old_x - x_pos;
+        double offset_y = old_y - y_pos;
+        App::Camera::MoveCenter(
+            {static_cast<int>(offset_x), static_cast<int>(offset_y)});
+    }
+
+    old_x = x_pos;
+    old_y = y_pos;
+    last_time_clicked = std::chrono::steady_clock::now();
+}
+
 void HandleEvents(GLFWwindow* window)
 {
     glfwWaitEvents();
@@ -132,16 +162,31 @@ void HandleEvents(GLFWwindow* window)
         App::Layers::DoCurrentTool();
     }
 }
+
+void UpdateProjMat(Gla::Shader& shader)
+{
+    assert(App::Project::IsOpened());
+
+    const auto width = static_cast<float>(App::Project::CanvasWidth());
+    const auto height = static_cast<float>(App::Project::CanvasHeight());
+    const App::Vec2Int center_offset =
+        App::Camera::GetCenter() - App::Project::GetCanvasDims() / 2;
+    auto zoom_half = static_cast<float>(App::Camera::GetZoomValue()) / 2;
+
+    glm::mat4 proj = glm::ortho(
+        static_cast<float>(center_offset.x) + zoom_half * width,
+        width - zoom_half * width + static_cast<float>(center_offset.x),
+        static_cast<float>(center_offset.y) + zoom_half * height,
+        height - zoom_half * height + static_cast<float>(center_offset.y));
+
+    shader.SetUniformMat4f("u_ViewProjection", proj);
+}
 } // namespace
 
 auto main() -> int
 {
     if (glfwInit() == 0) { return -1; }
 
-#ifndef NDEBUG
-    glfwSetErrorCallback(&GlfwError);
-    std::cout << "C++ standard: " << __cplusplus << '\n';
-#endif
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -163,8 +208,14 @@ auto main() -> int
 
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
-
     glfwMaximizeWindow(window);
+
+    glfwSetScrollCallback(window, &GlfwScrollCallback);
+    glfwSetCursorPosCallback(window, &GlfwCursorPosCallback);
+#ifndef NDEBUG
+    glfwSetErrorCallback(&GlfwError);
+    std::cout << "C++ standard: " << __cplusplus << '\n';
+#endif
 
     if (glewInit() != GLEW_OK) { std::cout << "Glew init error\n"; }
 
@@ -281,6 +332,8 @@ auto main() -> int
                 imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
                                         static_cast<int>(draw_window_dims.y));
                 mesh.Bind();
+                // TODO(scheph): Not to update the uniform each frame like this
+                UpdateProjMat(shader);
 
                 renderer.Clear();
                 renderer.DrawArrays(Gla::TRIANGLES, vertices.size());
