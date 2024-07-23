@@ -2,6 +2,7 @@
 #include "Application.hpp"
 #include "Layer.hpp"
 #include "Tool.hpp"
+#include "Camera.hpp"
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_resize2.h>
@@ -11,7 +12,7 @@
 #include <iostream>
 #include <string>
 
-namespace App
+namespace Pikzel
 {
 void Project::New(Vec2Int canvas_dims)
 {
@@ -29,7 +30,7 @@ void Project::New(Vec2Int canvas_dims)
     sProjectOpened = true;
 
     Tool::SetDataToDefault();
-    Layers::AddLayer();
+    Layers::InitHistory();
     Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
 }
 
@@ -117,4 +118,4 @@ void Project::CloseCurrentProject()
     Tool::SetDataToDefault();
     sProjectOpened = false;
 }
-} // namespace App
+} // namespace Pikzel

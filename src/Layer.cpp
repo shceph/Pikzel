@@ -1,7 +1,7 @@
 #include "Layer.hpp"
 
 #include "Application.hpp"
-#include "Definitions.hpp"
+#include "Camera.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
 
@@ -16,7 +16,7 @@
 #include <ranges>
 #include <vector>
 
-namespace App
+namespace Pikzel
 {
 auto Color::operator=(const ImVec4& color) -> Color&
 {
@@ -78,24 +78,25 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
 Layer::Layer() noexcept
     : mCanvas(Project::CanvasHeight(),
               std::vector<Color>(Project::CanvasWidth())),
-      mLayerName("Layer " + std::to_string(Layers::GetLayerCount() + 1))
+      mLayerName("Layer " + std::to_string(sConstructCounter))
 {
+    sConstructCounter++;
 }
 
 void Layer::DoCurrentTool()
 {
-    // We also don't want to edit the canvas if it isn't visible
     if (mLocked || !mVisible) { return; }
 
-    Vec2Int canvas;
-    if (!CanvasCoordsFromCursorPos(canvas)) { return; }
+    std::optional<Vec2Int> canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return; }
 
     UI::SetVertexBuffUpdateToTrue();
 
     if (Tool::GetToolType() == kColorPicker)
     {
         auto displayed_canvas = Layers::GetDisplayedCanvas();
-        const Color& picked_color = displayed_canvas[canvas.y][canvas.x];
+        const Color picked_color =
+            displayed_canvas[canv_coord->y][canv_coord->x];
 
         if (picked_color.a == 0) { return; }
 
@@ -108,34 +109,41 @@ void Layer::DoCurrentTool()
 
     if (Tool::GetToolType() == kBucket)
     {
-        Color clicked_color = mCanvas[canvas.y][canvas.x];
-        Fill(canvas.x, canvas.y, clicked_color);
+        Color clicked_color = mCanvas[canv_coord->y][canv_coord->x];
+        Fill(canv_coord->x, canv_coord->y, clicked_color);
+        Layers::MarkHistoryForUpdate();
         return;
     }
 
-    constexpr auto kMaxTimeInterval = std::chrono::milliseconds(200);
+    constexpr auto kMaxDelay = std::chrono::milliseconds(100);
     static auto time_last_drawn = std::chrono::steady_clock::now();
-    static auto position_last_drawn = canvas;
+    static auto position_last_drawn = canv_coord.value();
 
     if (Tool::GetBrushRadius() == 1)
     {
         if (Tool::GetToolType() == ToolType::kEraser)
         {
-            mCanvas[canvas.y][canvas.x] = Color{0, 0, 0, 0};
+            mCanvas[canv_coord->y][canv_coord->x] = Color{0, 0, 0, 0};
         }
-        else { mCanvas[canvas.y][canvas.x] = Tool::GetColorRef(); }
+        else { mCanvas[canv_coord->y][canv_coord->x] = Tool::GetColor(); }
     }
-    else { DrawCircle({canvas.x, canvas.y}, Tool::GetBrushRadius(), true); }
-
-    if (glm::distance<2, float>(glm::vec2(canvas),
-                                glm::vec2(position_last_drawn)) > 1 &&
-        std::chrono::steady_clock::now() - time_last_drawn <= kMaxTimeInterval)
+    else
     {
-        DrawLine(canvas, position_last_drawn, Tool::GetBrushRadius() * 2);
+        DrawCircle({canv_coord->x, canv_coord->y}, Tool::GetBrushRadius(),
+                   true);
     }
+
+    if (glm::distance<2, float>(glm::vec2(canv_coord.value()),
+                                glm::vec2(position_last_drawn)) > 1 &&
+        std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay)
+    {
+        DrawLine(canv_coord.value(), position_last_drawn,
+                 Tool::GetBrushRadius() * 2);
+    }
+    else { Layers::MarkHistoryForUpdate(); }
 
     time_last_drawn = std::chrono::steady_clock::now();
-    position_last_drawn = canvas;
+    position_last_drawn = canv_coord.value();
 }
 
 void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
@@ -203,20 +211,20 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
     if (fill)
     {
-	   for (int xcrd = -radius; xcrd <= radius; xcrd++)
-	   {
-		  for (int ycrd = -radius; ycrd <= radius; ycrd++)
-		  {
-			 if (xcrd * xcrd + ycrd * ycrd < radius * radius)
-			 {
-				int real_x = std::clamp(xcrd + center.x, 0, dims.x - 1);
-				int real_y = std::clamp(ycrd + center.y, 0, dims.y - 1);
-				mCanvas[real_y][real_x] = draw_color;
-			 }
-		  }
-	   }
+        for (int xcrd = -radius; xcrd <= radius; xcrd++)
+        {
+            for (int ycrd = -radius; ycrd <= radius; ycrd++)
+            {
+                if (xcrd * xcrd + ycrd * ycrd < radius * radius)
+                {
+                    int real_x = std::clamp(xcrd + center.x, 0, dims.x - 1);
+                    int real_y = std::clamp(ycrd + center.y, 0, dims.y - 1);
+                    mCanvas[real_y][real_x] = draw_color;
+                }
+            }
+        }
 
-	   return;
+        return;
     }
 
     // Circle equation
@@ -360,8 +368,7 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
     }
 }
 
-// Returns false if the cursor isn't inside the canvas
-auto Layer::CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool
+auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
 {
     double cursor_x = NAN;
     double cursor_y = NAN;
@@ -382,38 +389,44 @@ auto Layer::CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool
     if (cursor_x <= canvas_upperleft.x || cursor_x >= canvas_bottomtright.x ||
         cursor_y <= canvas_upperleft.y || cursor_y >= canvas_bottomtright.y)
     {
-        return false;
+        return std::nullopt;
     }
 
-    coords.x = static_cast<int>((cursor_x - canvas_upperleft.x) /
-                                ((canvas_bottomtright.x - canvas_upperleft.x) /
-                                 static_cast<float>(Project::CanvasWidth())));
-    coords.y = static_cast<int>((cursor_y - canvas_upperleft.y) /
-                                ((canvas_bottomtright.y - canvas_upperleft.y) /
-                                 static_cast<float>(Project::CanvasHeight())));
+    glm::vec2 cursor_draw_win_relative{cursor_x - canvas_upperleft.x,
+                                       cursor_y - canvas_upperleft.y};
+    glm::vec2 canvas_on_screen_dims{canvas_bottomtright.x - canvas_upperleft.x,
+                                    canvas_bottomtright.y - canvas_upperleft.y};
+    glm::vec2 canvas_dims{Project::GetCanvasDims()};
+
+    Vec2Int coords =
+        cursor_draw_win_relative / (canvas_on_screen_dims / canvas_dims);
 
     double zoom_val = Camera::GetZoomValue();
     if (zoom_val != 0)
     {
-	   double inv_zoom = 1 - zoom_val;
-	   int new_width = static_cast<int>(Project::CanvasWidth() * inv_zoom);
-	   int new_height = static_cast<int>(Project::CanvasHeight() * inv_zoom);
-	   coords.x = static_cast<int>(coords.x * inv_zoom);
-	   coords.y = static_cast<int>(coords.y * inv_zoom);
-	   coords.x += (Project::CanvasWidth() - new_width) / 2;
-	   coords.y += (Project::CanvasHeight() - new_height) / 2;
+        double inv_zoom = 1 - zoom_val;
+        int new_width = static_cast<int>(Project::CanvasWidth() * inv_zoom);
+        int new_height = static_cast<int>(Project::CanvasHeight() * inv_zoom);
+        coords.x = static_cast<int>(coords.x * inv_zoom);
+        coords.y = static_cast<int>(coords.y * inv_zoom);
+        coords.x += (Project::CanvasWidth() - new_width) / 2;
+        coords.y += (Project::CanvasHeight() - new_height) / 2;
     }
 
     coords += Camera::GetCenter() - Project::GetCanvasDims() / 2;
 
-    return coords.x >= 0 && coords.x < Project::CanvasWidth() &&
-           coords.y >= 0 && coords.y < Project::CanvasHeight();
+    if (coords.x < 0 || coords.x >= Project::CanvasWidth() || coords.y < 0 ||
+        coords.y >= Project::CanvasHeight())
+    {
+        return std::nullopt;
+    }
+
+    return std::make_optional(coords);
 }
 
 auto Layers::GetCurrentLayer() -> Layer&
 {
-    MY_ASSERT(sCurrentLayerIndex >= 0 &&
-              sCurrentLayerIndex < GetLayers().size());
+    assert(sCurrentLayerIndex >= 0 && sCurrentLayerIndex < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, sCurrentLayerIndex);
@@ -523,7 +536,7 @@ void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
 
 auto Layers::AtIndex(std::size_t index) -> Layer&
 {
-    MY_ASSERT(index >= 0 && index < GetLayers().size());
+    assert(index >= 0 && index < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, index);
@@ -561,10 +574,10 @@ void Layers::DrawToTempLayer()
         }
     }
 
-    Vec2Int canvas_coords;
-    if (!Layer::CanvasCoordsFromCursorPos(canvas_coords)) { return; }
+    std::optional<Vec2Int> canvas_coords = Layer::CanvasCoordsFromCursorPos();
+    if (!canvas_coords.has_value()) { return; }
 
-    tmp_layer.DrawCircle(canvas_coords, Tool::GetBrushRadius(), true,
+    tmp_layer.DrawCircle(canvas_coords.value(), Tool::GetBrushRadius(), true,
                          kDeleteColor);
 }
 
@@ -594,4 +607,46 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
 
     return displayed_canvas;
 }
-} // namespace App
+
+void Layers::PushToHistory()
+{
+    auto& history = GetHistory();
+
+    if (sCurrentCapture < history.size() - 1)
+    {
+        auto delete_begin = history.begin();
+        std::advance(delete_begin, sCurrentCapture + 1);
+        history.erase(delete_begin, history.end());
+    }
+
+    history.emplace_back(GetLayers(), sCurrentLayerIndex);
+    sCurrentCapture = history.size() - 1;
+}
+
+void Layers::Undo()
+{
+    if (sCurrentCapture != 0)
+    {
+        sCurrentCapture--;
+        auto& history = GetHistory();
+        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+    }
+}
+
+void Layers::Redo()
+{
+    auto& history = GetHistory();
+
+    if (sCurrentCapture != history.size() - 1)
+    {
+        sCurrentCapture++;
+        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+    }
+}
+
+void Layers::Update()
+{
+    if (sShouldUpdateHistory) { PushToHistory(); }
+    sShouldUpdateHistory = false;
+}
+} // namespace Pikzel

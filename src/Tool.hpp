@@ -2,7 +2,7 @@
 
 #include <imgui.h>
 
-namespace App
+namespace Pikzel
 {
 enum ToolType
 {
@@ -85,4 +85,4 @@ class Tool
     inline static int sBrushRadius = 1;
     inline static int sSelectedColorSlot = kColorSlot1;
 };
-} // namespace App
+}  // namespace Pikzel

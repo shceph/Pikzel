@@ -1,6 +1,6 @@
 #include "Tool.hpp"
 
-namespace App
+namespace Pikzel
 {
 void Tool::SetDataToDefault()
 {
@@ -13,4 +13,4 @@ void Tool::SetDataToDefault()
     sBrushRadius = 1;
     sSelectedColorSlot = kColorSlot1;
 }
-} // namespace App
+}  // namespace Pikzel

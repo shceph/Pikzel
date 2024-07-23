@@ -19,6 +19,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Application.hpp"
+#include "Camera.hpp"
 #include "Layer.hpp"
 
 namespace
@@ -126,7 +127,7 @@ void GlfwError(int err_id, const char* message)
 void GlfwScrollCallback(GLFWwindow* /*window*/, double /*xoffset*/,
                         double yoffset)
 {
-    App::Camera::AddToZoom(yoffset / 30);
+    Pikzel::Camera::AddToZoom(yoffset / 30);
 }
 
 void GlfwCursorPosCallback(GLFWwindow* window, double x_pos, double y_pos)
@@ -136,13 +137,12 @@ void GlfwCursorPosCallback(GLFWwindow* window, double x_pos, double y_pos)
     static double old_y = y_pos;
     static auto last_time_clicked = std::chrono::steady_clock::now();
 
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) ==
-            GLFW_PRESS &&
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS &&
         std::chrono::steady_clock::now() - last_time_clicked <= kAllowedDelay)
     {
         double offset_x = old_x - x_pos;
         double offset_y = old_y - y_pos;
-        App::Camera::MoveCenter(
+        Pikzel::Camera::MoveCenter(
             {static_cast<int>(offset_x), static_cast<int>(offset_y)});
     }
 
@@ -157,21 +157,21 @@ void HandleEvents(GLFWwindow* window)
     /* glfwPollEvents(); */
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS &&
-        App::Project::IsOpened())
+        Pikzel::Project::IsOpened())
     {
-        App::Layers::DoCurrentTool();
+        Pikzel::Layers::DoCurrentTool();
     }
 }
 
 void UpdateProjMat(Gla::Shader& shader)
 {
-    assert(App::Project::IsOpened());
+    assert(Pikzel::Project::IsOpened());
 
-    const auto width = static_cast<float>(App::Project::CanvasWidth());
-    const auto height = static_cast<float>(App::Project::CanvasHeight());
-    const App::Vec2Int center_offset =
-        App::Camera::GetCenter() - App::Project::GetCanvasDims() / 2;
-    auto zoom_half = static_cast<float>(App::Camera::GetZoomValue()) / 2;
+    const auto width = static_cast<float>(Pikzel::Project::CanvasWidth());
+    const auto height = static_cast<float>(Pikzel::Project::CanvasHeight());
+    const Pikzel::Vec2Int center_offset =
+        Pikzel::Camera::GetCenter() - Pikzel::Project::GetCanvasDims() / 2;
+    auto zoom_half = static_cast<float>(Pikzel::Camera::GetZoomValue()) / 2;
 
     glm::mat4 proj = glm::ortho(
         static_cast<float>(center_offset.x) + zoom_half * width,
@@ -186,10 +186,6 @@ void UpdateProjMat(Gla::Shader& shader)
 auto main() -> int
 {
     if (glfwInit() == 0) { return -1; }
-
-    // glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    // glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     constexpr int kWindowWidth = 1280;
     constexpr int kWindowHeight = 700;
@@ -233,12 +229,12 @@ auto main() -> int
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    App::UI::ImGuiInit(window);
+    Pikzel::UI::ImGuiInit(window);
 
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
 
-        std::vector<App::Vertex> vertices;
+        std::vector<Pikzel::Vertex> vertices;
 
         Gla::FrameBuffer imgui_window_fb(kWindowWidth, kWindowHeight);
         Gla::FrameBuffer::BindToDefaultFB();
@@ -254,20 +250,16 @@ auto main() -> int
         Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
                                            Gla::GLMinMagFilter::NEAREST);
 
-        Gla::Texture2D eye_opened_texture("assets/eye_opened.png",
-                                          Gla::GLMinMagFilter::LINEAR);
-        Gla::Texture2D eye_closed_texture("assets/eye_closed.png",
-                                          Gla::GLMinMagFilter::LINEAR);
-        Gla::Texture2D lock_locked_texture("assets/lock_locked.png",
-                                           Gla::GLMinMagFilter::LINEAR);
-        Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png",
-                                             Gla::GLMinMagFilter::LINEAR);
+        Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
+        Gla::Texture2D eye_closed_texture("assets/eye_closed.png");
+        Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
+        Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
 
-        App::UI::SetupToolTextures(
+        Pikzel::UI::SetupToolTextures(
             brush_tool_texture.GetID(), eraser_tool_texture.GetID(),
             color_picker_tool_texture.GetID(), bucket_tool_texture.GetID());
 
-        App::UI::SetupLayerToolTextures(
+        Pikzel::UI::SetupLayerToolTextures(
             eye_opened_texture.GetID(), eye_closed_texture.GetID(),
             lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
 
@@ -282,52 +274,50 @@ auto main() -> int
         Gla::Mesh mesh(vao, shader);
         mesh.Bind();
 
-        /* Loop until the user closes the window */
         while (glfwWindowShouldClose(window) == 0)
         {
-            App::UI::NewFrame();
+            Pikzel::UI::NewFrame();
 
-            if (App::Project::IsOpened())
+            if (Pikzel::Project::IsOpened())
             {
-                App::UI::RenderUI();
-                App::UI::RenderDrawWindow(imgui_window_fb.GetTextureID(),
-                                          "Draw");
+                Pikzel::UI::RenderUI();
+                Pikzel::UI::RenderDrawWindow(imgui_window_fb.GetTextureID(),
+                                             "Draw");
             }
             else
             {
-                App::UI::RenderNoProjectWindow();
+                Pikzel::UI::RenderNoProjectWindow();
 
-                if (App::Project::IsOpened()) // If a new project got created
+                if (Pikzel::Project::IsOpened()) // If a new project got created
                 {
-                    glm::mat4 proj = glm::ortho(
-                        0.0F, static_cast<float>(App::Project::CanvasWidth()),
-                        0.0F, static_cast<float>(App::Project::CanvasHeight()));
-                    shader.SetUniformMat4f("u_ViewProjection", proj);
-                    // Setting up the vertex vector for the first time
-                    App::UI::SetVertexBuffUpdateToTrue();
+                    UpdateProjMat(shader);
+                    Pikzel::UI::SetVertexBuffUpdateToTrue();
                 }
             }
 
-            App::UI::RenderAndEndFrame();
+            Pikzel::UI::RenderAndEndFrame();
 
-            if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
+            if (Pikzel::Project::IsOpened() &&
+                Pikzel::UI::IsDrawWindowRendered())
             {
-                App::Layers::DrawToTempLayer();
-                App::UI::SetVertexBuffUpdateToTrue();
+                Pikzel::Layers::DrawToTempLayer();
+                Pikzel::UI::SetVertexBuffUpdateToTrue();
             }
 
-            if (App::UI::ShouldUpdateVertexBuffer())
+            if (Pikzel::UI::ShouldUpdateVertexBuffer())
             {
                 mesh.Bind();
-                App::Layers::EmplaceVertices(vertices);
-                vbo.UpdateSizeIfNeeded(vertices.size() * sizeof(App::Vertex));
+                Pikzel::Layers::EmplaceVertices(vertices);
+                vbo.UpdateSizeIfNeeded(vertices.size() *
+                                       sizeof(Pikzel::Vertex));
                 vbo.UpdateData(vertices.data(),
-                               vertices.size() * sizeof(App::Vertex));
+                               vertices.size() * sizeof(Pikzel::Vertex));
             }
 
-            if (App::Project::IsOpened() && App::UI::IsDrawWindowRendered())
+            if (Pikzel::Project::IsOpened() &&
+                Pikzel::UI::IsDrawWindowRendered())
             {
-                ImVec2 draw_window_dims = App::UI::GetDrawWinDimensions();
+                ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
                 imgui_window_fb.Bind();
                 imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
                                         static_cast<int>(draw_window_dims.y));
@@ -336,23 +326,25 @@ auto main() -> int
                 UpdateProjMat(shader);
 
                 renderer.Clear();
+                glClearColor(0.8, 0.8, 0.8, 1.0);
                 renderer.DrawArrays(Gla::TRIANGLES, vertices.size());
 
                 Gla::FrameBuffer::BindToDefaultFB();
             }
 
-            App::UI::Update();
+		  Pikzel::Layers::Update();
+            Pikzel::UI::Update();
 
             /* Swap front and back buffers */
             glfwSwapBuffers(window);
 
             HandleEvents(window);
 
-            App::UI::SetShouldDoToolToTrue();
+            Pikzel::UI::SetShouldDoToolToTrue();
         }
     }
 
-    App::UI::ImGuiCleanup();
+    Pikzel::UI::ImGuiCleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 }

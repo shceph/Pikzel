@@ -5,24 +5,8 @@
 
 #include "Project.hpp"
 
-namespace App
+namespace Pikzel
 {
-class Camera
-{
-  public:
-    static void AddToZoom(double val_to_add);
-    static void SetCenter(Vec2Int center);
-    static void MoveCenter(Vec2Int offset);
-    inline static auto GetZoomValue() -> double { return sZoomValue; }
-    inline static auto GetCenter() -> Vec2Int { return sZoomCenter; }
-
-  private:
-    inline static double sZoomValue = 0.0;
-    inline static Vec2Int sZoomCenter;
-    constexpr static double kZoomMin = 0.0;
-    constexpr static double kZoomMax = 0.93;
-};
-
 class UI
 {
   public:
@@ -85,13 +69,13 @@ class UI
     inline static void SetShouldDoToolToTrue() { sShouldDoTool = true; }
 
   private:
-    static void RenderMainMenuBar();
+    static void RenderMenuBar();
     static void RenderSaveAsImagePopup();
     static void RenderSaveAsProjectPopup();
     static void RenderColorWindow();
     static void RenderColorPalette(ImVec4& color);
     static void RenderToolWindow();
-    static void RenderContextMenu();
+    static void RenderLayerWinContextMenu();
     static void RenderLayerWindow();
     static void RenderSaveErrorPopup();
     static void RenderNewProjectPopup();
@@ -132,4 +116,4 @@ class UI
 
     friend void Project::SaveAsImage(int, const std::string&);
 };
-} // namespace App
+}  // namespace Pikzel

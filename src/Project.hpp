@@ -3,7 +3,7 @@
 #include <glm/vec2.hpp>
 #include <string>
 
-namespace App
+namespace Pikzel
 {
 using Vec2Int = glm::vec<2, int>;
 
@@ -29,4 +29,4 @@ class Project
     inline static int sCanvasHeight = 0;
     inline static int sCanvasWidth = 0;
 };
-} // namespace App
+}  // namespace Pikzel

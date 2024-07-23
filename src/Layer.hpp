@@ -3,11 +3,13 @@
 #include "Project.hpp"
 
 #include <imgui.h>
+
 #include <list>
+#include <optional>
 #include <string>
 #include <vector>
 
-namespace App
+namespace Pikzel
 {
 constexpr int kCanvasHeight = 32;
 constexpr int kCanvasWidth = 32;
@@ -52,7 +54,7 @@ class Layer
         return mLayerName;
     }
 
-    static auto CanvasCoordsFromCursorPos(Vec2Int& coords) -> bool;
+    static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
 
   private:
     void DrawCircle(Vec2Int center, int radius, bool fill,
@@ -61,11 +63,11 @@ class Layer
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
-    CanvasData mCanvas;
+    inline static int sConstructCounter = 1;
 
+    CanvasData mCanvas;
     bool mVisible = true, mLocked = false;
     int mOpacity = 255;
-
     std::string mLayerName;
 
     friend class UI;
@@ -75,8 +77,23 @@ class Layer
 class Layers
 {
   public:
-    static auto GetCurrentLayer() -> Layer&;
+    struct Capture
+    {
+        Capture() : selected_layer_index{sCurrentLayerIndex}
+        {
+            layers.emplace_back();
+        }
 
+        Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
+            : layers{layers}, selected_layer_index{selected_layer_index}
+        {
+        }
+
+        std::list<Layer> layers;
+        std::size_t selected_layer_index;
+    };
+
+    static auto GetCurrentLayer() -> Layer&;
     static void DoCurrentTool();
     static void MoveUp(std::size_t layer_index);
     static void MoveDown(std::size_t layer_index);
@@ -84,29 +101,59 @@ class Layers
     static void EmplaceVertices(std::vector<Vertex>& vertices);
     static void ResetDataToDefault();
     static void DrawToTempLayer();
-
     static auto AtIndex(std::size_t index) -> Layer&;
-
     static auto GetDisplayedCanvas() -> CanvasData;
+    static void PushToHistory();
+    static void Undo();
+    static void Redo();
+    static void Update();
+
     inline static auto GetLayerCount() -> std::size_t
     {
+        assert(!GetLayers().empty());
         return GetLayers().size();
+    }
+    inline static auto GetCurrentLayerIndex() -> std::size_t
+    {
+        return sCurrentLayerIndex;
+    }
+    inline static void InitHistory()
+    {
+        Capture capture;
+        auto& history = GetHistory();
+        history.clear();
+        history.emplace_back(std::move(capture));
     }
 
   private:
-    static auto GetLayers() -> std::list<Layer>&
+    inline static auto GetCapture() -> Capture&
     {
-	   static std::list<Layer> layers;
-	   return layers;
+        auto& history = GetHistory();
+        assert(sCurrentCapture < history.size());
+        return history[sCurrentCapture];
     }
-    static auto GetTempLayer() -> Layer&
+    inline static auto GetLayers() -> std::list<Layer>&
+    {
+        return GetCapture().layers;
+    }
+    inline static auto GetHistory() -> std::vector<Capture>&
+    {
+        static std::vector<Capture> history;
+        return history;
+    }
+    inline static auto GetTempLayer() -> Layer&
     {
         static Layer tmp_lay;
         return tmp_lay;
     }
+    inline static void MarkHistoryForUpdate() { sShouldUpdateHistory = true; }
+
+    static constexpr int kMaxHistoryLenght = 10;
+    inline static std::size_t sCurrentCapture = 0;
     inline static std::size_t sCurrentLayerIndex = 0;
+    inline static bool sShouldUpdateHistory = false;
 
     friend class UI;
     friend class Layer;
 };
-} // namespace App
+} // namespace Pikzel

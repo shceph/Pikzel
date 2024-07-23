@@ -1,4 +1,5 @@
 #include "Application.hpp"
+#include "Camera.hpp"
 #include "Layer.hpp"
 #include "Tool.hpp"
 
@@ -13,25 +14,9 @@
 #include <array>
 #include <bit>
 #include <string>
-#include <algorithm>
 
-namespace App
+namespace Pikzel
 {
-void Camera::AddToZoom(double val_to_add)
-{
-    sZoomValue = std::clamp(sZoomValue + val_to_add, kZoomMin, kZoomMax);
-}
-
-void Camera::SetCenter(Vec2Int center)
-{
-    sZoomCenter = center;
-}
-
-void Camera::MoveCenter(Vec2Int offset)
-{
-    sZoomCenter += offset;
-}
-
 void UI::ImGuiInit(GLFWwindow* _window)
 {
     sWindow = _window;
@@ -60,7 +45,10 @@ void UI::ImGuiInit(GLFWwindow* _window)
     style.GrabRounding = 3.0F;
     style.WindowRounding = 3.0F;
     style.ScrollbarRounding = 3.0F;
-    style.FrameBorderSize = 1.0F;
+    style.TabRounding = 3.0F;
+    style.ChildRounding = 3.0F;
+    style.PopupRounding = 3.0F;
+    /* style.FrameBorderSize = 1.0F; */
     /* style.WindowBorderSize = 1.0F; */
     style.ScaleAllSizes(1.5);
 }
@@ -101,7 +89,7 @@ void UI::RenderUI()
 {
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
 
-    RenderMainMenuBar();
+    RenderMenuBar();
     RenderColorWindow();
     RenderToolWindow();
     RenderLayerWindow();
@@ -239,7 +227,7 @@ auto UI::ShouldDoTool() -> bool
     return sShouldDoTool;
 }
 
-void UI::RenderMainMenuBar()
+void UI::RenderMenuBar()
 {
     ImGui::BeginMainMenuBar();
 
@@ -250,14 +238,29 @@ void UI::RenderMainMenuBar()
             Project::CloseCurrentProject();
             sRenderNewProjectPopup = true;
         }
-
         if (ImGui::MenuItem("Save as image")) { sRenderSaveAsImgPopup = true; }
-
         if (ImGui::MenuItem("Save as project"))
         {
             sRenderSaveAsPrjPopup = true;
         }
+        ImGui::EndMenu();
+    }
 
+    if (ImGui::BeginMenu("Edit"))
+    {
+        if (ImGui::MenuItem("Undo")) { Layers::Undo(); }
+        if (ImGui::MenuItem("Redo")) { Layers::Redo(); }
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("View"))
+    {
+        constexpr double kZoomAddVal = 0.1;
+        if (ImGui::MenuItem("Zoom In")) { Camera::AddToZoom(kZoomAddVal); }
+        if (ImGui::MenuItem("Zoom Out")) { Camera::AddToZoom(-kZoomAddVal); }
+        if (ImGui::MenuItem("Reset Camera")) { Camera::ResetCamera(); }
+        if (ImGui::MenuItem("Reset Center")) { Camera::ResetCenter(); }
+        if (ImGui::MenuItem("Reset Zoom")) { Camera::ResetZoom(); }
         ImGui::EndMenu();
     }
 
@@ -291,9 +294,7 @@ void UI::RenderSaveAsImagePopup()
             std::string destination(destination_str.data());
             destination += '/';
             destination += file_name_str.data();
-
             Project::SaveAsImage(magnify_factor, destination);
-
             sRenderSaveAsImgPopup = false;
             ImGui::CloseCurrentPopup();
         }
@@ -520,8 +521,8 @@ void UI::RenderToolWindow()
     ImGui::NewLine();
 
     ImGui::PushItemWidth(200.0F);
-    /* ImGui::InputInt(" Brush size", &Tool::sBrushRadius, 1, 10); */
-    ImGui::SliderInt(" Brush size", &Tool::sBrushRadius, 1, 1000);
+    ImGui::SliderInt(" Brush size", &Tool::sBrushRadius, 1,
+                     Project::CanvasWidth());
     ImGui::PopItemWidth();
 
     if (Tool::sBrushRadius < 1) { Tool::sBrushRadius = 1; }
@@ -536,7 +537,6 @@ void UI::RenderLayerWindow()
     if (ImGui::Button("Add a layer")) { Layers::AddLayer(); }
 
     auto layer_it = Layers::GetLayers().begin();
-
     for (std::size_t i = 0; i < Layers::GetLayers().size(); i++)
     {
         Layer& layer_traversed = *layer_it;
@@ -618,14 +618,14 @@ void UI::RenderLayerWindow()
         }
     }
 
-    RenderContextMenu();
+    RenderLayerWinContextMenu();
 
     ImGui::End();
 }
 
 // Don't forget to call this function before ImGui::End() as this function uses
 // ImGui::IsWindowHovered()
-void UI::RenderContextMenu()
+void UI::RenderLayerWinContextMenu()
 {
     // Code bellow renders popups for changing a layer's name
     static bool open_the_change_lay_name_popup = false;
@@ -754,4 +754,4 @@ void UI::EndOutline()
     ImGui::GetStyle().FrameBorderSize = 0.0F;
     ImGui::PopStyleColor();
 }
-} // namespace App
+} // namespace Pikzel
