@@ -10,7 +10,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <chrono>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -20,11 +19,11 @@
 
 #include "Application.hpp"
 #include "Camera.hpp"
+#include "Events.hpp"
 #include "Layer.hpp"
 
 namespace
 {
-
 #ifndef NDEBUG
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
@@ -124,45 +123,6 @@ void GlfwError(int err_id, const char* message)
 }
 #endif
 
-void GlfwScrollCallback(GLFWwindow* /*window*/, double /*xoffset*/,
-                        double yoffset)
-{
-    Pikzel::Camera::AddToZoom(yoffset / 30);
-}
-
-void GlfwCursorPosCallback(GLFWwindow* window, double x_pos, double y_pos)
-{
-    constexpr auto kAllowedDelay = std::chrono::milliseconds(25);
-    static double old_x = x_pos;
-    static double old_y = y_pos;
-    static auto last_time_clicked = std::chrono::steady_clock::now();
-
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS &&
-        std::chrono::steady_clock::now() - last_time_clicked <= kAllowedDelay)
-    {
-        double offset_x = old_x - x_pos;
-        double offset_y = old_y - y_pos;
-        Pikzel::Camera::MoveCenter(
-            {static_cast<int>(offset_x), static_cast<int>(offset_y)});
-    }
-
-    old_x = x_pos;
-    old_y = y_pos;
-    last_time_clicked = std::chrono::steady_clock::now();
-}
-
-void HandleEvents(GLFWwindow* window)
-{
-    glfwWaitEvents();
-    /* glfwPollEvents(); */
-
-    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS &&
-        Pikzel::Project::IsOpened())
-    {
-        Pikzel::Layers::DoCurrentTool();
-    }
-}
-
 void UpdateProjMat(Gla::Shader& shader)
 {
     assert(Pikzel::Project::IsOpened());
@@ -181,6 +141,14 @@ void UpdateProjMat(Gla::Shader& shader)
 
     shader.SetUniformMat4f("u_ViewProjection", proj);
 }
+
+void PushCallbacksToEventsClass()
+{
+    Pikzel::Events::PushToScrollCallback(
+        Pikzel::Events::CallbackType(Pikzel::Camera::ScrollCallback));
+    Pikzel::Events::PushToCursorPosCallback(
+        Pikzel::Events::CallbackType(Pikzel::Camera::CursorPosCallback));
+}
 } // namespace
 
 auto main() -> int
@@ -190,9 +158,8 @@ auto main() -> int
     constexpr int kWindowWidth = 1280;
     constexpr int kWindowHeight = 700;
 
-    /* Create a windowed mode window and its OpenGL context */
-    GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight,
-                                          "PixelCraft", nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Pikzel",
+                                          nullptr, nullptr);
 
     if (window == nullptr)
     {
@@ -206,8 +173,10 @@ auto main() -> int
     glfwSwapInterval(1);
     glfwMaximizeWindow(window);
 
-    glfwSetScrollCallback(window, &GlfwScrollCallback);
-    glfwSetCursorPosCallback(window, &GlfwCursorPosCallback);
+    Pikzel::Events::SetWindowPtr(window);
+    PushCallbacksToEventsClass();
+    glfwSetScrollCallback(window, &Pikzel::Events::GlfwScrollCallback);
+    glfwSetCursorPosCallback(window, &Pikzel::Events::GlfwCursorPosCallback);
 #ifndef NDEBUG
     glfwSetErrorCallback(&GlfwError);
     std::cout << "C++ standard: " << __cplusplus << '\n';
@@ -215,9 +184,8 @@ auto main() -> int
 
     if (glewInit() != GLEW_OK) { std::cout << "Glew init error\n"; }
 
-    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
-
 #ifndef NDEBUG
+    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(GlDebugOutput, nullptr);
@@ -249,16 +217,20 @@ auto main() -> int
                                                  Gla::GLMinMagFilter::NEAREST);
         Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
                                            Gla::GLMinMagFilter::NEAREST);
+        Gla::Texture2D square_tool_texture("assets/square_tool.png");
+
+        std::array<unsigned int, Pikzel::kToolCount> tool_texture_ids = {
+            brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
+            color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
+            square_tool_texture.GetID(),
+        };
 
         Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
         Gla::Texture2D eye_closed_texture("assets/eye_closed.png");
         Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
         Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
 
-        Pikzel::UI::SetupToolTextures(
-            brush_tool_texture.GetID(), eraser_tool_texture.GetID(),
-            color_picker_tool_texture.GetID(), bucket_tool_texture.GetID());
-
+        Pikzel::UI::SetupToolTextures(tool_texture_ids);
         Pikzel::UI::SetupLayerToolTextures(
             eye_opened_texture.GetID(), eye_closed_texture.GetID(),
             lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
@@ -284,27 +256,12 @@ auto main() -> int
                 Pikzel::UI::RenderDrawWindow(imgui_window_fb.GetTextureID(),
                                              "Draw");
             }
-            else
-            {
-                Pikzel::UI::RenderNoProjectWindow();
-
-                if (Pikzel::Project::IsOpened()) // If a new project got created
-                {
-                    UpdateProjMat(shader);
-                    Pikzel::UI::SetVertexBuffUpdateToTrue();
-                }
-            }
+            else { Pikzel::UI::RenderNoProjectWindow(); }
 
             Pikzel::UI::RenderAndEndFrame();
 
             if (Pikzel::Project::IsOpened() &&
                 Pikzel::UI::IsDrawWindowRendered())
-            {
-                Pikzel::Layers::DrawToTempLayer();
-                Pikzel::UI::SetVertexBuffUpdateToTrue();
-            }
-
-            if (Pikzel::UI::ShouldUpdateVertexBuffer())
             {
                 mesh.Bind();
                 Pikzel::Layers::EmplaceVertices(vertices);
@@ -312,33 +269,27 @@ auto main() -> int
                                        sizeof(Pikzel::Vertex));
                 vbo.UpdateData(vertices.data(),
                                vertices.size() * sizeof(Pikzel::Vertex));
-            }
+                UpdateProjMat(shader);
 
-            if (Pikzel::Project::IsOpened() &&
-                Pikzel::UI::IsDrawWindowRendered())
-            {
                 ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
                 imgui_window_fb.Bind();
                 imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
                                         static_cast<int>(draw_window_dims.y));
-                mesh.Bind();
-                // TODO(scheph): Not to update the uniform each frame like this
-                UpdateProjMat(shader);
 
                 renderer.Clear();
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 renderer.DrawArrays(Gla::TRIANGLES, vertices.size());
 
                 Gla::FrameBuffer::BindToDefaultFB();
+
+                Pikzel::Layers::DrawToTempLayer();
             }
 
-		  Pikzel::Layers::Update();
+            Pikzel::Layers::Update();
             Pikzel::UI::Update();
+            Pikzel::Events::Update();
 
-            /* Swap front and back buffers */
             glfwSwapBuffers(window);
-
-            HandleEvents(window);
 
             Pikzel::UI::SetShouldDoToolToTrue();
         }

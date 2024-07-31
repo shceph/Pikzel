@@ -4,6 +4,10 @@
 #include <imgui.h>
 
 #include "Project.hpp"
+#include "Tool.hpp"
+
+#include <array>
+#include <span>
 
 namespace Pikzel
 {
@@ -20,16 +24,12 @@ class UI
                                  const char* window_name);
     static void Update();
 
-    static void SetupToolTextures(unsigned int brush_tex_id,
-                                  unsigned int eraser_tex_id,
-                                  unsigned int color_pick_tex_id,
-                                  unsigned int bucket_tex_id);
+    static void SetupToolTextures(std::span<unsigned int> tex_ids);
     static void SetupLayerToolTextures(unsigned int eye_opened_id,
                                        unsigned int eye_closed_id,
                                        unsigned int lock_locked_id,
                                        unsigned int lock_unlocked_id);
 
-    static auto ShouldUpdateVertexBuffer() -> bool;
     static auto ShouldDoTool() -> bool;
 
     static auto IsDrawWindowRendered() -> bool { return sDrawWindowRendered; }
@@ -57,15 +57,6 @@ class UI
     }
 
     inline static auto GetWindowPointer() -> GLFWwindow* { return sWindow; }
-
-    inline static void SetVertexBuffUpdateToTrue()
-    {
-        sUpdateVertexBuffer = true;
-    }
-    inline static void SetVertexBuffUpdateToFalse()
-    {
-        sUpdateVertexBuffer = false;
-    }
     inline static void SetShouldDoToolToTrue() { sShouldDoTool = true; }
 
   private:
@@ -90,23 +81,14 @@ class UI
         return sel_itm_outline_col;
     }
 
-    inline static GLFWwindow* sWindow;
-
-    inline static ImTextureID sBrushToolTextureID = nullptr;
-    inline static ImTextureID sEraserToolTextureID = nullptr;
-    inline static ImTextureID sColorPickerToolTextureID = nullptr;
-    inline static ImTextureID sBucketToolTextureID = nullptr;
+    inline static GLFWwindow* sWindow = nullptr;
+	inline static std::array<ImTextureID, kToolCount> sToolTextures;
 
     inline static ImTextureID sEyeOpenedTextureID = nullptr;
     inline static ImTextureID sEyeClosedTextureID = nullptr;
     inline static ImTextureID sLockLockedTextureID = nullptr;
     inline static ImTextureID sLockUnlockedTextureID = nullptr;
 
-    /* inline static ImVec4 sSelectedItemOutlineColor; */
-
-    // Says whether the vertex buffer should be updated, or the canvas state, in
-    // other words
-    inline static bool sUpdateVertexBuffer = false;
     inline static bool sShouldDoTool = false;
     inline static bool sRenderSaveAsImgPopup = false;
     inline static bool sRenderSaveAsPrjPopup = false;

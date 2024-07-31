@@ -9,7 +9,9 @@ enum ToolType
     kBrush,
     kEraser,
     kColorPicker,
-    kBucket
+    kBucket,
+	kRectShape,
+	kToolCount,
 };
 
 class Tool

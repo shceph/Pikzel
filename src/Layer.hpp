@@ -4,6 +4,7 @@
 
 #include <imgui.h>
 
+#include <deque>
 #include <list>
 #include <optional>
 #include <string>
@@ -39,9 +40,8 @@ class Layer
   public:
     Layer() noexcept;
     void DoCurrentTool();
-    // Places the vertices containing the canvas data for my shader program
     void EmplaceVertices(std::vector<Vertex>& vertices,
-                         bool use_color_alpha = false);
+                         bool use_color_alpha = false) const;
 
     [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
     [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
@@ -55,10 +55,12 @@ class Layer
     }
 
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
+	static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
 
   private:
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
+	void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
@@ -113,6 +115,10 @@ class Layers
         assert(!GetLayers().empty());
         return GetLayers().size();
     }
+    inline static auto GetLayersConst() -> const std::list<Layer>&
+    {
+        return GetLayers();
+    }
     inline static auto GetCurrentLayerIndex() -> std::size_t
     {
         return sCurrentLayerIndex;
@@ -122,6 +128,7 @@ class Layers
         Capture capture;
         auto& history = GetHistory();
         history.clear();
+        history.emplace_back(std::move(capture));
         history.emplace_back(std::move(capture));
     }
 
@@ -136,9 +143,9 @@ class Layers
     {
         return GetCapture().layers;
     }
-    inline static auto GetHistory() -> std::vector<Capture>&
+    inline static auto GetHistory() -> std::deque<Capture>&
     {
-        static std::vector<Capture> history;
+        static std::deque<Capture> history;
         return history;
     }
     inline static auto GetTempLayer() -> Layer&
@@ -148,12 +155,12 @@ class Layers
     }
     inline static void MarkHistoryForUpdate() { sShouldUpdateHistory = true; }
 
-    static constexpr int kMaxHistoryLenght = 10;
+    static constexpr int kMaxHistoryLenght = 30;
     inline static std::size_t sCurrentCapture = 0;
     inline static std::size_t sCurrentLayerIndex = 0;
     inline static bool sShouldUpdateHistory = false;
 
-    friend class UI;
     friend class Layer;
+    friend class UI;
 };
 } // namespace Pikzel

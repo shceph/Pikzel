@@ -11,6 +11,8 @@ class Camera
     static void ResetCamera();
     static void ResetCenter();
     static void ResetZoom();
+    static void ScrollCallback(double xoffset, double yoffset);
+    static void CursorPosCallback(double x_pos, double y_pos);
     inline static auto GetZoomValue() -> double { return sZoomValue; }
     inline static auto GetCenter() -> Vec2Int { return sCenter; }
 

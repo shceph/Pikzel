@@ -13,6 +13,7 @@ Checks: >
   # misc-*,
   # google-*,
 
+  -google-readability-todo,
   -cppcoreguidelines-pro-type-union-access,
   -hicpp-signed-bitwise,
   -readability-magic-numbers,

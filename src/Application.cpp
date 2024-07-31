@@ -184,22 +184,27 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
 void UI::Update()
 {
     sDrawWindowRendered = false;
-    SetVertexBuffUpdateToFalse();
 }
 
-void UI::SetupToolTextures(unsigned int brush_tex_id,
-                           unsigned int eraser_tex_id,
-                           unsigned int color_pick_tex_id,
-                           unsigned int bucket_tex_id)
+void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
 {
-    sBrushToolTextureID =
+    auto index = 0UZ;
+
+    for (auto tex_id : tex_ids)
+    {
+        sToolTextures.at(index) =
+            std::bit_cast<ImTextureID>(static_cast<uintptr_t>(tex_id));
+        index++;
+    }
+
+    /*sBrushToolTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(brush_tex_id));
     sEraserToolTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(eraser_tex_id));
     sColorPickerToolTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(color_pick_tex_id));
     sBucketToolTextureID =
-        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(bucket_tex_id));
+        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(bucket_tex_id));*/
 }
 
 void UI::SetupLayerToolTextures(unsigned int eye_opened_id,
@@ -215,11 +220,6 @@ void UI::SetupLayerToolTextures(unsigned int eye_opened_id,
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(lock_locked_id));
     sLockUnlockedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(lock_unlocked_id));
-}
-
-auto UI::ShouldUpdateVertexBuffer() -> bool
-{
-    return sUpdateVertexBuffer;
 }
 
 auto UI::ShouldDoTool() -> bool
@@ -472,51 +472,48 @@ void UI::RenderToolWindow()
 
     ToolType tool_type = Tool::GetToolType();
 
-    /* kBrush */
     if (tool_type == kBrush) { BeginOutline(); }
-
-    if (ImGui::ImageButton(sBrushToolTextureID, {20.0F, 20.0F}))
+    if (ImGui::ImageButton(sToolTextures[kBrush], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kBrush);
     }
-
     if (tool_type == kBrush) { EndOutline(); }
 
-    /* kEraser */
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kEraser) { BeginOutline(); }
-
-    if (ImGui::ImageButton(sEraserToolTextureID, {20.0F, 20.0F}))
+    if (ImGui::ImageButton(sToolTextures[kEraser], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kEraser);
     }
-
     if (tool_type == kEraser) { EndOutline(); }
 
-    /* COLOR PICKER */
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kColorPicker) { BeginOutline(); }
-
-    if (ImGui::ImageButton(sColorPickerToolTextureID, {20.0F, 20.0F}))
+    if (ImGui::ImageButton(sToolTextures[kColorPicker], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kColorPicker);
     }
-
     if (tool_type == kColorPicker) { EndOutline(); }
 
-    /* kBucker */
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kBucket) { BeginOutline(); }
-
-    if (ImGui::ImageButton(sBucketToolTextureID, {20.0F, 20.0F}))
+    if (ImGui::ImageButton(sToolTextures[kBucket], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kBucket);
     }
-
     if (tool_type == kBucket) { EndOutline(); }
+
+    ImGui::SameLine(0.0F, 4.0F);
+
+    if (tool_type == kRectShape) { BeginOutline(); }
+    if (ImGui::ImageButton(sToolTextures[kRectShape], {20.0F, 20.0F}))
+    {
+        Tool::SetToolType(kRectShape);
+    }
+    if (tool_type == kRectShape) { EndOutline(); }
 
     ImGui::NewLine();
 
@@ -562,7 +559,6 @@ void UI::RenderLayerWindow()
         if (ImGui::ImageButton((str_id_for_widgets + "_v").c_str(),
                                visibility_tex, kImageButtonDims))
         {
-            sUpdateVertexBuffer = true;
             layer_traversed.SwitchVisibilityState();
         }
 
@@ -571,12 +567,9 @@ void UI::RenderLayerWindow()
         if (ImGui::ImageButton((str_id_for_widgets + "_l").c_str(), lock_tex,
                                kImageButtonDims))
         {
-            sUpdateVertexBuffer = true;
             layer_traversed.SwitchLockState();
         }
 
-        // Checks if the layer traversed is the current selected layer. If so,
-        // draws borders around the layer button
         bool this_is_selected_layer = (Layers::sCurrentLayerIndex == i);
         if (this_is_selected_layer) { BeginOutline(); }
 
@@ -592,28 +585,22 @@ void UI::RenderLayerWindow()
         ImGui::PushItemWidth(100.0F);
         ImGui::PushID(static_cast<int>(i));
 
-        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0, 255))
-        {
-            UI::SetVertexBuffUpdateToTrue();
-        }
+        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0, 255)) {}
 
         ImGui::PopID();
         ImGui::PopItemWidth();
 
         ImGui::SameLine(0.0F, 10.0F);
         if (ImGui::ArrowButton((str_id_for_widgets + "_abu").c_str(),
-                               ImGuiDir_Up)) // Move layer up button
+                               ImGuiDir_Up))
         {
-            // Need to update the vb because the layer order changes
-            sUpdateVertexBuffer = true;
             Layers::MoveUp(static_cast<int>(i));
         }
 
         ImGui::SameLine(0.0F, 1.0F);
         if (ImGui::ArrowButton((str_id_for_widgets + "_abd").c_str(),
-                               ImGuiDir_Down)) // Move layer down button
+                               ImGuiDir_Down))
         {
-            sUpdateVertexBuffer = true;
             Layers::MoveDown(static_cast<int>(i));
         }
     }
@@ -730,7 +717,6 @@ void UI::RenderNewProjectPopup()
         {
             Project::New({width, height});
             sRenderNewProjectPopup = false;
-            sUpdateVertexBuffer = true;
         }
 
         ImGui::SameLine(0.0F, 5.0F);

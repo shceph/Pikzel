@@ -2,6 +2,7 @@
 
 #include "Application.hpp"
 #include "Camera.hpp"
+#include "Events.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
 
@@ -12,6 +13,7 @@
 #include <chrono>
 #include <cmath>
 #include <list>
+#include <print>
 #include <queue>
 #include <ranges>
 #include <vector>
@@ -90,8 +92,6 @@ void Layer::DoCurrentTool()
     std::optional<Vec2Int> canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return; }
 
-    UI::SetVertexBuffUpdateToTrue();
-
     if (Tool::GetToolType() == kColorPicker)
     {
         auto displayed_canvas = Layers::GetDisplayedCanvas();
@@ -112,6 +112,36 @@ void Layer::DoCurrentTool()
         Color clicked_color = mCanvas[canv_coord->y][canv_coord->x];
         Fill(canv_coord->x, canv_coord->y, clicked_color);
         Layers::MarkHistoryForUpdate();
+        return;
+    }
+
+    if (Tool::GetToolType() == ToolType::kRectShape)
+    {
+        static bool shape_began = false;
+        static Vec2Int shape_begin_coords{0, 0};
+
+        if (!shape_began && Events::IsMouseButtonPressed(Events::kButtonLeft))
+        {
+            shape_begin_coords = canv_coord.value();
+            shape_began = true;
+            return;
+        }
+
+        if (!shape_began) { return; }
+
+        auto left_button_held = Events::IsMouseButtonHeld(Events::kButtonLeft);
+        if (left_button_held)
+        {
+            Layers::GetTempLayer().DrawRect(shape_begin_coords,
+                                            canv_coord.value(), true);
+        }
+        else
+        {
+            DrawRect(shape_begin_coords, canv_coord.value(), true);
+            shape_began = false;
+            Layers::MarkHistoryForUpdate();
+        }
+
         return;
     }
 
@@ -147,7 +177,7 @@ void Layer::DoCurrentTool()
 }
 
 void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
-                            bool use_color_alpha /*= false*/)
+                            bool use_color_alpha /*= false*/) const
 {
     if (!mVisible || mOpacity == 0) { return; }
 
@@ -259,6 +289,22 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
         mCanvas[y1_floor][x_coord] = draw_color;
         mCanvas[y2_ceil][x_coord] = draw_color;
+    }
+}
+
+void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
+{
+    std::size_t max_x = std::max(upper_left.x, bottom_right.x);
+    std::size_t min_x = std::min(upper_left.x, bottom_right.x);
+    std::size_t max_y = std::max(upper_left.y, bottom_right.y);
+    std::size_t min_y = std::min(upper_left.y, bottom_right.y);
+
+    for (auto i = min_y; i <= max_y; i++)
+    {
+        for (auto j = min_x; j <= max_x; j++)
+        {
+            mCanvas[i][j] = Tool::GetColor();
+        }
     }
 }
 
@@ -424,6 +470,11 @@ auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
     return std::make_optional(coords);
 }
 
+auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
+{
+    return glm::clamp(val_to_clamp, {0, 0}, Project::GetCanvasDims());
+}
+
 auto Layers::GetCurrentLayer() -> Layer&
 {
     assert(sCurrentLayerIndex >= 0 && sCurrentLayerIndex < GetLayers().size());
@@ -447,39 +498,29 @@ void Layers::AddLayer()
 
 void Layers::MoveUp(std::size_t layer_index)
 {
-    // Can't move the top index up
-    if (layer_index <= 0) { return; }
+    if (layer_index == 0) { return; }
 
     auto it1 = GetLayers().begin();
     std::advance(it1, layer_index);
     auto it2 = GetLayers().begin();
     std::advance(it2, layer_index - 1);
-
     std::iter_swap(it1, it2);
 
-    // The index of the current layer decreases by 1, since it goes up
     if (sCurrentLayerIndex == layer_index) { sCurrentLayerIndex--; }
-    // If the current layer is the one moved down, the index increases by 1,
-    // since it goes down
     else if (sCurrentLayerIndex == layer_index - 1) { sCurrentLayerIndex++; }
 }
 
 void Layers::MoveDown(std::size_t layer_index)
 {
-    // Can't move the bottom index down
     if (layer_index >= GetLayers().size() - 1) { return; }
 
     auto it1 = GetLayers().begin();
     std::advance(it1, layer_index);
     auto it2 = GetLayers().begin();
     std::advance(it2, layer_index + 1);
-
     std::iter_swap(it1, it2);
 
-    // The index of the current layer increases by 1, since it goes down
     if (sCurrentLayerIndex == layer_index) { sCurrentLayerIndex++; }
-    // If the current layer is the one moved up, the index decreases by 1, since
-    // it goes up
     else if (sCurrentLayerIndex == layer_index + 1) { sCurrentLayerIndex--; }
 }
 
@@ -489,9 +530,6 @@ void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
 
     constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
                                                 Color{201, 201, 201, 255}};
-
-    /* Color{0.514F, 0.514F, 0.514F, 1.0F}, */
-    /* Color{0.788F, 0.788F, 0.788F, 1.0F}}; */
 
     /* Background vertices */
     for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
@@ -555,13 +593,6 @@ void Layers::DrawToTempLayer()
     constexpr Color kNoColor = {0, 0, 0, 0};
     constexpr Color kDeleteColor = {255, 255, 255, 110};
 
-    auto curr_tool = Tool::GetToolType();
-
-    if (curr_tool != ToolType::kBrush && curr_tool != ToolType::kEraser)
-    {
-        return;
-    }
-
     auto& tmp_layer = GetTempLayer();
 
     for (std::size_t i = 0;
@@ -572,6 +603,13 @@ void Layers::DrawToTempLayer()
         {
             tmp_layer.mCanvas[i][j] = kNoColor;
         }
+    }
+
+    auto curr_tool = Tool::GetToolType();
+
+    if (curr_tool != ToolType::kBrush && curr_tool != ToolType::kEraser)
+    {
+        return;
     }
 
     std::optional<Vec2Int> canvas_coords = Layer::CanvasCoordsFromCursorPos();
@@ -620,6 +658,15 @@ void Layers::PushToHistory()
     }
 
     history.emplace_back(GetLayers(), sCurrentLayerIndex);
+
+    if (history.size() > kMaxHistoryLenght)
+    {
+        auto delete_end =
+            history.begin() +
+            static_cast<std::ptrdiff_t>(history.size() - kMaxHistoryLenght);
+        history.erase(history.begin(), delete_end);
+    }
+
     sCurrentCapture = history.size() - 1;
 }
 
@@ -646,6 +693,24 @@ void Layers::Redo()
 
 void Layers::Update()
 {
+    if (Events::IsMouseButtonPressed(Events::kButtonLeft) &&
+        Project::IsOpened())
+    {
+        DoCurrentTool();
+    }
+
+    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&
+        Events::IsKeyboardKeyPressed(GLFW_KEY_Z))
+    {
+        Undo();
+    }
+
+    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&
+        Events::IsKeyboardKeyPressed(GLFW_KEY_R))
+    {
+        Redo();
+    }
+
     if (sShouldUpdateHistory) { PushToHistory(); }
     sShouldUpdateHistory = false;
 }
