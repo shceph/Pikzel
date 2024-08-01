@@ -100,7 +100,7 @@ void Project::SaveAsProject(const std::string& save_dest)
 
     if (!save_file.is_open())
     {
-        // TODO(shceph): this is only a temproary way to handle the error
+        // TODO: this is only a temproary way to handle the error
         std::cerr << "Couldn't open the file in "
                      "Project::SaveAsProject(std::string save_dest)"
                   << "\nFile: " << __FILE__ << "\nLine: " << __LINE__

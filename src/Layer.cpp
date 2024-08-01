@@ -13,7 +13,6 @@
 #include <chrono>
 #include <cmath>
 #include <list>
-#include <print>
 #include <queue>
 #include <ranges>
 #include <vector>
@@ -92,7 +91,10 @@ void Layer::DoCurrentTool()
     std::optional<Vec2Int> canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return; }
 
-    if (Tool::GetToolType() == kColorPicker)
+    bool left_button_pressed =
+        Events::IsMouseButtonPressed(Events::kButtonLeft);
+
+    if (Tool::GetToolType() == kColorPicker && left_button_pressed)
     {
         auto displayed_canvas = Layers::GetDisplayedCanvas();
         const Color picked_color =
@@ -107,7 +109,7 @@ void Layer::DoCurrentTool()
         return;
     }
 
-    if (Tool::GetToolType() == kBucket)
+    if (Tool::GetToolType() == kBucket && left_button_pressed)
     {
         Color clicked_color = mCanvas[canv_coord->y][canv_coord->x];
         Fill(canv_coord->x, canv_coord->y, clicked_color);
@@ -120,30 +122,31 @@ void Layer::DoCurrentTool()
         static bool shape_began = false;
         static Vec2Int shape_begin_coords{0, 0};
 
-        if (!shape_began && Events::IsMouseButtonPressed(Events::kButtonLeft))
+        if (!shape_began)
         {
-            shape_begin_coords = canv_coord.value();
-            shape_began = true;
+            if (left_button_pressed)
+            {
+                shape_begin_coords = canv_coord.value();
+                shape_began = true;
+            }
             return;
         }
 
-        if (!shape_began) { return; }
-
-        auto left_button_held = Events::IsMouseButtonHeld(Events::kButtonLeft);
-        if (left_button_held)
+        if (left_button_pressed)
         {
             Layers::GetTempLayer().DrawRect(shape_begin_coords,
                                             canv_coord.value(), true);
+            return;
         }
-        else
-        {
-            DrawRect(shape_begin_coords, canv_coord.value(), true);
-            shape_began = false;
-            Layers::MarkHistoryForUpdate();
-        }
+
+        DrawRect(shape_begin_coords, canv_coord.value(), true);
+        shape_began = false;
+        Layers::MarkHistoryForUpdate();
 
         return;
     }
+
+    if (!left_button_pressed) { return; }
 
     constexpr auto kMaxDelay = std::chrono::milliseconds(100);
     static auto time_last_drawn = std::chrono::steady_clock::now();
@@ -693,11 +696,7 @@ void Layers::Redo()
 
 void Layers::Update()
 {
-    if (Events::IsMouseButtonPressed(Events::kButtonLeft) &&
-        Project::IsOpened())
-    {
-        DoCurrentTool();
-    }
+    if (Project::IsOpened()) { DoCurrentTool(); }
 
     if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&
         Events::IsKeyboardKeyPressed(GLFW_KEY_Z))

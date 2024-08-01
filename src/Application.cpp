@@ -50,7 +50,7 @@ void UI::ImGuiInit(GLFWwindow* _window)
     style.PopupRounding = 3.0F;
     /* style.FrameBorderSize = 1.0F; */
     /* style.WindowBorderSize = 1.0F; */
-    style.ScaleAllSizes(1.5);
+    /* style.ScaleAllSizes(1.5); */
 }
 
 void UI::ImGuiCleanup()
