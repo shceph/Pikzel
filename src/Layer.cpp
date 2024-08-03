@@ -43,7 +43,7 @@ auto Color::operator==(const ImVec4& other) const -> bool
            std::abs(static_cast<float>(a) / 0xff - other.w) <= kTolerance;
 }
 
-auto Color::BlendColor(Color color1, Color color2) -> Color
+/*auto Color::BlendColor(Color color1, Color color2) -> Color
 {
     Color result;
 
@@ -66,6 +66,48 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
     result.a = static_cast<uint8_t>(result_alpha * 255);
 
     return result;
+}*/
+
+/*int blend(unsigned char result[4], unsigned char fg[4], unsigned char bg[4])
+{
+    unsigned int alpha = fg[3] + 1;
+    unsigned int inv_alpha = 256 - fg[3];
+    result[0] = (unsigned char)((alpha * fg[0] + inv_alpha * bg[0]) >> 8);
+    result[1] = (unsigned char)((alpha * fg[1] + inv_alpha * bg[1]) >> 8);
+    result[2] = (unsigned char)((alpha * fg[2] + inv_alpha * bg[2]) >> 8);
+    result[3] = 0xff;
+}*/
+
+auto Color::BlendColor(Color color1, Color color2) -> Color
+{
+    ImVec4 col1 = {
+        static_cast<float>(color1.r) / 255,
+        static_cast<float>(color1.g) / 255,
+        static_cast<float>(color1.b) / 255,
+        static_cast<float>(color1.a) / 255,
+    };
+
+    ImVec4 col2 = {
+        static_cast<float>(color2.r) / 255,
+        static_cast<float>(color2.g) / 255,
+        static_cast<float>(color2.b) / 255,
+        static_cast<float>(color2.a) / 255,
+    };
+
+    float alpha1 = col1.w;
+    float alpha2 = col2.w;
+    float out_alpha = alpha1 + alpha2 * (1.0F - alpha1);
+
+    if (out_alpha == 0) { return {0, 0, 0, 0}; }
+
+    float out_r =
+        (col1.x * alpha1 + col2.x * alpha2 * (1.0F - alpha1)) / out_alpha;
+    float out_g =
+        (col1.y * alpha1 + col2.y * alpha2 * (1.0F - alpha1)) / out_alpha;
+    float out_b =
+        (col1.z * alpha1 + col2.z * alpha2 * (1.0F - alpha1)) / out_alpha;
+
+    return Color::FromImVec4({out_r, out_g, out_b, out_alpha});
 }
 
 auto Color::FromImVec4(const ImVec4 color) -> Color
@@ -641,7 +683,8 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
                         ? layer_traversed.mCanvas[i][j].a
                         : static_cast<uint8_t>(layer_traversed.mOpacity)};
 
-                Color::BlendColor(displayed_canvas[i][j], dst_color);
+                displayed_canvas[i][j] =
+                    Color::BlendColor(dst_color, displayed_canvas[i][j]);
             }
         }
     }

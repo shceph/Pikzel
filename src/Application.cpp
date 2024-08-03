@@ -338,10 +338,8 @@ void UI::RenderSaveAsProjectPopup()
             std::string destination(destination_str.data());
             destination += '/';
             destination += file_name_str.data();
-
             Project::SaveAsProject(destination);
-
-            sRenderSaveAsImgPopup = false;
+            sRenderSaveAsPrjPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -349,7 +347,7 @@ void UI::RenderSaveAsProjectPopup()
 
         if (ImGui::Button("Cancel"))
         {
-            sRenderSaveAsImgPopup = false;
+            sRenderSaveAsPrjPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
