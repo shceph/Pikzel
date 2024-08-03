@@ -130,6 +130,7 @@ class Layers
         history.clear();
         history.emplace_back(std::move(capture));
         history.emplace_back(std::move(capture));
+		sCurrentCapture = 0;
     }
 
   private:
@@ -161,6 +162,7 @@ class Layers
     inline static bool sShouldUpdateHistory = false;
 
     friend class Layer;
+	friend void Project::New(Vec2Int);
     friend class UI;
 };
 } // namespace Pikzel

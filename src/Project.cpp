@@ -18,7 +18,7 @@ void Project::New(Vec2Int canvas_dims)
 {
     if (sProjectOpened)
     {
-        // TODO(scheph): Should handle the case if the user is trying to create
+        // TODO: Should handle the case if the user is trying to create
         // a new project whilst having one already opened. Maybe I could make a
         // prompt waringng the user and telling them the projrct won't be saved
         // if they continue;
@@ -32,6 +32,9 @@ void Project::New(Vec2Int canvas_dims)
     Tool::SetDataToDefault();
     Layers::InitHistory();
     Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
+	Layer tmp_layer;
+	auto& old_tmp_layer = Layers::GetTempLayer();
+	old_tmp_layer = std::move(tmp_layer);
 }
 
 void Project::Open(const std::string& /*project_file_dest*/)
