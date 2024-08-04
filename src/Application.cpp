@@ -106,11 +106,12 @@ void UI::RenderNoProjectWindow()
     ImGui::Begin("No project window");
 
     if (ImGui::Selectable("New project")) { sRenderNewProjectPopup = true; }
-    if (ImGui::Selectable("Open a project")) {}
+    if (ImGui::Selectable("Open a project")) { sRenderOpenProjectPopup = true; }
 
     ImGui::End();
 
     if (sRenderNewProjectPopup) { RenderNewProjectPopup(); }
+    if (sRenderOpenProjectPopup) { RenderOpenProjectPopup(); }
 }
 
 void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
@@ -313,11 +314,10 @@ void UI::RenderSaveAsImagePopup()
 
 void UI::RenderSaveAsProjectPopup()
 {
-    sShouldDoTool = false; // Don't want to draw with a popup opened
+    sShouldDoTool = false;
 
     static std::array<char, 256> destination_str;
     static std::array<char, 64> file_name_str;
-    static int magnify_factor = 1;
 
     ImGui::OpenPopup("Save");
 
@@ -327,11 +327,9 @@ void UI::RenderSaveAsProjectPopup()
         ImGui::Text("Destination:");
         ImGui::InputText("##dest_input", destination_str.data(),
                          destination_str.size());
-        ImGui::Text("Picture name:");
-        ImGui::InputText("##picname_input", file_name_str.data(),
+        ImGui::Text("File name:");
+        ImGui::InputText("##filename_input", file_name_str.data(),
                          file_name_str.size());
-        ImGui::Text("Magnify factor:");
-        ImGui::InputInt("##mag_input", &magnify_factor);
 
         if (ImGui::Button("Save"))
         {
@@ -720,6 +718,39 @@ void UI::RenderNewProjectPopup()
         ImGui::SameLine(0.0F, 5.0F);
 
         if (ImGui::Button("Cancel")) { sRenderNewProjectPopup = false; }
+
+        ImGui::EndPopup();
+    }
+}
+
+void UI::RenderOpenProjectPopup()
+{
+    static std::array<char, 256> destination_str;
+
+    ImGui::OpenPopup("Open");
+
+    if (ImGui::BeginPopupModal("Open", nullptr,
+                               ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::Text("Destination:");
+        ImGui::InputText("##dest_input", destination_str.data(),
+                         destination_str.size());
+
+        if (ImGui::Button("Open"))
+        {
+            std::string destination(destination_str.data());
+            Project::Open(destination);
+            sRenderOpenProjectPopup = false;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine(0.0F, 10.0F);
+
+        if (ImGui::Button("Cancel"))
+        {
+            sRenderOpenProjectPopup = false;
+            ImGui::CloseCurrentPopup();
+        }
 
         ImGui::EndPopup();
     }

@@ -70,6 +70,7 @@ class UI
     static void RenderLayerWindow();
     static void RenderSaveErrorPopup();
     static void RenderNewProjectPopup();
+    static void RenderOpenProjectPopup();
 
     static void
     BeginOutline(ImVec4& outline_color = GetSelectedItemOutlineColor());
@@ -94,6 +95,7 @@ class UI
     inline static bool sRenderSaveAsPrjPopup = false;
     inline static bool sRenderSaveErrorPopup = false;
     inline static bool sRenderNewProjectPopup = false;
+    inline static bool sRenderOpenProjectPopup = false;
     inline static bool sDrawWindowRendered = false;
 
     friend void Project::SaveAsImage(int, const std::string&);

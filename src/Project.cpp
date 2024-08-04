@@ -1,8 +1,8 @@
 #include "Project.hpp"
 #include "Application.hpp"
+#include "Camera.hpp"
 #include "Layer.hpp"
 #include "Tool.hpp"
-#include "Camera.hpp"
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_resize2.h>
@@ -32,13 +32,76 @@ void Project::New(Vec2Int canvas_dims)
     Tool::SetDataToDefault();
     Layers::InitHistory();
     Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
-	Layer tmp_layer;
-	auto& old_tmp_layer = Layers::GetTempLayer();
-	old_tmp_layer = std::move(tmp_layer);
+    auto& old_tmp_layer = Layers::GetTempLayer();
+    old_tmp_layer = Layer{};
+	Layer::ResetConstructCounter();
 }
 
-void Project::Open(const std::string& /*project_file_dest*/)
+void Project::Open(const std::string& project_file_dest)
 {
+    std::ifstream proj_file(project_file_dest);
+
+    if (!proj_file.is_open())
+    {
+#ifdef _DEBUG
+        std::cerr << "Couldn't open the file: " << project_file_dest
+                  << " in Project::Open(const std::string&)"
+                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << '\n';
+#endif
+        return;
+    }
+
+    std::size_t layer_count = 0UZ;
+    int width = 0;
+    int height = 0;
+
+    if (proj_file >> layer_count && proj_file >> width && proj_file >> height)
+    {
+    }
+    else
+    {
+#ifdef _DEBUG
+        std::cerr
+            << "Invalid project file, at Project::Open(const std::string&)\n";
+
+        if (proj_file.eof()) { std::cerr << "EOF reached\n"; }
+#endif
+        return;
+    }
+
+    Vec2Int canvas_dims{width, height};
+    Project::New(canvas_dims);
+    auto& layers = Layers::GetCapture().layers;
+	layers.clear();
+
+    for (auto lay = 0UZ; lay < layer_count; lay++)
+    {
+        layers.emplace_back();
+        auto iter = layers.begin();
+        std::advance(iter, lay);
+
+        for (int i = 0; i < canvas_dims.y; i++)
+        {
+            for (int j = 0; j < canvas_dims.x; j++)
+            {
+                Color col;
+
+                if (!(proj_file >> col.r) || !(proj_file >> col.g) ||
+                    !(proj_file >> col.b) || !(proj_file >> col.a))
+                {
+#ifdef _DEBUG
+                    std::cerr << "Invalid project file, at Project::Open(const "
+                                 "std::string&), copying colors\n";
+#endif
+                    return;
+                }
+
+                iter->mCanvas[i][j] = col;
+            }
+        }
+    }
+
+    proj_file.close();
 }
 
 void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
@@ -99,17 +162,35 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
 
 void Project::SaveAsProject(const std::string& save_dest)
 {
-    std::ofstream save_file(save_dest);
+    std::ofstream save_file(save_dest + ".pkz");
 
     if (!save_file.is_open())
     {
-        // TODO: this is only a temproary way to handle the error
+#ifdef _DEBUG
         std::cerr << "Couldn't open the file in "
                      "Project::SaveAsProject(std::string save_dest)"
-                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__
-                  << std::endl;
-
+                  << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << '\n';
+#endif
         return;
+    }
+
+    auto& layers = Layers::GetCapture().layers;
+    save_file << static_cast<std::size_t>(layers.size()) << " ";
+    save_file << sCanvasWidth << " ";
+    save_file << sCanvasHeight << "\n";
+
+    for (auto& layer : layers)
+    {
+        for (auto& canvas_row : layer.mCanvas)
+        {
+            for (Color elem : canvas_row)
+            {
+                save_file << elem.r << " ";
+                save_file << elem.g << " ";
+                save_file << elem.b << " ";
+                save_file << elem.a << "\n";
+            }
+        }
     }
 
     save_file.close();

@@ -55,12 +55,13 @@ class Layer
     }
 
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
-	static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    static inline void ResetConstructCounter() { sConstructCounter = 1; }
 
   private:
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
-	void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
+    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
@@ -74,6 +75,8 @@ class Layer
 
     friend class UI;
     friend class Layers;
+    friend void Project::SaveAsProject(const std::string&);
+    friend void Project::Open(const std::string&);
 };
 
 class Layers
@@ -130,7 +133,7 @@ class Layers
         history.clear();
         history.emplace_back(std::move(capture));
         history.emplace_back(std::move(capture));
-		sCurrentCapture = 0;
+        sCurrentCapture = 0;
     }
 
   private:
@@ -162,7 +165,9 @@ class Layers
     inline static bool sShouldUpdateHistory = false;
 
     friend class Layer;
-	friend void Project::New(Vec2Int);
     friend class UI;
+    friend void Project::New(Vec2Int);
+    friend void Project::Open(const std::string&);
+    friend void Project::SaveAsProject(const std::string&);
 };
 } // namespace Pikzel
