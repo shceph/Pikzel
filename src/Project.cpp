@@ -29,12 +29,12 @@ void Project::New(Vec2Int canvas_dims)
 
     sProjectOpened = true;
 
+    auto& old_tmp_layer = Layers::GetTempLayer();
+    old_tmp_layer = Layer{};
+    Layer::ResetConstructCounter();
     Tool::SetDataToDefault();
     Layers::InitHistory();
     Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
-    auto& old_tmp_layer = Layers::GetTempLayer();
-    old_tmp_layer = Layer{};
-	Layer::ResetConstructCounter();
 }
 
 void Project::Open(const std::string& project_file_dest)
@@ -55,10 +55,8 @@ void Project::Open(const std::string& project_file_dest)
     int width = 0;
     int height = 0;
 
-    if (proj_file >> layer_count && proj_file >> width && proj_file >> height)
-    {
-    }
-    else
+    if (!(proj_file >> layer_count) || !(proj_file >> width) ||
+        !(proj_file >> height))
     {
 #ifdef _DEBUG
         std::cerr
@@ -72,13 +70,36 @@ void Project::Open(const std::string& project_file_dest)
     Vec2Int canvas_dims{width, height};
     Project::New(canvas_dims);
     auto& layers = Layers::GetCapture().layers;
-	layers.clear();
+    layers.clear();
+    Layer::ResetConstructCounter();
 
     for (auto lay = 0UZ; lay < layer_count; lay++)
     {
         layers.emplace_back();
         auto iter = layers.begin();
         std::advance(iter, lay);
+
+        int opacity = 0;
+        if (!(proj_file >> opacity))
+        {
+#ifdef _DEBUG
+            std::cerr << "Invalid project file, at Project::Open(const "
+                         "std::string&), copying opacity\n";
+#endif
+            return;
+        }
+        iter->mOpacity = opacity;
+
+        /*std::string name;
+        if (!std::getline(proj_file, name))
+        {
+#ifdef _DEBUG
+            std::cerr << "Invalid project file, at Project::Open(const "
+                         "std::string&), copying name\n";
+#endif
+            return;
+        }
+        iter->mLayerName = name;*/
 
         for (int i = 0; i < canvas_dims.y; i++)
         {
@@ -176,11 +197,14 @@ void Project::SaveAsProject(const std::string& save_dest)
 
     auto& layers = Layers::GetCapture().layers;
     save_file << static_cast<std::size_t>(layers.size()) << " ";
-    save_file << sCanvasWidth << " ";
-    save_file << sCanvasHeight << "\n";
+    save_file << Project::CanvasWidth() << " ";
+    save_file << Project::CanvasHeight() << "\n";
 
     for (auto& layer : layers)
     {
+        save_file << layer.GetOpacity() << "\n";
+        // save_file << layer.GetName() << "\n";
+
         for (auto& canvas_row : layer.mCanvas)
         {
             for (Color elem : canvas_row)

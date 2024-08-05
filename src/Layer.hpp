@@ -48,7 +48,7 @@ class Layer
 
     inline void SwitchVisibilityState() { mVisible = !mVisible; }
     inline void SwitchLockState() { mLocked = !mLocked; }
-
+    [[nodiscard]] inline auto GetOpacity() const -> int { return mOpacity; }
     [[nodiscard]] inline auto GetName() const -> const std::string&
     {
         return mLayerName;

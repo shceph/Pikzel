@@ -3,6 +3,7 @@
 #include "Application.hpp"
 #include "Camera.hpp"
 #include "Events.hpp"
+#include "GLFW/glfw3.h"
 #include "Project.hpp"
 #include "Tool.hpp"
 
@@ -172,6 +173,18 @@ void Layer::DoCurrentTool()
                 shape_began = true;
             }
             return;
+        }
+
+        if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
+        {
+            int diff_x = shape_begin_coords.x - canv_coord->x;
+            int diff_y = shape_begin_coords.y - canv_coord->y;
+
+            if (std::abs(diff_x) < std::abs(diff_y))
+            {
+                canv_coord->y = shape_begin_coords.y - diff_x;
+            }
+            else { canv_coord->x = shape_begin_coords.x - diff_y; }
         }
 
         if (left_button_pressed)
