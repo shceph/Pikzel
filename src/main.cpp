@@ -10,6 +10,7 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <future>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -21,6 +22,7 @@
 #include "Camera.hpp"
 #include "Events.hpp"
 #include "Layer.hpp"
+#include "VertexBufferControl.hpp"
 
 namespace
 {
@@ -110,10 +112,9 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
     }
 
     // Output the debug message along with file and line information
-    std::cerr << "OpenGL Debug Message:"
-              << "\n  Source: " << source_str << "\n  Type: " << type_str
-              << "\n  Severity: " << severity_str << "\n  ID: " << errorId
-              << "\n  Message: " << message << '\n';
+    std::cerr << "OpenGL Debug Message:" << "\n  Source: " << source_str
+              << "\n  Type: " << type_str << "\n  Severity: " << severity_str
+              << "\n  ID: " << errorId << "\n  Message: " << message << '\n';
 }
 
 void GlfwError(int err_id, const char* message)
@@ -240,12 +241,26 @@ auto main() -> int
         Gla::VertexBufferLayout layout;
         layout.Push<float>(2);
         layout.Push<uint8_t>(4, GL_TRUE);
+        /* vao.AddBuffer(vbo_background, layout); */
+        /* vao.AddBuffer(vbo_canvas, layout); */
         vao.AddBuffer(vbo, layout);
         Gla::Shader shader("shader/VertShader.vert", "shader/FragShader.frag");
         shader.Bind();
         Gla::Mesh mesh(vao, shader);
         mesh.Bind();
 
+        Gla::VertexArray vao_canvas;
+        Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::DYNAMIC_DRAW);
+        vao_canvas.AddBuffer(vbo_canvas, layout);
+        Gla::Mesh mesh_canvas(vao_canvas, shader);
+
+        Gla::VertexArray vao_bckg;
+        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::DYNAMIC_DRAW);
+        vao_bckg.AddBuffer(vbo_bckg, layout);
+        Gla::Mesh mesh_bckg(vao_bckg, shader);
+        auto bckg_vertices_count = 0UZ;
+
+        std::future<void> vbo_update_future;
         while (glfwWindowShouldClose(window) == 0)
         {
             Pikzel::UI::NewFrame();
@@ -256,19 +271,50 @@ auto main() -> int
                 Pikzel::UI::RenderDrawWindow(imgui_window_fb.GetTextureID(),
                                              "Draw");
             }
-            else { Pikzel::UI::RenderNoProjectWindow(); }
+            else
+            {
+                Pikzel::UI::RenderNoProjectWindow();
+
+                if (Pikzel::Project::IsOpened())
+                {
+                    std::vector<Pikzel::Vertex> bckg_vertices;
+                    Pikzel::Layers::EmplaceBckgVertices(bckg_vertices);
+                    bckg_vertices_count = bckg_vertices.size();
+                    auto bckg_buff_size =
+                        bckg_vertices.size() * sizeof(Pikzel::Vertex);
+                    vbo_bckg.UpdateSize(bckg_buff_size);
+                    vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
+
+                    std::size_t vertex_count =
+                        static_cast<std::size_t>(
+                            Pikzel::Project::CanvasWidth() *
+                            Pikzel::Project::CanvasHeight()) *
+                        Pikzel::kVerticesPerPixel;
+
+                    vbo_canvas.UpdateSize(vertex_count *
+                                          sizeof(Pikzel::Vertex));
+
+                    auto* buff_data = static_cast<Pikzel::Vertex*>(
+                        glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
+
+                    Pikzel::VertexBufferControl::Init(buff_data, vertex_count);
+                }
+            }
 
             Pikzel::UI::RenderAndEndFrame();
 
             if (Pikzel::Project::IsOpened() &&
                 Pikzel::UI::IsDrawWindowRendered())
             {
-                mesh.Bind();
-                Pikzel::Layers::EmplaceVertices(vertices);
-                vbo.UpdateSizeIfNeeded(vertices.size() *
-                                       sizeof(Pikzel::Vertex));
-                vbo.UpdateData(vertices.data(),
-                               vertices.size() * sizeof(Pikzel::Vertex));
+                /* mesh.Bind(); */
+
+                /* Pikzel::Layers::EmplaceVertices(vertices); */
+
+                /* vbo.UpdateSizeIfNeeded(vertices.size() * */
+                /*                        sizeof(Pikzel::Vertex)); */
+                /* vbo.UpdateData(vertices.data(), */
+                /*                vertices.size() * sizeof(Pikzel::Vertex)); */
+
                 UpdateProjMat(shader);
 
                 ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
@@ -276,17 +322,31 @@ auto main() -> int
                 imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
                                         static_cast<int>(draw_window_dims.y));
 
+                mesh_bckg.Bind();
                 renderer.Clear();
                 glClearColor(0.8, 0.8, 0.8, 1.0);
-                renderer.DrawArrays(Gla::TRIANGLES, vertices.size());
+                renderer.DrawArrays(Gla::TRIANGLES, bckg_vertices_count);
+
+                mesh_canvas.Bind();
+                if (vbo_update_future.valid()) { vbo_update_future.wait(); }
+                renderer.DrawArrays(
+                    Gla::TRIANGLES,
+                    Pikzel::VertexBufferControl::GetVertexCount());
+
+                /* renderer.Clear(); */
+                /* glClearColor(0.8, 0.8, 0.8, 1.0); */
+                /* renderer.DrawArrays(Gla::TRIANGLES, vertices.size()); */
 
                 Gla::FrameBuffer::BindToDefaultFB();
 
-                Pikzel::Layers::DrawToTempLayer();
+                /* Pikzel::Layers::DrawToTempLayer(); */
+
+                Pikzel::Layers::Update();
+                vbo_update_future = std::async(
+                    std::launch::async, Pikzel::VertexBufferControl::Update);
+                Pikzel::UI::Update();
             }
 
-            Pikzel::Layers::Update();
-            Pikzel::UI::Update();
             Pikzel::Events::Update();
 
             glfwSwapBuffers(window);

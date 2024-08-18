@@ -3,10 +3,11 @@
 #include "Application.hpp"
 #include "Camera.hpp"
 #include "Events.hpp"
-#include "GLFW/glfw3.h"
 #include "Project.hpp"
 #include "Tool.hpp"
+#include "VertexBufferControl.hpp"
 
+#include "GLFW/glfw3.h"
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -43,41 +44,6 @@ auto Color::operator==(const ImVec4& other) const -> bool
            std::abs(static_cast<float>(b) / 0xff - other.z) <= kTolerance &&
            std::abs(static_cast<float>(a) / 0xff - other.w) <= kTolerance;
 }
-
-/*auto Color::BlendColor(Color color1, Color color2) -> Color
-{
-    Color result;
-
-    float alpha1 = static_cast<float>(color1.a) / 255.0F;
-    float alpha2 = static_cast<float>(color2.a) / 255.0F;
-    float result_alpha = alpha1 + alpha2 * (1 - alpha1);
-
-    result.r = static_cast<uint8_t>(
-        (static_cast<float>(color1.r) * alpha1 +
-         static_cast<float>(color2.r) * alpha2 * (1 - alpha1)) /
-        result_alpha);
-    result.g = static_cast<uint8_t>(
-        (static_cast<float>(color1.g) * alpha1 +
-         static_cast<float>(color2.g) * alpha2 * (1 - alpha1)) /
-        result_alpha);
-    result.b = static_cast<uint8_t>(
-        (static_cast<float>(color1.b) * alpha1 +
-         static_cast<float>(color2.b) * alpha2 * (1 - alpha1)) /
-        result_alpha);
-    result.a = static_cast<uint8_t>(result_alpha * 255);
-
-    return result;
-}*/
-
-/*int blend(unsigned char result[4], unsigned char fg[4], unsigned char bg[4])
-{
-    unsigned int alpha = fg[3] + 1;
-    unsigned int inv_alpha = 256 - fg[3];
-    result[0] = (unsigned char)((alpha * fg[0] + inv_alpha * bg[0]) >> 8);
-    result[1] = (unsigned char)((alpha * fg[1] + inv_alpha * bg[1]) >> 8);
-    result[2] = (unsigned char)((alpha * fg[2] + inv_alpha * bg[2]) >> 8);
-    result[3] = 0xff;
-}*/
 
 auto Color::BlendColor(Color color1, Color color2) -> Color
 {
@@ -131,77 +97,79 @@ void Layer::DoCurrentTool()
 {
     if (mLocked || !mVisible) { return; }
 
-    std::optional<Vec2Int> canv_coord = CanvasCoordsFromCursorPos();
+    switch (Tool::GetToolType())
+    {
+    case kBrush:
+    case kEraser:
+        HandleBrushAndEraser();
+        break;
+    case kColorPicker:
+        HandleColorPicker();
+        break;
+    case kBucket:
+        HandleBucket();
+        break;
+    case kRectShape:
+        HandleRectShape();
+        break;
+    case kToolCount:
+        assert(false);
+    }
+}
+
+void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
+                            bool use_color_alpha /*= false*/) const
+{
+    if (!mVisible || mOpacity == 0) { return; }
+    /* mVertices.clear(); */
+    /* std::vector<Vertex>& vertices = mVertices; */
+
+    for (int i = 0; i < Project::CanvasHeight(); i++)
+    {
+        for (int j = 0; j < Project::CanvasWidth(); j++)
+        {
+            if (mCanvas[i][j].a == 0) { continue; }
+
+            uint8_t alpha_val = 0;
+            if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
+            else { alpha_val = mOpacity; }
+
+            Color color_used = mCanvas[i][j];
+            color_used.a = alpha_val;
+
+            // first triangle
+            // upper left corner
+            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
+                                  color_used);
+            // upper right corner
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i), color_used);
+            // bottom left corner
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 1, color_used);
+            // second triangle
+            // upper right corner
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i), color_used);
+            // bottom right corner
+            vertices.emplace_back(static_cast<float>(j) + 1,
+                                  static_cast<float>(i) + 1, color_used);
+            // bottom left corner
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 1, color_used);
+        }
+    }
+}
+
+void Layer::Update()
+{
+}
+
+void Layer::HandleBrushAndEraser()
+{
+    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return; }
-
-    bool left_button_pressed =
-        Events::IsMouseButtonPressed(Events::kButtonLeft);
-
-    if (Tool::GetToolType() == kColorPicker && left_button_pressed)
-    {
-        auto displayed_canvas = Layers::GetDisplayedCanvas();
-        const Color picked_color =
-            displayed_canvas[canv_coord->y][canv_coord->x];
-
-        if (picked_color.a == 0) { return; }
-
-        Tool::sCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
-        Tool::sCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
-        Tool::sCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
-
-        return;
-    }
-
-    if (Tool::GetToolType() == kBucket && left_button_pressed)
-    {
-        Color clicked_color = mCanvas[canv_coord->y][canv_coord->x];
-        Fill(canv_coord->x, canv_coord->y, clicked_color);
-        Layers::MarkHistoryForUpdate();
-        return;
-    }
-
-    if (Tool::GetToolType() == ToolType::kRectShape)
-    {
-        static bool shape_began = false;
-        static Vec2Int shape_begin_coords{0, 0};
-
-        if (!shape_began)
-        {
-            if (left_button_pressed)
-            {
-                shape_begin_coords = canv_coord.value();
-                shape_began = true;
-            }
-            return;
-        }
-
-        if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
-        {
-            int diff_x = shape_begin_coords.x - canv_coord->x;
-            int diff_y = shape_begin_coords.y - canv_coord->y;
-
-            if (std::abs(diff_x) < std::abs(diff_y))
-            {
-                canv_coord->y = shape_begin_coords.y - diff_x;
-            }
-            else { canv_coord->x = shape_begin_coords.x - diff_y; }
-        }
-
-        if (left_button_pressed)
-        {
-            Layers::GetTempLayer().DrawRect(shape_begin_coords,
-                                            canv_coord.value(), true);
-            return;
-        }
-
-        DrawRect(shape_begin_coords, canv_coord.value(), true);
-        shape_began = false;
-        Layers::MarkHistoryForUpdate();
-
-        return;
-    }
-
-    if (!left_button_pressed) { return; }
 
     constexpr auto kMaxDelay = std::chrono::milliseconds(100);
     static auto time_last_drawn = std::chrono::steady_clock::now();
@@ -211,9 +179,14 @@ void Layer::DoCurrentTool()
     {
         if (Tool::GetToolType() == ToolType::kEraser)
         {
-            mCanvas[canv_coord->y][canv_coord->x] = Color{0, 0, 0, 0};
+            // mCanvas[canv_coord->y][canv_coord->x] = Color{0, 0, 0, 0};
+            DrawPixel(canv_coord.value(), {0, 0, 0, 0});
         }
-        else { mCanvas[canv_coord->y][canv_coord->x] = Tool::GetColor(); }
+        else
+        {
+            DrawPixel(canv_coord.value());
+            // mCanvas[canv_coord->y][canv_coord->x] = Tool::GetColor();
+        }
     }
     else
     {
@@ -234,46 +207,83 @@ void Layer::DoCurrentTool()
     position_last_drawn = canv_coord.value();
 }
 
-void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
-                            bool use_color_alpha /*= false*/) const
+void Layer::HandleColorPicker()
 {
-    if (!mVisible || mOpacity == 0) { return; }
+    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    auto canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return; }
 
-    for (int i = 0; i < Project::CanvasHeight(); i++)
+    auto displayed_canvas = Layers::GetDisplayedCanvas();
+    const Color picked_color = displayed_canvas[canv_coord->y][canv_coord->x];
+
+    if (picked_color.a == 0) { return; }
+
+    Tool::sCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
+    Tool::sCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
+    Tool::sCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
+}
+
+void Layer::HandleBucket()
+{
+    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    auto canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return; }
+
+    Color clicked_color = GetPixel(canv_coord.value());
+    Fill(canv_coord->x, canv_coord->y, clicked_color);
+    Layers::MarkHistoryForUpdate();
+}
+
+void Layer::HandleRectShape()
+{
+    auto canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return; }
+    bool left_button_pressed =
+        Events::IsMouseButtonPressed(Events::kButtonLeft);
+
+    static bool shape_began = false;
+    static Vec2Int shape_begin_coords{0, 0};
+
+    if (!shape_began)
     {
-        for (int j = 0; j < Project::CanvasWidth(); j++)
+        if (left_button_pressed)
         {
-            if (mCanvas[i][j].a == 0) { continue; }
-
-            uint8_t alpha_val = 0;
-            if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
-            else { alpha_val = mOpacity; }
-
-            Color color_used = mCanvas[i][j];
-            color_used.a = alpha_val;
-
-            /* first triangle */
-            // upper left corner
-            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
-                                  color_used);
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i), color_used);
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 1, color_used);
-            /* second triangle */
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i), color_used);
-            // bottom right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i) + 1, color_used);
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 1, color_used);
+            shape_begin_coords = canv_coord.value();
+            shape_began = true;
         }
+        return;
     }
+
+    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
+    {
+        int diff_x = shape_begin_coords.x - canv_coord->x;
+        int diff_y = shape_begin_coords.y - canv_coord->y;
+
+        if (std::abs(diff_x) < std::abs(diff_y))
+        {
+            canv_coord->y = shape_begin_coords.y - diff_x;
+        }
+        else { canv_coord->x = shape_begin_coords.x - diff_y; }
+    }
+
+    if (left_button_pressed)
+    {
+        Layers::GetTempLayer().DrawRect(shape_begin_coords, canv_coord.value(),
+                                        true);
+        return;
+    }
+
+    DrawRect(shape_begin_coords, canv_coord.value(), true);
+    shape_began = false;
+    Layers::MarkHistoryForUpdate();
+}
+
+void Layer::DrawPixel(Vec2Int coords,
+                      Color color /*= Color::FromImVec4(Tool::GetColor())*/)
+{
+    mCanvas[coords.y][coords.x] = color;
+	VertexBufferControl::PushDirtyPixel(coords);
+    /* VertexBufferControl::UpdatePixel(coords); */
 }
 
 void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
@@ -291,7 +301,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
     if (radius == 1)
     {
-        mCanvas[center.y][center.x] = draw_color;
+        DrawPixel(center, draw_color);
         return;
     }
 
@@ -307,7 +317,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
                 {
                     int real_x = std::clamp(xcrd + center.x, 0, dims.x - 1);
                     int real_y = std::clamp(ycrd + center.y, 0, dims.y - 1);
-                    mCanvas[real_y][real_x] = draw_color;
+                    DrawPixel({real_x, real_y}, draw_color);
                 }
             }
         }
@@ -345,8 +355,10 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
             y2_ceil = Project::CanvasHeight() - 1;
         }
 
-        mCanvas[y1_floor][x_coord] = draw_color;
-        mCanvas[y2_ceil][x_coord] = draw_color;
+        /* mCanvas[y1_floor][x_coord] = draw_color; */
+        /* mCanvas[y2_ceil][x_coord] = draw_color; */
+        DrawPixel({x_coord, y1_floor}, draw_color);
+        DrawPixel({x_coord, y2_ceil}, draw_color);
     }
 }
 
@@ -361,7 +373,8 @@ void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
     {
         for (auto j = min_x; j <= max_x; j++)
         {
-            mCanvas[i][j] = Tool::GetColor();
+            // mCanvas[i][j] = Tool::GetColor();
+            DrawPixel({j, i});
         }
     }
 }
@@ -425,7 +438,8 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b)
             point_a.y += sign_y;
         }
 
-        mCanvas[point_a.x][point_a.y] = Tool::GetColorRef();
+        // mCanvas[point_a.x][point_a.y] = Tool::GetColorRef();
+        DrawPixel(point_a);
     }
 }
 
@@ -447,11 +461,11 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
         auto& top = pixel_queue.front();
         const int row = top.first;
         const int col = top.second;
+        Color pixel = GetPixel({col, row});
 
-        if (mCanvas[row][col] == clicked_color &&
-            mCanvas[row][col] != fill_color)
+        if (pixel == clicked_color && pixel != fill_color)
         {
-            mCanvas[row][col] = fill_color;
+            DrawPixel({col, row}, Color::FromImVec4(fill_color));
 
             if (col + 1 < Project::CanvasWidth())
             {
@@ -584,10 +598,12 @@ void Layers::MoveDown(std::size_t layer_index)
 
 void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
 {
-    vertices.clear();
+    assert(Project::IsOpened());
 
     constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
                                                 Color{201, 201, 201, 255}};
+
+    vertices.clear();
 
     /* Background vertices */
     for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
@@ -630,6 +646,46 @@ void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
     GetTempLayer().EmplaceVertices(vertices, true);
 }
 
+void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices)
+{
+    assert(Project::IsOpened());
+
+    constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
+                                                Color{201, 201, 201, 255}};
+
+    for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
+    {
+        for (int j = 0; j < Project::CanvasWidth() + 6; j += 6)
+        {
+            /* first triangle */
+            // upper left corner
+            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
+            // upper right corner
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
+            // bottom left corner
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
+            /* second triangle */
+            // upper right corner
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i),
+                                  kBgColors.at(((i + j) / 6) % 2));
+            // bottom right corner
+            vertices.emplace_back(static_cast<float>(j) + 6,
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
+            // bottom left corner
+            vertices.emplace_back(static_cast<float>(j),
+                                  static_cast<float>(i) + 6,
+                                  kBgColors.at(((i + j) / 6) % 2));
+        }
+    }
+}
+
 auto Layers::AtIndex(std::size_t index) -> Layer&
 {
     assert(index >= 0 && index < GetLayers().size());
@@ -659,7 +715,8 @@ void Layers::DrawToTempLayer()
         for (std::size_t j = 0;
              j < static_cast<std::size_t>(Project::CanvasWidth()); j++)
         {
-            tmp_layer.mCanvas[i][j] = kNoColor;
+            // tmp_layer.mCanvas[i][j] = kNoColor;
+            tmp_layer.DrawPixel({j, i}, kNoColor);
         }
     }
 
@@ -688,12 +745,12 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
         {
             for (int j = 0; j < Project::CanvasWidth(); j++)
             {
+                Color pixel = layer_traversed.GetPixel({j, i});
+
                 Color dst_color = {
-                    layer_traversed.mCanvas[i][j].r,
-                    layer_traversed.mCanvas[i][j].g,
-                    layer_traversed.mCanvas[i][j].b,
-                    layer_traversed.mCanvas[i][j].a == 0
-                        ? layer_traversed.mCanvas[i][j].a
+                    pixel.r, pixel.g, pixel.b,
+                    pixel.a == 0
+                        ? pixel.a
                         : static_cast<uint8_t>(layer_traversed.mOpacity)};
 
                 displayed_canvas[i][j] =
@@ -752,6 +809,13 @@ void Layers::Redo()
 
 void Layers::Update()
 {
+    for (auto& layer : GetLayers())
+    {
+        layer.Update();
+    }
+
+    GetTempLayer().Update();
+
     if (Project::IsOpened()) { DoCurrentTool(); }
 
     if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&

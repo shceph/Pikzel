@@ -4,10 +4,17 @@
 
 namespace Gla
 {
+	enum VertexBufferUsage
+	{
+		STATIC_DRAW = GL_STATIC_DRAW,
+		STREAM_DRAW = GL_STREAM_DRAW,
+		DYNAMIC_DRAW = GL_DYNAMIC_DRAW
+	};
+
     class VertexBuffer
     {
     public:
-        VertexBuffer(const void* data, std::size_t size);
+        VertexBuffer(const void* data, std::size_t size, VertexBufferUsage usage = STATIC_DRAW);
         ~VertexBuffer();
 
         void UpdateData(const void* data, std::size_t size, std::size_t offset = 0ull);
@@ -22,5 +29,6 @@ namespace Gla
     private:
         unsigned int m_RendererID;
         std::size_t m_Size;  // In bytes
+		VertexBufferUsage m_Usage;
     };
 }

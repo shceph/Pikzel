@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Project.hpp"
+#include "Tool.hpp"
 
 #include <imgui.h>
 
@@ -17,20 +18,20 @@ constexpr int kCanvasWidth = 32;
 
 struct Color
 {
-    uint8_t r = 0, g = 0, b = 0, a = 0;
-
     auto operator=(const ImVec4& color) -> Color&;
     auto operator==(const Color& other) const -> bool;
     auto operator==(const ImVec4& other) const -> bool;
 
     static auto BlendColor(Color color1, Color color2) -> Color;
     static auto FromImVec4(ImVec4 color) -> Color;
+
+    uint8_t r = 0, g = 0, b = 0, a = 0;
 };
 
 struct Vertex
 {
     float pos_x{}, pos_y{};
-    Color color;
+    Color color{0, 0, 0, 0};
 };
 
 using CanvasData = std::vector<std::vector<Color>>;
@@ -42,23 +43,34 @@ class Layer
     void DoCurrentTool();
     void EmplaceVertices(std::vector<Vertex>& vertices,
                          bool use_color_alpha = false) const;
-
-    [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
-    [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
+    void Update();
 
     inline void SwitchVisibilityState() { mVisible = !mVisible; }
     inline void SwitchLockState() { mLocked = !mLocked; }
+
+    [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
+    [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
     [[nodiscard]] inline auto GetOpacity() const -> int { return mOpacity; }
     [[nodiscard]] inline auto GetName() const -> const std::string&
     {
         return mLayerName;
     }
-
+    [[nodiscard]] inline auto GetPixel(Vec2Int coords) const -> Color
+    {
+        return mCanvas[coords.y][coords.x];
+    }
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
     static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+
     static inline void ResetConstructCounter() { sConstructCounter = 1; }
 
   private:
+    void HandleBrushAndEraser();
+    static void HandleColorPicker();
+    void HandleBucket();
+    void HandleRectShape();
+    void DrawPixel(Vec2Int coords,
+                   Color color = Color::FromImVec4(Tool::GetColor()));
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
@@ -66,12 +78,13 @@ class Layer
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
-    inline static int sConstructCounter = 1;
-
     CanvasData mCanvas;
-    bool mVisible = true, mLocked = false;
+    bool mVisible = true;
+    bool mLocked = false;
     int mOpacity = 255;
     std::string mLayerName;
+
+    inline static int sConstructCounter = 1;
 
     friend class UI;
     friend class Layers;
@@ -104,6 +117,7 @@ class Layers
     static void MoveDown(std::size_t layer_index);
     static void AddLayer();
     static void EmplaceVertices(std::vector<Vertex>& vertices);
+    static void EmplaceBckgVertices(std::vector<Vertex>& vertices);
     static void ResetDataToDefault();
     static void DrawToTempLayer();
     static auto AtIndex(std::size_t index) -> Layer&;
@@ -166,6 +180,7 @@ class Layers
 
     friend class Layer;
     friend class UI;
+    friend class VertexBufferControl;
     friend void Project::New(Vec2Int);
     friend void Project::Open(const std::string&);
     friend void Project::SaveAsProject(const std::string&);

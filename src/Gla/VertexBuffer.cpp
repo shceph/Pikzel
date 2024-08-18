@@ -2,12 +2,12 @@
 
 namespace Gla
 {
-    VertexBuffer::VertexBuffer(const void* data, std::size_t size)
-        : m_RendererID(0), m_Size(size)
+    VertexBuffer::VertexBuffer(const void* data, std::size_t size, VertexBufferUsage usage)
+        : m_RendererID(0), m_Size(size), m_Usage(usage)
     {
         GLCall( glGenBuffers(1, &m_RendererID) );
         GLCall( glBindBuffer(GL_ARRAY_BUFFER, m_RendererID) );
-        GLCall( glBufferData(GL_ARRAY_BUFFER, size, data, GL_DYNAMIC_DRAW) );
+        GLCall( glBufferData(GL_ARRAY_BUFFER, size, data, usage) );
     }
 
     VertexBuffer::~VertexBuffer()
@@ -32,7 +32,7 @@ namespace Gla
     void VertexBuffer::UpdateSize(std::size_t size)  // Deletes existing data
     {
         Bind();
-        GLCall( glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_DYNAMIC_DRAW) );
+        GLCall( glBufferData(GL_ARRAY_BUFFER, size, nullptr, m_Usage) );
         m_Size = size;
     }
 
