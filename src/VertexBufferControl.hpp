@@ -18,6 +18,11 @@ class VertexBufferControl
 	static void PushDirtyPixel(Vec2Int dirty_pixel);
 	static void UpdatePixel(Vec2Int coords);
 
+	static inline void SetUpdateAllToTrue()
+	{
+		sUpdateAll = true;
+	}
+
 	[[nodiscard]] static inline auto GetVertexCount() -> std::size_t
 	{
 		return sVertexCount;

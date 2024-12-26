@@ -282,7 +282,7 @@ void Layer::DrawPixel(Vec2Int coords,
                       Color color /*= Color::FromImVec4(Tool::GetColor())*/)
 {
     mCanvas[coords.y][coords.x] = color;
-	VertexBufferControl::PushDirtyPixel(coords);
+    VertexBufferControl::PushDirtyPixel(coords);
     /* VertexBufferControl::UpdatePixel(coords); */
 }
 
@@ -325,7 +325,6 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         return;
     }
 
-    // Circle equation
     for (int x_coord = std::max(0, center.x - radius + 1);
          x_coord < std::min(Project::CanvasWidth(), center.x + radius);
          x_coord++)
@@ -653,34 +652,35 @@ void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices)
     constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
                                                 Color{201, 201, 201, 255}};
 
-    for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
+    for (int i = 0; i < Project::CanvasHeight(); i += 6)
     {
-        for (int j = 0; j < Project::CanvasWidth() + 6; j += 6)
+        for (int j = 0; j < Project::CanvasWidth(); j += 6)
         {
-            /* first triangle */
+            auto x_coord = static_cast<float>(j);
+            auto y_coord = static_cast<float>(i);
+            glm::vec2 dims = Project::GetCanvasDims();
+
             // upper left corner
-            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
+            vertices.emplace_back(x_coord, y_coord,
                                   kBgColors.at(((i + j) / 6) % 2));
             // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i),
-                                  kBgColors.at(((i + j) / 6) % 2));
+            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
+                                  y_coord, kBgColors.at(((i + j) / 6) % 2));
             // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 6,
+            vertices.emplace_back(x_coord,
+                                  std::clamp(y_coord + 6, 0.0F, dims.y),
                                   kBgColors.at(((i + j) / 6) % 2));
             /* second triangle */
             // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i),
-                                  kBgColors.at(((i + j) / 6) % 2));
+            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
+                                  y_coord, kBgColors.at(((i + j) / 6) % 2));
             // bottom right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i) + 6,
+            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
+                                  std::clamp(y_coord + 6, 0.0F, dims.y),
                                   kBgColors.at(((i + j) / 6) % 2));
             // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 6,
+            vertices.emplace_back(x_coord,
+                                  std::clamp(y_coord + 6, 0.0F, dims.y),
                                   kBgColors.at(((i + j) / 6) % 2));
         }
     }
@@ -792,7 +792,8 @@ void Layers::Undo()
     {
         sCurrentCapture--;
         auto& history = GetHistory();
-        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+		sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+		VertexBufferControl::SetUpdateAllToTrue();
     }
 }
 
@@ -803,7 +804,8 @@ void Layers::Redo()
     if (sCurrentCapture != history.size() - 1)
     {
         sCurrentCapture++;
-        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+		sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+		VertexBufferControl::SetUpdateAllToTrue();
     }
 }
 

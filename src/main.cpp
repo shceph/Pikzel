@@ -327,8 +327,9 @@ auto main() -> int
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 renderer.DrawArrays(Gla::TRIANGLES, bckg_vertices_count);
 
-                mesh_canvas.Bind();
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }
+
+                mesh_canvas.Bind();
                 renderer.DrawArrays(
                     Gla::TRIANGLES,
                     Pikzel::VertexBufferControl::GetVertexCount());
