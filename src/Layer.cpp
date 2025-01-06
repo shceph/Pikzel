@@ -85,12 +85,13 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
             static_cast<uint8_t>(color.w * 0xff)};
 }
 
-Layer::Layer() noexcept
+Layer::Layer(bool is_canvas_layer /*= true*/) noexcept
     : mCanvas(Project::CanvasHeight(),
               std::vector<Color>(Project::CanvasWidth())),
+      mIsCanvasLayer(is_canvas_layer),
       mLayerName("Layer " + std::to_string(sConstructCounter))
 {
-    sConstructCounter++;
+    if (mIsCanvasLayer) { sConstructCounter++; }
 }
 
 void Layer::DoCurrentTool()
@@ -282,7 +283,8 @@ void Layer::DrawPixel(Vec2Int coords,
                       Color color /*= Color::FromImVec4(Tool::GetColor())*/)
 {
     mCanvas[coords.y][coords.x] = color;
-    VertexBufferControl::PushDirtyPixel(coords);
+
+    if (mIsCanvasLayer) { VertexBufferControl::PushDirtyPixel(coords); }
     /* VertexBufferControl::UpdatePixel(coords); */
 }
 
@@ -295,7 +297,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
     if (Tool::GetToolType() != ToolType::kEraser)
     {
-        draw_color = Tool::GetColorRef();
+        draw_color = Tool::GetColor();
         draw_color.a = 0xff;
     }
 
@@ -359,6 +361,17 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         DrawPixel({x_coord, y1_floor}, draw_color);
         DrawPixel({x_coord, y2_ceil}, draw_color);
     }
+}
+
+void Layer::Clear()
+{
+	for (int i = 0; i < Project::CanvasHeight(); i++)
+	{
+		for (int j = 0; j < Project::CanvasWidth(); j++)
+		{
+			DrawPixel({j, i}, {0, 0, 0, 0});
+		}
+	}
 }
 
 void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
@@ -792,8 +805,8 @@ void Layers::Undo()
     {
         sCurrentCapture--;
         auto& history = GetHistory();
-		sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
-		VertexBufferControl::SetUpdateAllToTrue();
+        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+        VertexBufferControl::SetUpdateAllToTrue();
     }
 }
 
@@ -804,8 +817,8 @@ void Layers::Redo()
     if (sCurrentCapture != history.size() - 1)
     {
         sCurrentCapture++;
-		sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
-		VertexBufferControl::SetUpdateAllToTrue();
+        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+        VertexBufferControl::SetUpdateAllToTrue();
     }
 }
 

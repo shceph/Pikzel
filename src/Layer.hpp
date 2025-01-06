@@ -39,7 +39,7 @@ using CanvasData = std::vector<std::vector<Color>>;
 class Layer
 {
   public:
-    Layer() noexcept;
+    explicit Layer(bool is_canvas_layer = true) noexcept;
     void DoCurrentTool();
     void EmplaceVertices(std::vector<Vertex>& vertices,
                          bool use_color_alpha = false) const;
@@ -63,6 +63,9 @@ class Layer
     static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
 
     static inline void ResetConstructCounter() { sConstructCounter = 1; }
+    void DrawCircle(Vec2Int center, int radius, bool fill,
+                    Color delete_color = {0, 0, 0, 0});
+	void Clear();
 
   private:
     void HandleBrushAndEraser();
@@ -71,14 +74,13 @@ class Layer
     void HandleRectShape();
     void DrawPixel(Vec2Int coords,
                    Color color = Color::FromImVec4(Tool::GetColor()));
-    void DrawCircle(Vec2Int center, int radius, bool fill,
-                    Color delete_color = {0, 0, 0, 0});
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;
+    bool mIsCanvasLayer;
     bool mVisible = true;
     bool mLocked = false;
     int mOpacity = 255;
@@ -142,11 +144,10 @@ class Layers
     }
     inline static void InitHistory()
     {
-        Capture capture;
         auto& history = GetHistory();
         history.clear();
-        history.emplace_back(std::move(capture));
-        history.emplace_back(std::move(capture));
+        history.emplace_back();
+        history.emplace_back();
         sCurrentCapture = 0;
     }
 

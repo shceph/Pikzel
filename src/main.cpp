@@ -22,7 +22,10 @@
 #include "Camera.hpp"
 #include "Events.hpp"
 #include "Layer.hpp"
+#include "PreviewLayer.hpp"
 #include "VertexBufferControl.hpp"
+
+using Pikzel::Vertex;
 
 namespace
 {
@@ -124,7 +127,7 @@ void GlfwError(int err_id, const char* message)
 }
 #endif
 
-void UpdateProjMat(Gla::Shader& shader)
+auto GetProjMat() -> glm::mat4
 {
     assert(Pikzel::Project::IsOpened());
 
@@ -140,7 +143,7 @@ void UpdateProjMat(Gla::Shader& shader)
         static_cast<float>(center_offset.y) + zoom_half * height,
         height - zoom_half * height + static_cast<float>(center_offset.y));
 
-    shader.SetUniformMat4f("u_ViewProjection", proj);
+    return proj;
 }
 
 void PushCallbacksToEventsClass()
@@ -260,6 +263,15 @@ auto main() -> int
         Gla::Mesh mesh_bckg(vao_bckg, shader);
         auto bckg_vertices_count = 0UZ;
 
+        Gla::VertexArray vao_preview;
+        Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::DYNAMIC_DRAW);
+        vao_preview.AddBuffer(vbo_preview, layout);
+        Gla::Shader shader_preview("shader/VertShader.vert",
+                                   "shader/FragShader.frag");
+        Gla::Mesh group_preview(vao_preview, shader_preview);
+        std::vector<Pikzel::Vertex> preview_vertices;
+        std::unique_ptr<Pikzel::PreviewLayer> preview_layer;
+
         std::future<void> vbo_update_future;
         while (glfwWindowShouldClose(window) == 0)
         {
@@ -298,6 +310,7 @@ auto main() -> int
                         glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
 
                     Pikzel::VertexBufferControl::Init(buff_data, vertex_count);
+                    preview_layer = std::make_unique<Pikzel::PreviewLayer>();
                 }
             }
 
@@ -306,16 +319,27 @@ auto main() -> int
             if (Pikzel::Project::IsOpened() &&
                 Pikzel::UI::IsDrawWindowRendered())
             {
-                /* mesh.Bind(); */
+                bool draw_preview_layer = false;
+                auto cursor_pos = Pikzel::Layer::CanvasCoordsFromCursorPos();
+                glm::mat4 translation_mat(1.0);
 
-                /* Pikzel::Layers::EmplaceVertices(vertices); */
+                if (cursor_pos.has_value())
+                {
+                    auto move_distance =
+                        cursor_pos.value() -
+                        glm::vec<2, int>{Pikzel::Project::CanvasWidth() / 2,
+                                         Pikzel::Project::CanvasHeight() / 2};
 
-                /* vbo.UpdateSizeIfNeeded(vertices.size() * */
-                /*                        sizeof(Pikzel::Vertex)); */
-                /* vbo.UpdateData(vertices.data(), */
-                /*                vertices.size() * sizeof(Pikzel::Vertex)); */
+                    translation_mat = glm::translate(
+                        glm::mat4(1.0),
+                        glm::vec3(move_distance.x, move_distance.y, 1.0));
 
-                UpdateProjMat(shader);
+                    draw_preview_layer = true;
+                }
+
+                auto proj_mat = GetProjMat();
+				shader.Bind();
+                shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
                 ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
                 imgui_window_fb.Bind();
@@ -327,12 +351,38 @@ auto main() -> int
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 renderer.DrawArrays(Gla::TRIANGLES, bckg_vertices_count);
 
+                group_preview.Bind();
+
+                if (preview_layer->IsLayerChanged())
+                {
+                    assert(preview_layer != nullptr);
+
+                    preview_vertices.clear();
+                    preview_layer->EmplaceVertices(preview_vertices);
+                    vbo_preview.UpdateSizeIfNeeded(preview_vertices.size() *
+                                                   sizeof(Vertex));
+                    vbo_preview.UpdateData(preview_vertices.data(),
+                                           preview_vertices.size() *
+                                               sizeof(Vertex));
+                }
+
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
                 mesh_canvas.Bind();
                 renderer.DrawArrays(
                     Gla::TRIANGLES,
                     Pikzel::VertexBufferControl::GetVertexCount());
+
+                if (draw_preview_layer)
+                {
+					group_preview.Bind();
+                    shader_preview.SetUniformMat4f("u_ViewProjection",
+                                                   proj_mat * translation_mat);
+                    renderer.DrawArrays(Gla::TRIANGLES,
+                                        preview_vertices.size());
+                }
+
+				glClear(GL_DEPTH_BUFFER_BIT);
 
                 /* renderer.Clear(); */
                 /* glClearColor(0.8, 0.8, 0.8, 1.0); */
@@ -346,6 +396,7 @@ auto main() -> int
                 vbo_update_future = std::async(
                     std::launch::async, Pikzel::VertexBufferControl::Update);
                 Pikzel::UI::Update();
+                preview_layer->Update();
             }
 
             Pikzel::Events::Update();
