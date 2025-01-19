@@ -1,4 +1,6 @@
 #include "VertexBufferControl.hpp"
+#include "Gla/VertexBuffer.hpp"
+#include "Gla/GlaBase.hpp"
 #include "Layer.hpp"
 #include "Project.hpp"
 
@@ -22,6 +24,9 @@ void VertexBufferControl::Update()
 
         for (const auto& layer : capture.layers)
         {
+            std::size_t layer_index = 0;
+            std::size_t offset = 0;
+
             for (int i = 0; i < Project::CanvasHeight(); i++)
             {
                 for (int j = 0; j < Project::CanvasWidth(); j++)
@@ -29,9 +34,10 @@ void VertexBufferControl::Update()
                     const auto color = layer.GetPixel({j, i});
                     const auto x_flt = static_cast<float>(j);
                     const auto y_flt = static_cast<float>(i);
-                    const auto index = static_cast<std::size_t>(
-                                           i * Project::CanvasWidth() + j) *
-                                       kVerticesPerPixel;
+                    const auto index =
+                        offset + static_cast<std::size_t>(
+                                     i * Project::CanvasWidth() + j) *
+                                     kVerticesPerPixel;
                     // first triangle
                     // upper left corner
                     sBufferData[index] = Vertex{x_flt, y_flt, color};
@@ -49,6 +55,10 @@ void VertexBufferControl::Update()
                     sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
                 }
             }
+
+            layer_index++;
+            offset += layer_index * Project::CanvasWidth() *
+                      Project::CanvasHeight() * kVerticesPerPixel;
         }
 
         sUpdateAll = false;
@@ -90,12 +100,12 @@ void VertexBufferControl::Update()
         sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
     }
 
-	sDirtyPixels.clear();
+    sDirtyPixels.clear();
 }
 
 void VertexBufferControl::PushDirtyPixel(Vec2Int dirty_pixel)
 {
-	sDirtyPixels.push_back(dirty_pixel);
+    sDirtyPixels.push_back(dirty_pixel);
 }
 
 void VertexBufferControl::UpdatePixel(Vec2Int coords)
@@ -108,9 +118,9 @@ void VertexBufferControl::UpdatePixel(Vec2Int coords)
                                 Project::CanvasHeight() * kVerticesPerPixel;
 
     const auto index =
-        kOffset + static_cast<std::size_t>(coords.y * Project::CanvasWidth() +
-                                           coords.x) *
-                      kVerticesPerPixel;
+        kOffset +
+        static_cast<std::size_t>(coords.y * Project::CanvasWidth() + coords.x) *
+            kVerticesPerPixel;
 
     if (index > max_index) { return; }
 
@@ -132,6 +142,36 @@ void VertexBufferControl::UpdatePixel(Vec2Int coords)
     sBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
     // bottom left corner
     sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+}
+
+void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
+{
+    vbo.Bind();
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+
+    auto vbo_size = GetNeededVBOSizeForLayer() * Layers::GetLayerCount();
+    vbo.UpdateSizeIfNeeded(vbo_size);
+
+    auto vertex_count = vbo_size / sizeof(Vertex);
+
+    std::vector<Vertex> vertices(vertex_count);
+    Layers::EmplaceVertices(vertices);
+	assert(vertices.size() == vertex_count);
+    vbo.UpdateData(vertices.data(), vbo_size);
+
+    auto* ptr_to_buffer =
+        static_cast<Vertex*>(glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
+
+    sBufferData = std::span<Vertex>(ptr_to_buffer, vertex_count);
+    sVertexCount = vertex_count;
+}
+
+void VertexBufferControl::UpdateSizeIfNeeded(Gla::VertexBuffer &vbo)
+{
+	if (vbo.GetSize() != GetNeededVBOSizeForLayer() * Layers::GetLayerCount())
+	{
+		UpdateSize(vbo);
+	}
 }
 
 } // namespace Pikzel

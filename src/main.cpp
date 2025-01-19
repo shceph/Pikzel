@@ -153,6 +153,46 @@ void PushCallbacksToEventsClass()
     Pikzel::Events::PushToCursorPosCallback(
         Pikzel::Events::CallbackType(Pikzel::Camera::CursorPosCallback));
 }
+
+auto GetTransMatIfShouldDrawPreview() -> std::optional<glm::mat4>
+{
+    auto cursor_pos = Pikzel::Layer::CanvasCoordsFromCursorPos();
+    glm::mat4 translation_mat(1.0);
+
+    if (cursor_pos.has_value())
+    {
+        auto move_distance =
+            cursor_pos.value() -
+            glm::vec<2, int>{Pikzel::Project::CanvasWidth() / 2,
+                             Pikzel::Project::CanvasHeight() / 2};
+
+        translation_mat = glm::translate(
+            glm::mat4(1.0), glm::vec3(move_distance.x, move_distance.y, 1.0));
+
+        return translation_mat;
+    }
+
+    return std::nullopt;
+}
+
+// Binds the vbo
+void UpdatePreviewVboIfNeeded(
+    std::unique_ptr<Pikzel::PreviewLayer>& preview_layer,
+    std::vector<Vertex>& preview_vertices, Gla::VertexBuffer& vbo_preview)
+{
+    vbo_preview.Bind();
+    if (preview_layer->IsPreviewLayerChanged())
+    {
+        assert(preview_layer != nullptr);
+
+        preview_vertices.clear();
+        preview_layer->EmplaceVertices(preview_vertices);
+        vbo_preview.UpdateSizeIfNeeded(preview_vertices.size() *
+                                       sizeof(Vertex));
+        vbo_preview.UpdateData(preview_vertices.data(),
+                               preview_vertices.size() * sizeof(Vertex));
+    }
+}
 } // namespace
 
 auto main() -> int
@@ -196,7 +236,7 @@ auto main() -> int
 #endif
 
     glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_GREATER);
+    glDepthFunc(GL_LESS);
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -205,8 +245,6 @@ auto main() -> int
 
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
-
-        std::vector<Pikzel::Vertex> vertices;
 
         Gla::FrameBuffer imgui_window_fb(kWindowWidth, kWindowHeight);
         Gla::FrameBuffer::BindToDefaultFB();
@@ -255,12 +293,12 @@ auto main() -> int
         Gla::VertexArray vao_canvas;
         Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::DYNAMIC_DRAW);
         vao_canvas.AddBuffer(vbo_canvas, layout);
-        Gla::Mesh mesh_canvas(vao_canvas, shader);
+        Gla::Mesh group_canvas(vao_canvas, shader);
 
         Gla::VertexArray vao_bckg;
         Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::DYNAMIC_DRAW);
         vao_bckg.AddBuffer(vbo_bckg, layout);
-        Gla::Mesh mesh_bckg(vao_bckg, shader);
+        Gla::Mesh group_bckg(vao_bckg, shader);
         auto bckg_vertices_count = 0UZ;
 
         Gla::VertexArray vao_preview;
@@ -269,7 +307,7 @@ auto main() -> int
         Gla::Shader shader_preview("shader/VertShader.vert",
                                    "shader/FragShader.frag");
         Gla::Mesh group_preview(vao_preview, shader_preview);
-        std::vector<Pikzel::Vertex> preview_vertices;
+        std::vector<Vertex> preview_vertices;
         std::unique_ptr<Pikzel::PreviewLayer> preview_layer;
 
         std::future<void> vbo_update_future;
@@ -289,11 +327,10 @@ auto main() -> int
 
                 if (Pikzel::Project::IsOpened())
                 {
-                    std::vector<Pikzel::Vertex> bckg_vertices;
+                    std::vector<Vertex> bckg_vertices;
                     Pikzel::Layers::EmplaceBckgVertices(bckg_vertices);
                     bckg_vertices_count = bckg_vertices.size();
-                    auto bckg_buff_size =
-                        bckg_vertices.size() * sizeof(Pikzel::Vertex);
+                    auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
                     vbo_bckg.UpdateSize(bckg_buff_size);
                     vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
 
@@ -303,10 +340,9 @@ auto main() -> int
                             Pikzel::Project::CanvasHeight()) *
                         Pikzel::kVerticesPerPixel;
 
-                    vbo_canvas.UpdateSize(vertex_count *
-                                          sizeof(Pikzel::Vertex));
+                    vbo_canvas.UpdateSize(vertex_count * sizeof(Vertex));
 
-                    auto* buff_data = static_cast<Pikzel::Vertex*>(
+                    auto* buff_data = static_cast<Vertex*>(
                         glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
 
                     Pikzel::VertexBufferControl::Init(buff_data, vertex_count);
@@ -319,26 +355,8 @@ auto main() -> int
             if (Pikzel::Project::IsOpened() &&
                 Pikzel::UI::IsDrawWindowRendered())
             {
-                bool draw_preview_layer = false;
-                auto cursor_pos = Pikzel::Layer::CanvasCoordsFromCursorPos();
-                glm::mat4 translation_mat(1.0);
-
-                if (cursor_pos.has_value())
-                {
-                    auto move_distance =
-                        cursor_pos.value() -
-                        glm::vec<2, int>{Pikzel::Project::CanvasWidth() / 2,
-                                         Pikzel::Project::CanvasHeight() / 2};
-
-                    translation_mat = glm::translate(
-                        glm::mat4(1.0),
-                        glm::vec3(move_distance.x, move_distance.y, 1.0));
-
-                    draw_preview_layer = true;
-                }
-
                 auto proj_mat = GetProjMat();
-				shader.Bind();
+                shader.Bind();
                 shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
                 ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
@@ -346,51 +364,32 @@ auto main() -> int
                 imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
                                         static_cast<int>(draw_window_dims.y));
 
-                mesh_bckg.Bind();
+                group_bckg.Bind();
                 renderer.Clear();
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 renderer.DrawArrays(Gla::TRIANGLES, bckg_vertices_count);
 
-                group_preview.Bind();
-
-                if (preview_layer->IsLayerChanged())
+                UpdatePreviewVboIfNeeded(preview_layer, preview_vertices,
+                                         vbo_preview);
+                auto trans_mat = GetTransMatIfShouldDrawPreview();
+                if (trans_mat.has_value())
                 {
-                    assert(preview_layer != nullptr);
-
-                    preview_vertices.clear();
-                    preview_layer->EmplaceVertices(preview_vertices);
-                    vbo_preview.UpdateSizeIfNeeded(preview_vertices.size() *
-                                                   sizeof(Vertex));
-                    vbo_preview.UpdateData(preview_vertices.data(),
-                                           preview_vertices.size() *
-                                               sizeof(Vertex));
-                }
-
-                if (vbo_update_future.valid()) { vbo_update_future.wait(); }
-
-                mesh_canvas.Bind();
-                renderer.DrawArrays(
-                    Gla::TRIANGLES,
-                    Pikzel::VertexBufferControl::GetVertexCount());
-
-                if (draw_preview_layer)
-                {
-					group_preview.Bind();
-                    shader_preview.SetUniformMat4f("u_ViewProjection",
-                                                   proj_mat * translation_mat);
+                    group_preview.Bind();
+                    shader_preview.SetUniformMat4f(
+                        "u_ViewProjection", proj_mat * trans_mat.value());
                     renderer.DrawArrays(Gla::TRIANGLES,
                                         preview_vertices.size());
                 }
 
-				glClear(GL_DEPTH_BUFFER_BIT);
+                if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
-                /* renderer.Clear(); */
-                /* glClearColor(0.8, 0.8, 0.8, 1.0); */
-                /* renderer.DrawArrays(Gla::TRIANGLES, vertices.size()); */
+                group_canvas.Bind();
+                Pikzel::VertexBufferControl::UpdateSizeIfNeeded(vbo_canvas);
+                renderer.DrawArrays(
+                    Gla::TRIANGLES,
+                    Pikzel::VertexBufferControl::GetVertexCount());
 
                 Gla::FrameBuffer::BindToDefaultFB();
-
-                /* Pikzel::Layers::DrawToTempLayer(); */
 
                 Pikzel::Layers::Update();
                 vbo_update_future = std::async(

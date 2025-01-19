@@ -59,13 +59,16 @@ class Layer
     {
         return mCanvas[coords.y][coords.x];
     }
+
+    // Returns Vec2Int if the cursor is above canvas, otherwise returns
+    // std::nullopt
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
     static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
 
     static inline void ResetConstructCounter() { sConstructCounter = 1; }
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
-	void Clear();
+    void Clear();
 
   private:
     void HandleBrushAndEraser();
@@ -147,7 +150,6 @@ class Layers
         auto& history = GetHistory();
         history.clear();
         history.emplace_back();
-        history.emplace_back();
         sCurrentCapture = 0;
     }
 
@@ -166,11 +168,6 @@ class Layers
     {
         static std::deque<Capture> history;
         return history;
-    }
-    inline static auto GetTempLayer() -> Layer&
-    {
-        static Layer tmp_lay;
-        return tmp_lay;
     }
     inline static void MarkHistoryForUpdate() { sShouldUpdateHistory = true; }
 

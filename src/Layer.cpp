@@ -122,21 +122,20 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
                             bool use_color_alpha /*= false*/) const
 {
     if (!mVisible || mOpacity == 0) { return; }
-    /* mVertices.clear(); */
-    /* std::vector<Vertex>& vertices = mVertices; */
 
     for (int i = 0; i < Project::CanvasHeight(); i++)
     {
         for (int j = 0; j < Project::CanvasWidth(); j++)
         {
-            if (mCanvas[i][j].a == 0) { continue; }
+            /* if (mCanvas[i][j].a == 0) { continue; } */
 
             uint8_t alpha_val = 0;
             if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
             else { alpha_val = mOpacity; }
 
             Color color_used = mCanvas[i][j];
-            color_used.a = alpha_val;
+
+            if (color_used.a != 0) { color_used.a = alpha_val; }
 
             // first triangle
             // upper left corner
@@ -269,8 +268,10 @@ void Layer::HandleRectShape()
 
     if (left_button_pressed)
     {
+        /*
         Layers::GetTempLayer().DrawRect(shape_begin_coords, canv_coord.value(),
                                         true);
+                                        */
         return;
     }
 
@@ -365,13 +366,13 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
 void Layer::Clear()
 {
-	for (int i = 0; i < Project::CanvasHeight(); i++)
-	{
-		for (int j = 0; j < Project::CanvasWidth(); j++)
-		{
-			DrawPixel({j, i}, {0, 0, 0, 0});
-		}
-	}
+    for (int i = 0; i < Project::CanvasHeight(); i++)
+    {
+        for (int j = 0; j < Project::CanvasWidth(); j++)
+        {
+            DrawPixel({j, i}, {0, 0, 0, 0});
+        }
+    }
 }
 
 void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
@@ -611,51 +612,12 @@ void Layers::MoveDown(std::size_t layer_index)
 void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
 {
     assert(Project::IsOpened());
-
-    constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
-                                                Color{201, 201, 201, 255}};
-
     vertices.clear();
 
-    /* Background vertices */
-    for (int i = 0; i < Project::CanvasHeight() + 6; i += 6)
-    {
-        for (int j = 0; j < Project::CanvasWidth() + 6; j += 6)
-        {
-            /* first triangle */
-            // upper left corner
-            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i),
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 6,
-                                  kBgColors.at(((i + j) / 6) % 2));
-            /* second triangle */
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i),
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // bottom right corner
-            vertices.emplace_back(static_cast<float>(j) + 6,
-                                  static_cast<float>(i) + 6,
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 6,
-                                  kBgColors.at(((i + j) / 6) % 2));
-        }
-    }
-
-    for (auto& layer : std::ranges::reverse_view(GetLayers()))
+    for (auto& layer : GetLayers())
     {
         layer.EmplaceVertices(vertices);
     }
-
-    GetTempLayer().EmplaceVertices(vertices, true);
 }
 
 void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices)
@@ -715,7 +677,7 @@ void Layers::ResetDataToDefault()
     sCurrentLayerIndex = 0;
 }
 
-void Layers::DrawToTempLayer()
+/*void Layers::DrawToTempLayer()
 {
     constexpr Color kNoColor = {0, 0, 0, 0};
     constexpr Color kDeleteColor = {255, 255, 255, 110};
@@ -745,7 +707,7 @@ void Layers::DrawToTempLayer()
 
     tmp_layer.DrawCircle(canvas_coords.value(), Tool::GetBrushRadius(), true,
                          kDeleteColor);
-}
+}*/
 
 auto Layers::GetDisplayedCanvas() -> CanvasData
 {
@@ -828,8 +790,6 @@ void Layers::Update()
     {
         layer.Update();
     }
-
-    GetTempLayer().Update();
 
     if (Project::IsOpened()) { DoCurrentTool(); }
 

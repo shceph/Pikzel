@@ -29,8 +29,6 @@ void Project::New(Vec2Int canvas_dims)
 
     sProjectOpened = true;
 
-    auto& old_tmp_layer = Layers::GetTempLayer();
-    old_tmp_layer = Layer{};
     Layer::ResetConstructCounter();
     Tool::SetDataToDefault();
     Layers::InitHistory();

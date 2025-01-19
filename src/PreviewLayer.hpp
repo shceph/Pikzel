@@ -16,9 +16,9 @@ class PreviewLayer
     void EmplaceVertices(std::vector<Vertex>& vertices);
     void Update(); // This one should run every frame
 
-    [[nodiscard]] inline auto IsLayerChanged() const -> bool
+    [[nodiscard]] inline auto IsPreviewLayerChanged() const -> bool
     {
-        return mLayerChanged;
+        return mPreviewLayerChanged;
     }
 
   private:
@@ -26,6 +26,6 @@ class PreviewLayer
     glm::mat4 mTranslationMat;
     Color mToolColor{0, 0, 0, 0};
     int mBrushSize = 1;
-    bool mLayerChanged{true};
+    bool mPreviewLayerChanged{true};
 };
 } // namespace Pikzel

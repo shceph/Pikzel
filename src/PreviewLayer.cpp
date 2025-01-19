@@ -8,13 +8,13 @@ void PreviewLayer::UpdateCircleSize(int size)
     mLayer.Clear();
     mLayer.DrawCircle({Project::CanvasWidth() / 2, Project::CanvasHeight() / 2},
                       size, true, {100, 100, 100, 100});
-    mLayerChanged = true;
+    mPreviewLayerChanged = true;
 }
 
 void PreviewLayer::Clear()
 {
     mLayer.Clear();
-    mLayerChanged = true;
+    mPreviewLayerChanged = true;
 }
 
 void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices)
@@ -24,7 +24,7 @@ void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices)
 
 void PreviewLayer::Update()
 {
-    mLayerChanged = false;
+    mPreviewLayerChanged = false;
 
     if (mBrushSize != Tool::GetBrushRadius())
     {
@@ -38,7 +38,7 @@ void PreviewLayer::Update()
         mLayer.DrawCircle(
             {Project::CanvasWidth() / 2, Project::CanvasHeight() / 2},
             mBrushSize, true, {100, 100, 100, 100});
-        mLayerChanged = true;
+        mPreviewLayerChanged = true;
     }
 }
 } // namespace Pikzel
