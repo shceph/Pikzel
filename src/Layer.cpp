@@ -241,42 +241,49 @@ void Layer::HandleRectShape()
     bool left_button_pressed =
         Events::IsMouseButtonPressed(Events::kButtonLeft);
 
-    static bool shape_began = false;
-    static Vec2Int shape_begin_coords{0, 0};
+    /* static bool shape_began = false; */
+    /* static Vec2Int shape_begin_coords{0, 0}; */
 
-    if (!shape_began)
+    if (!mRectShapeData.shape_began)
     {
         if (left_button_pressed)
         {
-            shape_begin_coords = canv_coord.value();
-            shape_began = true;
+            mRectShapeData.shape_begin_coords = canv_coord.value();
+            mRectShapeData.shape_began = true;
         }
         return;
     }
 
     if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
     {
-        int diff_x = shape_begin_coords.x - canv_coord->x;
-        int diff_y = shape_begin_coords.y - canv_coord->y;
+        int diff_x = mRectShapeData.shape_begin_coords.x - canv_coord->x;
+        int diff_y = mRectShapeData.shape_begin_coords.y - canv_coord->y;
 
         if (std::abs(diff_x) < std::abs(diff_y))
         {
-            canv_coord->y = shape_begin_coords.y - diff_x;
+            canv_coord->y = mRectShapeData.shape_begin_coords.y - diff_x;
         }
-        else { canv_coord->x = shape_begin_coords.x - diff_y; }
+        else { canv_coord->x = mRectShapeData.shape_begin_coords.x - diff_y; }
     }
 
     if (left_button_pressed)
     {
-        /*
-        Layers::GetTempLayer().DrawRect(shape_begin_coords, canv_coord.value(),
-                                        true);
-                                        */
+        if (!mIsCanvasLayer)
+        {
+            DrawRect(mRectShapeData.shape_begin_coords, canv_coord.value(),
+                     true);
+        }
+
         return;
     }
 
-    DrawRect(shape_begin_coords, canv_coord.value(), true);
-    shape_began = false;
+    if (mIsCanvasLayer)
+    {
+        DrawRect(mRectShapeData.shape_begin_coords, canv_coord.value(), true);
+    }
+    else { Clear(); }
+
+    mRectShapeData.shape_began = false;
     Layers::MarkHistoryForUpdate();
 }
 

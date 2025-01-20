@@ -39,6 +39,12 @@ using CanvasData = std::vector<std::vector<Color>>;
 class Layer
 {
   public:
+	struct RectShapeData
+	{
+		bool shape_began = false;
+		Vec2Int shape_begin_coords{0, 0};
+	};
+
     explicit Layer(bool is_canvas_layer = true) noexcept;
     void DoCurrentTool();
     void EmplaceVertices(std::vector<Vertex>& vertices,
@@ -70,11 +76,12 @@ class Layer
                     Color delete_color = {0, 0, 0, 0});
     void Clear();
 
+    void HandleRectShape();
+
   private:
     void HandleBrushAndEraser();
     static void HandleColorPicker();
     void HandleBucket();
-    void HandleRectShape();
     void DrawPixel(Vec2Int coords,
                    Color color = Color::FromImVec4(Tool::GetColor()));
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
@@ -83,6 +90,7 @@ class Layer
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;
+	RectShapeData mRectShapeData;
     bool mIsCanvasLayer;
     bool mVisible = true;
     bool mLocked = false;

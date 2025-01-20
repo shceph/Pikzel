@@ -375,8 +375,15 @@ auto main() -> int
                 if (trans_mat.has_value())
                 {
                     group_preview.Bind();
-                    shader_preview.SetUniformMat4f(
-                        "u_ViewProjection", proj_mat * trans_mat.value());
+                    glm::mat4 result(1.0F);
+
+                    if (preview_layer->ShouldApplyCursorBasedTranslation())
+                    {
+                        result = proj_mat * trans_mat.value();
+                    }
+                    else { result = proj_mat; }
+
+                    shader_preview.SetUniformMat4f("u_ViewProjection", result);
                     renderer.DrawArrays(Gla::TRIANGLES,
                                         preview_vertices.size());
                 }
