@@ -2,46 +2,57 @@
 
 #include "GlaBase.hpp"
 
+#include <cassert>
 #include <vector>
 
 namespace Gla
 {
-    struct VertexBufferElement
+struct VertexBufferElement
+{
+    unsigned int type;
+    unsigned int count;
+    unsigned int normalized;
+
+    static constexpr auto GetSizeOfType(unsigned int _type) -> unsigned int
     {
-        VertexBufferElement(unsigned int _type, unsigned int _count, unsigned int _normalized);
-
-        unsigned int type;
-        unsigned int count;
-        unsigned int normalized;
-
-        static constexpr unsigned int GetSizeOfType(unsigned int _type)
+        switch (_type)
         {
-            switch (_type) {
-                case GL_FLOAT:          return sizeof(GLfloat);
-                case GL_UNSIGNED_INT:   return sizeof(GLuint);
-                case GL_BYTE:           return sizeof(GLbyte);
-			 case GL_UNSIGNED_BYTE:  return sizeof(GLubyte);
-			 default:				GLAssert(false);
-            }
-            
-            return 0;
+        case GL_FLOAT:
+            return sizeof(GLfloat);
+        case GL_UNSIGNED_INT:
+            return sizeof(GLuint);
+        case GL_BYTE:
+            return sizeof(GLbyte);
+        case GL_UNSIGNED_BYTE:
+            return sizeof(GLubyte);
+        default:
+            assert(false);
         }
-    };
 
-    class VertexBufferLayout
+        return 0;
+    }
+};
+
+class VertexBufferLayout
+{
+  public:
+    VertexBufferLayout() = default;
+
+    template <typename T>
+    void Push(unsigned int count, unsigned int normalized = GL_FALSE);
+
+    [[nodiscard]] inline auto
+    GetElements() const -> std::vector<VertexBufferElement>
     {
-    public:
-        VertexBufferLayout()
-            : m_Stride(0) {}
-
-        template <typename T>
-        void Push(unsigned int count, unsigned int normalized = GL_FALSE);
-
-        inline const std::vector<VertexBufferElement> GetElements() const { return m_Elements; };
-        inline unsigned int GetStride() const { return m_Stride; };
-
-    private:
-        std::vector<VertexBufferElement> m_Elements;
-        unsigned int m_Stride;
+        return mElement;
     };
-}
+    [[nodiscard]] inline auto GetStride() const -> unsigned int
+    {
+        return mStride;
+    };
+
+  private:
+    std::vector<VertexBufferElement> mElement;
+    unsigned int mStride{};
+};
+} // namespace Gla

@@ -4,48 +4,70 @@
 
 namespace Gla
 {
-    enum GLMinMagFilter { LINEAR = GL_LINEAR, NEAREST = GL_NEAREST };
+enum GLMinMagFilter
+{
+    kLinear = GL_LINEAR,
+    kNearest = GL_NEAREST
+};
 
-    class Texture
+class Texture
+{
+  public:
+    Texture() = default;
+    Texture(const Texture&) = default;
+    Texture(Texture&&) = delete;
+    auto operator=(const Texture&) -> Texture& = default;
+    auto operator=(Texture&&) -> Texture& = delete;
+    virtual ~Texture() = default;
+
+    virtual void Bind(unsigned int /*slot*/ = 0) const {};
+    virtual void Unbind() const {};
+
+    [[nodiscard]] inline auto GetID() const -> unsigned int
     {
-    public:
-        virtual ~Texture() = default;
+        return mRendererID;
+    }
 
-        virtual void Bind(unsigned int slot = 0) const {}
-        virtual void Unbind() const {}
+  protected:
+    unsigned int mRendererID{0};
+};
 
-        inline unsigned int GetID() const { return m_RendererID; }
+class TextureCubeMap : public Texture
+{
+  public:
+    TextureCubeMap(const TextureCubeMap&) = default;
+    TextureCubeMap(TextureCubeMap&&) = delete;
+    auto operator=(const TextureCubeMap&) -> TextureCubeMap& = default;
+    auto operator=(TextureCubeMap&&) -> TextureCubeMap& = delete;
+    explicit TextureCubeMap(const std::string& path);
+    explicit TextureCubeMap(std::array<std::string, 6> paths);
+    ~TextureCubeMap() override;
 
-    protected:
-        unsigned int m_RendererID;
-    };
+    void Bind(unsigned int slot = 0) const override;
+    void Unbind() const override;
+};
 
-    class TextureCubeMap : public Texture
-    {
-    public:
-        TextureCubeMap(const std::string& path);
-        TextureCubeMap(const std::string paths[6]);
-        ~TextureCubeMap();
+class Texture2D : public Texture
+{
+  public:
+    Texture2D(const Texture2D&) = default;
+    Texture2D(Texture2D&&) = delete;
+    auto operator=(const Texture2D&) -> Texture2D& = default;
+    auto operator=(Texture2D&&) -> Texture2D& = delete;
+    explicit Texture2D(const std::string& path,
+                       GLMinMagFilter texture_min_filter = kLinear,
+                       bool flip_vertically = false);
+    ~Texture2D() override;
 
-        void Bind(unsigned int slot = 0) const;
-        void Unbind() const;
-    };
+    void Bind(unsigned int slot = 0) const override;
+    void Unbind() const override;
 
-    class Texture2D : public Texture
-    {
-    public:
-        Texture2D(const std::string& path, GLMinMagFilter texture_min_filter = LINEAR, bool flip_vertically = false);
-        ~Texture2D();
+    [[nodiscard]] inline auto GetWidth() const -> int { return mWidth; }
+    [[nodiscard]] inline auto GetHeight() const -> int { return mHeight; }
 
-        void Bind(unsigned int slot = 0) const;
-        void Unbind() const;
-
-        inline int GetWidth()  const { return m_Width;  }
-        inline int GetHeight() const { return m_Height; }
-
-    private:
-        std::string m_FilePath;
-        unsigned char *m_LocalBuffer;
-        int m_Width, m_Height, m_BPP;
-    };
-}
+  private:
+    std::string mFilePath;
+    unsigned char* mLocalBuffer;
+    int mWidth, mHeight, mBPP;
+};
+} // namespace Gla

@@ -1,43 +1,45 @@
 #pragma once
 
-#include "GlaBase.hpp"
-#include "VertexArray.hpp"
 #include "Shader.hpp"
 #include "Texture.hpp"
+#include "VertexArray.hpp"
 
 namespace Gla
 {
-    class Mesh
+class Group
+{
+  public:
+    Group(const VertexArray& vao, const Shader& shader, const Texture& texture)
+        : mVertexArray{&vao}, mShader{&shader}, mTexture{&texture}
     {
-    public:
-        Mesh(const VertexArray& va, const Shader& shader, const Texture& texture)
-            : m_VertexArray(va), m_Shader(shader), m_Texture(&texture) {}
+    }
 
-        Mesh(const VertexArray& va, const Shader& shader)
-            : m_VertexArray(va), m_Shader(shader), m_Texture(nullptr) {}
+    Group(const VertexArray& vao, const Shader& shader)
+        : mVertexArray{&vao}, mShader{&shader}, mTexture{nullptr}
+    {
+    }
 
-        void Bind() const
-        {
-            m_VertexArray.Bind();
-            m_Shader.Bind();
+    void Bind() const
+    {
+        assert(mVertexArray != nullptr && mShader != nullptr);
 
-            if (m_Texture != nullptr)
-                m_Texture->Bind();
-        }
+        mVertexArray->Bind();
+        mShader->Bind();
 
-        void Unbind() const  // Just binds to 0
-        {
-            m_VertexArray.Unbind();
-            m_Shader.Unbind();
-            
-            if (m_Texture != nullptr) {
-                m_Texture->Unbind();
-            }
-        }
+        if (mTexture != nullptr) { mTexture->Bind(); }
+    }
 
-    private:
-        const VertexArray& m_VertexArray;
-        const Shader& m_Shader;
-        const Texture* m_Texture;
-    };
-}
+    void Unbind() const
+    {
+        VertexArray::Unbind();
+        Shader::Unbind();
+
+        if (mTexture != nullptr) { mTexture->Unbind(); }
+    }
+
+  private:
+    const VertexArray* mVertexArray;
+    const Shader* mShader;
+    const Texture* mTexture;
+};
+} // namespace Gla

@@ -1,30 +1,30 @@
 #pragma once
 
-#include "GlaBase.hpp"
-
 namespace Gla
 {
-    // This class is only suited for a uniform block with one 4x4 matrix
-    class UniformBuffer
-    {
-    public:
-        UniformBuffer(unsigned int binding_point, const void* data = nullptr);
-        ~UniformBuffer() = default;
+// This class is only suited for a uniform block with one 4x4 matrix
+class UniformBuffer
+{
+  public:
+    UniformBuffer(const UniformBuffer&) = default;
+    UniformBuffer(UniformBuffer&&) = delete;
+    auto operator=(const UniformBuffer&) -> UniformBuffer& = default;
+    auto operator=(UniformBuffer&&) -> UniformBuffer& = delete;
+    explicit UniformBuffer(unsigned int binding_point,
+                           const void* data = nullptr);
+    ~UniformBuffer() = default;
 
-        void UpdateData(const void* data);
-        void Bind() const;
+    void UpdateData(const void* data) const;
+    void Bind() const;
 
-        constexpr const unsigned int GetHandle() const
-        {
-            return m_RendererID;
-        }
-        
-    private:
-        unsigned int m_RendererID;
-        unsigned int m_BindingPoint;
-        unsigned int m_Size;
-        static constexpr unsigned int BlockSize = 16 * sizeof(float);
+    [[nodiscard]] auto GetHandle() const -> unsigned int { return mRendererID; }
 
-        char* m_BufferData;
-    };
+  private:
+    static constexpr unsigned int kBlockSize = 16 * sizeof(float);
+
+    unsigned int mRendererID;
+    unsigned int mBindingPoint;
+    unsigned int mSize;
+    char* mBufferData;
+};
 } // namespace Gla

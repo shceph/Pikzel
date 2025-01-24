@@ -1,24 +1,39 @@
 #pragma once
 
-#include "GlaBase.hpp"
+#include <glm/glm.hpp>
 
 namespace Gla
 {
-    class FrameBuffer  // For now, only stores depth, as I needed such framebuffer for shadow mapping.
+class FrameBuffer // For now, only stores depth, as I needed such framebuffer
+                  // for shadow mapping.
+{
+  public:
+    struct Dims
     {
-    public:
-        FrameBuffer(int width, int height);
-        ~FrameBuffer();
-
-        void Rescale(int width, int height);
-
-        void Bind() const;
-        unsigned int GetTextureID() const;
-
-        static void BindToDefaultFB();
-    private:
-        unsigned int m_FrameBufferID;
-        unsigned int m_TextureID;
-        int m_Width, m_Height;
+        int width;
+        int height;
     };
+
+    FrameBuffer(const FrameBuffer&) = default;
+    FrameBuffer(FrameBuffer&&) = delete;
+    auto operator=(const FrameBuffer&) -> FrameBuffer& = default;
+    auto operator=(FrameBuffer&&) -> FrameBuffer& = delete;
+    explicit FrameBuffer(Dims dims);
+    ~FrameBuffer();
+
+    void Rescale(Dims dims);
+
+    void Bind() const;
+    [[nodiscard]] auto GetTextureID() const -> unsigned int
+    {
+        return mTextureID;
+    }
+
+    static void BindToDefaultFB();
+
+  private:
+    unsigned int mFrameBufferID;
+    unsigned int mTextureID;
+    Dims mDims;
+};
 } // namespace Gla

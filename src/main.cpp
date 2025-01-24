@@ -245,19 +245,17 @@ auto main() -> int
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
 
-        Gla::FrameBuffer imgui_window_fb(kWindowWidth, kWindowHeight);
+        Gla::FrameBuffer imgui_window_fb({kWindowWidth, kWindowHeight});
         Gla::FrameBuffer::BindToDefaultFB();
 
-        Gla::Renderer renderer;
-
         Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
-                                          Gla::GLMinMagFilter::NEAREST, true);
+                                          Gla::GLMinMagFilter::kNearest, true);
         Gla::Texture2D eraser_tool_texture("assets/eraser_tool.png",
-                                           Gla::GLMinMagFilter::NEAREST);
+                                           Gla::GLMinMagFilter::kNearest);
         Gla::Texture2D color_picker_tool_texture("assets/color_picker_tool.png",
-                                                 Gla::GLMinMagFilter::NEAREST);
+                                                 Gla::GLMinMagFilter::kNearest);
         Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
-                                           Gla::GLMinMagFilter::NEAREST);
+                                           Gla::GLMinMagFilter::kNearest);
         Gla::Texture2D square_tool_texture("assets/square_tool.png");
 
         std::array<unsigned int, Pikzel::kToolCount> tool_texture_ids = {
@@ -283,22 +281,22 @@ auto main() -> int
         shader.Bind();
 
         Gla::VertexArray vao_canvas;
-        Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::DYNAMIC_DRAW);
+        Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicArray);
         vao_canvas.AddBuffer(vbo_canvas, layout);
-        Gla::Mesh group_canvas(vao_canvas, shader);
+        Gla::Group group_canvas(vao_canvas, shader);
 
         Gla::VertexArray vao_bckg;
-        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::DYNAMIC_DRAW);
+        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kDynamicArray);
         vao_bckg.AddBuffer(vbo_bckg, layout);
-        Gla::Mesh group_bckg(vao_bckg, shader);
+        Gla::Group group_bckg(vao_bckg, shader);
         auto bckg_vertices_count = 0UZ;
 
         Gla::VertexArray vao_preview;
-        Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::DYNAMIC_DRAW);
+        Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicArray);
         vao_preview.AddBuffer(vbo_preview, layout);
         Gla::Shader shader_preview("shader/VertShader.vert",
                                    "shader/FragShader.frag");
-        Gla::Mesh group_preview(vao_preview, shader_preview);
+        Gla::Group group_preview(vao_preview, shader_preview);
         std::vector<Vertex> preview_vertices;
         std::unique_ptr<Pikzel::PreviewLayer> preview_layer;
 
@@ -353,13 +351,13 @@ auto main() -> int
 
                 ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
                 imgui_window_fb.Bind();
-                imgui_window_fb.Rescale(static_cast<int>(draw_window_dims.x),
-                                        static_cast<int>(draw_window_dims.y));
+                imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
+                                         static_cast<int>(draw_window_dims.y)});
 
                 group_bckg.Bind();
-                renderer.Clear();
+                Gla::Renderer::Clear();
                 glClearColor(0.8, 0.8, 0.8, 1.0);
-                renderer.DrawArrays(Gla::TRIANGLES, bckg_vertices_count);
+                Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
 
                 UpdatePreviewVboIfNeeded(preview_layer, preview_vertices,
                                          vbo_preview);
@@ -375,16 +373,16 @@ auto main() -> int
                     }
 
                     shader_preview.SetUniformMat4f("u_ViewProjection", result);
-                    renderer.DrawArrays(Gla::TRIANGLES,
-                                        preview_vertices.size());
+                    Gla::Renderer::DrawArrays(Gla::kTriangles,
+                                              preview_vertices.size());
                 }
 
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
                 group_canvas.Bind();
                 Pikzel::VertexBufferControl::UpdateSizeIfNeeded(vbo_canvas);
-                renderer.DrawArrays(
-                    Gla::TRIANGLES,
+                Gla::Renderer::DrawArrays(
+                    Gla::kTriangles,
                     Pikzel::VertexBufferControl::GetVertexCount());
 
                 Gla::FrameBuffer::BindToDefaultFB();
