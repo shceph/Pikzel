@@ -1,6 +1,7 @@
 #include "Camera.hpp"
 
 #include "Events.hpp"
+#include "Project.hpp"
 
 #include <algorithm>
 
@@ -11,12 +12,12 @@ void Camera::AddToZoom(double val_to_add)
     sZoomValue = std::clamp(sZoomValue + val_to_add, kZoomMin, kZoomMax);
 }
 
-void Camera::SetCenter(Vec2Int center)
+void Camera::SetCenter(glm::vec2 center)
 {
     sCenter = center;
 }
 
-void Camera::MoveCenter(Vec2Int offset)
+void Camera::MoveCenter(glm::vec2 offset)
 {
     sCenter += offset;
 }
@@ -49,10 +50,12 @@ void Camera::CursorPosCallback(double x_pos, double y_pos)
 
     if (Events::IsMouseButtonHeld(Events::kButtonRight))
     {
-        double offset_x = old_x - x_pos;
-        double offset_y = old_y - y_pos;
-        Pikzel::Camera::MoveCenter(
-            {static_cast<int>(offset_x), static_cast<int>(offset_y)});
+        glm::vec2 offset{old_x - x_pos, old_y - y_pos};
+        glm::vec2 resolution_at_no_additinal_offset{500, 500};
+        offset *= (glm::vec2{Project::GetCanvasDims()} /
+                   resolution_at_no_additinal_offset) *
+                  static_cast<float>(1.0 - sZoomValue);
+        Pikzel::Camera::MoveCenter(offset);
     }
 
     old_x = x_pos;

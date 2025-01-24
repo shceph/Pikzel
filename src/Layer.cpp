@@ -201,7 +201,7 @@ void Layer::HandleBrushAndEraser()
         DrawLine(canv_coord.value(), position_last_drawn,
                  Tool::GetBrushRadius() * 2);
     }
-    else { Layers::MarkHistoryForUpdate(); }
+    else { MarkHistoryForUpdate(); }
 
     time_last_drawn = std::chrono::steady_clock::now();
     position_last_drawn = canv_coord.value();
@@ -231,7 +231,7 @@ void Layer::HandleBucket()
 
     Color clicked_color = GetPixel(canv_coord.value());
     Fill(canv_coord->x, canv_coord->y, clicked_color);
-    Layers::MarkHistoryForUpdate();
+    MarkHistoryForUpdate();
 }
 
 void Layer::HandleRectShape()
@@ -244,34 +244,38 @@ void Layer::HandleRectShape()
     /* static bool shape_began = false; */
     /* static Vec2Int shape_begin_coords{0, 0}; */
 
-    if (!mRectShapeData.shape_began)
+    if (!mHandleRectShapeData.shape_began)
     {
         if (left_button_pressed)
         {
-            mRectShapeData.shape_begin_coords = canv_coord.value();
-            mRectShapeData.shape_began = true;
+            mHandleRectShapeData.shape_begin_coords = canv_coord.value();
+            mHandleRectShapeData.shape_began = true;
         }
         return;
     }
 
+    // Use left shift to force drawing a square
     if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
     {
-        int diff_x = mRectShapeData.shape_begin_coords.x - canv_coord->x;
-        int diff_y = mRectShapeData.shape_begin_coords.y - canv_coord->y;
+        int diff_x = mHandleRectShapeData.shape_begin_coords.x - canv_coord->x;
+        int diff_y = mHandleRectShapeData.shape_begin_coords.y - canv_coord->y;
 
         if (std::abs(diff_x) < std::abs(diff_y))
         {
-            canv_coord->y = mRectShapeData.shape_begin_coords.y - diff_x;
+            canv_coord->y = mHandleRectShapeData.shape_begin_coords.y - diff_x;
         }
-        else { canv_coord->x = mRectShapeData.shape_begin_coords.x - diff_y; }
+        else
+        {
+            canv_coord->x = mHandleRectShapeData.shape_begin_coords.x - diff_y;
+        }
     }
 
     if (left_button_pressed)
     {
-        if (!mIsCanvasLayer)
+        if (IsPreviewLayer())
         {
-            DrawRect(mRectShapeData.shape_begin_coords, canv_coord.value(),
-                     true);
+            DrawRect(mHandleRectShapeData.shape_begin_coords,
+                     canv_coord.value(), true);
         }
 
         return;
@@ -279,12 +283,13 @@ void Layer::HandleRectShape()
 
     if (mIsCanvasLayer)
     {
-        DrawRect(mRectShapeData.shape_begin_coords, canv_coord.value(), true);
+        DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(),
+                 true);
     }
     else { Clear(); }
 
-    mRectShapeData.shape_began = false;
-    Layers::MarkHistoryForUpdate();
+    mHandleRectShapeData.shape_began = false;
+    MarkHistoryForUpdate();
 }
 
 void Layer::DrawPixel(Vec2Int coords,
@@ -380,6 +385,11 @@ void Layer::Clear()
             DrawPixel({j, i}, {0, 0, 0, 0});
         }
     }
+}
+
+void Layer::MarkHistoryForUpdate() const
+{
+    if (mIsCanvasLayer) { Layers::MarkHistoryForUpdate(); }
 }
 
 void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
@@ -551,7 +561,7 @@ auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
         coords.y += (Project::CanvasHeight() - new_height) / 2;
     }
 
-    coords += Camera::GetCenter() - Project::GetCanvasDims() / 2;
+    coords += Camera::GetCenterAsVec2Int() - Project::GetCanvasDims() / 2;
 
     if (coords.x < 0 || coords.x >= Project::CanvasWidth() || coords.y < 0 ||
         coords.y >= Project::CanvasHeight())
@@ -800,14 +810,12 @@ void Layers::Update()
 
     if (Project::IsOpened()) { DoCurrentTool(); }
 
-    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&
-        Events::IsKeyboardKeyPressed(GLFW_KEY_Z))
+    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_Z))
     {
         Undo();
     }
 
-    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_CONTROL) &&
-        Events::IsKeyboardKeyPressed(GLFW_KEY_R))
+    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_R))
     {
         Redo();
     }

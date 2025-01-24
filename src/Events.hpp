@@ -12,9 +12,6 @@ namespace Pikzel
 class Events
 {
   public:
-    using CallbackType = std::function<void(double, double)>;
-    // Just int for now; use GLFW macros
-    using KeyboardKey = int;
     enum MouseButtons
     {
         kButtonLeft = GLFW_MOUSE_BUTTON_LEFT,
@@ -23,6 +20,12 @@ class Events
         kMouseButtonCount
     };
 
+    using CallbackType = std::function<void(double, double)>;
+    using TimePointType = std::chrono::time_point<std::chrono::steady_clock>;
+    using ArrayOfTimePoints = std::array<TimePointType, kMouseButtonCount>;
+
+    // Just int for now; use GLFW macros
+    using KeyboardKey = int;
     static void GlfwScrollCallback(GLFWwindow* window, double xoffset,
                                    double yoffset);
     static void GlfwCursorPosCallback(GLFWwindow* window, double x_pos,
@@ -36,12 +39,43 @@ class Events
 
     static void SetWindowPtr(GLFWwindow* window) { sWindow = window; }
 
+    static auto GetLastTimeClickedArrayForEachButton() -> ArrayOfTimePoints&
+    {
+        static ArrayOfTimePoints last_time_clicked;
+        return last_time_clicked;
+    }
+
+    static auto GetLastTimeKeyboardUsed() -> TimePointType&
+    {
+        static TimePointType last_time_keyboard_used{
+            std::chrono::steady_clock::now()};
+        return last_time_keyboard_used;
+    }
+
+    template <typename... Args>
+    static auto AreKeyboardKeysPressed(Args... args) -> bool
+    {
+        constexpr auto kDelay = std::chrono::milliseconds(130);
+        auto& last_time_keyboard_used = GetLastTimeKeyboardUsed();
+
+        if (std::chrono::steady_clock::now() - last_time_keyboard_used <=
+            kDelay)
+        {
+            return false;
+        }
+
+        if (((glfwGetKey(sWindow, args) == GLFW_PRESS) && ...))
+        {
+            last_time_keyboard_used = std::chrono::steady_clock::now();
+            return true;
+        }
+
+        return false;
+    }
+
   private:
     inline static GLFWwindow* sWindow = nullptr;
     inline static std::vector<CallbackType> sScrollCallbacks;
     inline static std::vector<CallbackType> sCursorPosCallbacks;
-    inline static std::array<std::chrono::time_point<std::chrono::steady_clock>,
-                             kMouseButtonCount>
-        sLastTimeClicked;
 };
 } // namespace Pikzel

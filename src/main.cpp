@@ -133,15 +133,16 @@ auto GetProjMat() -> glm::mat4
 
     const auto width = static_cast<float>(Pikzel::Project::CanvasWidth());
     const auto height = static_cast<float>(Pikzel::Project::CanvasHeight());
-    const Pikzel::Vec2Int center_offset =
-        Pikzel::Camera::GetCenter() - Pikzel::Project::GetCanvasDims() / 2;
+    const glm::vec2 camera_top_left = Pikzel::Camera::GetCenterAsVec2Int() -
+                                      Pikzel::Project::GetCanvasDims() / 2;
     auto zoom_half = static_cast<float>(Pikzel::Camera::GetZoomValue()) / 2;
 
-    glm::mat4 proj = glm::ortho(
-        static_cast<float>(center_offset.x) + zoom_half * width,
-        width - zoom_half * width + static_cast<float>(center_offset.x),
-        static_cast<float>(center_offset.y) + zoom_half * height,
-        height - zoom_half * height + static_cast<float>(center_offset.y));
+    glm::mat4 proj =
+        glm::ortho(zoom_half * width + camera_top_left.x,
+                   width - zoom_half * width + camera_top_left.x,
+
+                   zoom_half * height + camera_top_left.y,
+                   height - zoom_half * height + camera_top_left.y);
 
     return proj;
 }
@@ -224,11 +225,9 @@ auto main() -> int
 #ifndef NDEBUG
     glfwSetErrorCallback(&GlfwError);
     std::cout << "C++ standard: " << __cplusplus << '\n';
-#endif
 
     if (glewInit() != GLEW_OK) { std::cout << "Glew init error\n"; }
 
-#ifndef NDEBUG
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -277,18 +276,11 @@ auto main() -> int
             eye_opened_texture.GetID(), eye_closed_texture.GetID(),
             lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
 
-        Gla::VertexArray vao;
-        Gla::VertexBuffer vbo(nullptr, 0);
         Gla::VertexBufferLayout layout;
         layout.Push<float>(2);
         layout.Push<uint8_t>(4, GL_TRUE);
-        /* vao.AddBuffer(vbo_background, layout); */
-        /* vao.AddBuffer(vbo_canvas, layout); */
-        vao.AddBuffer(vbo, layout);
         Gla::Shader shader("shader/VertShader.vert", "shader/FragShader.frag");
         shader.Bind();
-        Gla::Mesh mesh(vao, shader);
-        mesh.Bind();
 
         Gla::VertexArray vao_canvas;
         Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::DYNAMIC_DRAW);
@@ -375,13 +367,12 @@ auto main() -> int
                 if (trans_mat.has_value())
                 {
                     group_preview.Bind();
-                    glm::mat4 result(1.0F);
+                    glm::mat4 result = proj_mat;
 
                     if (preview_layer->ShouldApplyCursorBasedTranslation())
                     {
-                        result = proj_mat * trans_mat.value();
+                        result *= trans_mat.value();
                     }
-                    else { result = proj_mat; }
 
                     shader_preview.SetUniformMat4f("u_ViewProjection", result);
                     renderer.DrawArrays(Gla::TRIANGLES,

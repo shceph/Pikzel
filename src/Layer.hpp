@@ -39,11 +39,11 @@ using CanvasData = std::vector<std::vector<Color>>;
 class Layer
 {
   public:
-	struct RectShapeData
-	{
-		bool shape_began = false;
-		Vec2Int shape_begin_coords{0, 0};
-	};
+    struct RectShapeData
+    {
+        bool shape_began = false;
+        Vec2Int shape_begin_coords{0, 0};
+    };
 
     explicit Layer(bool is_canvas_layer = true) noexcept;
     void DoCurrentTool();
@@ -65,6 +65,10 @@ class Layer
     {
         return mCanvas[coords.y][coords.x];
     }
+    [[nodiscard]] inline auto IsPreviewLayer() const -> bool
+    {
+        return !mIsCanvasLayer;
+    }
 
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
@@ -75,7 +79,7 @@ class Layer
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
     void Clear();
-
+	void MarkHistoryForUpdate() const;
     void HandleRectShape();
 
   private:
@@ -90,7 +94,7 @@ class Layer
     void Fill(int x_coord, int y_coord, Color clicked_color);
 
     CanvasData mCanvas;
-	RectShapeData mRectShapeData;
+    RectShapeData mHandleRectShapeData;
     bool mIsCanvasLayer;
     bool mVisible = true;
     bool mLocked = false;

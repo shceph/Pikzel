@@ -28,14 +28,15 @@ void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices)
 void PreviewLayer::Update()
 {
     mPreviewLayerChanged = false;
-	mApplyCursorBasedTranslation = true;
+    mApplyCursorBasedTranslation = true;
 
     auto tool_type = Tool::GetToolType();
+    auto tool_curr_color = Color::FromImVec4(Tool::GetColor());
 
     if (tool_type == kEraser) { mToolColor = kEraserToolPreviewColor; }
-    else if (tool_type == kBrush && mToolColor != Tool::GetColor())
+    else if (tool_type == kBrush && mToolColor != tool_curr_color)
     {
-        mToolColor = Tool::GetColor();
+        mToolColor = tool_curr_color;
         mLayer.DrawCircle(
             {Project::CanvasWidth() / 2, Project::CanvasHeight() / 2},
             mBrushSize, true, {100, 100, 100, 100});
@@ -50,13 +51,13 @@ void PreviewLayer::Update()
     }
     else if (IsToolTypeChanged()) { Clear(); }
 
-	if (tool_type == kRectShape)
-	{
-		Clear();
-		mLayer.HandleRectShape();
-		SetPreviewLayerChangedToTrue();
-		mApplyCursorBasedTranslation = false;
-	}
+    if (tool_type == kRectShape)
+    {
+        Clear();
+        mLayer.HandleRectShape();
+        SetPreviewLayerChangedToTrue();
+        mApplyCursorBasedTranslation = false;
+    }
 
     mToolType = Tool::GetToolType();
 }

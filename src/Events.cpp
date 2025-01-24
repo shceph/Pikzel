@@ -12,7 +12,7 @@ void Events::GlfwScrollCallback(GLFWwindow* /*window*/, double xoffset,
 {
     for (auto& callable : sScrollCallbacks)
     {
-	   callable(xoffset, yoffset);
+        callable(xoffset, yoffset);
     }
 }
 
@@ -37,7 +37,21 @@ void Events::PushToCursorPosCallback(CallbackType&& callback)
 
 auto Events::IsKeyboardKeyPressed(KeyboardKey key) -> bool
 {
-    return glfwGetKey(sWindow, key) == GLFW_PRESS;
+    constexpr auto kDelay = std::chrono::milliseconds(130);
+    auto& last_time_keyboard_used = GetLastTimeKeyboardUsed();
+
+    if (std::chrono::steady_clock::now() - last_time_keyboard_used <= kDelay)
+    {
+        return false;
+    }
+
+    if (glfwGetKey(sWindow, key) == GLFW_PRESS)
+    {
+        last_time_keyboard_used = std::chrono::steady_clock::now();
+        return true;
+    }
+
+    return false;
 }
 
 auto Events::IsMouseButtonPressed(MouseButtons button) -> bool
@@ -50,19 +64,22 @@ auto Events::IsMouseButtonHeld(MouseButtons button) -> bool
 {
     constexpr auto kDelay = std::chrono::milliseconds(25);
     assert(button != kMouseButtonCount);
+    auto& last_time_clicked = GetLastTimeClickedArrayForEachButton();
 
     return glfwGetMouseButton(sWindow, button) == GLFW_PRESS &&
-           std::chrono::steady_clock::now() - sLastTimeClicked.at(button) <=
+           std::chrono::steady_clock::now() - last_time_clicked.at(button) <=
                kDelay;
 }
 
 void Events::Update()
 {
-    for (auto i = 0UZ; i <= sLastTimeClicked.size(); i++)
+    auto& last_time_clicked = GetLastTimeClickedArrayForEachButton();
+
+    for (auto i = 0UZ; i <= last_time_clicked.size(); i++)
     {
         if (glfwGetMouseButton(sWindow, static_cast<int>(i)) == GLFW_PRESS)
         {
-            sLastTimeClicked.at(i) = std::chrono::steady_clock::now();
+            last_time_clicked.at(i) = std::chrono::steady_clock::now();
         }
     }
 
