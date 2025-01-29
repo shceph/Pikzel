@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Application.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
 
@@ -7,6 +8,7 @@
 
 #include <deque>
 #include <list>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -63,6 +65,7 @@ class Layer
     }
     [[nodiscard]] inline auto GetPixel(Vec2Int coords) const -> Color
     {
+        std::lock_guard<std::mutex> lock{sMutex};
         return mCanvas[coords.y][coords.x];
     }
     [[nodiscard]] inline auto IsPreviewLayer() const -> bool
@@ -74,12 +77,21 @@ class Layer
     // std::nullopt
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
     static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    static void SetUpdateWholeVBOToTrue() { sShouldUpdateWholeVBO = true; }
+    static void UpdateStatic();
+    static inline auto GetDirtyPixels() -> std::vector<Vec2Int>&
+    {
+        static std::vector<Vec2Int> dirty_pixels;
+        return dirty_pixels;
+    }
 
     static inline void ResetConstructCounter() { sConstructCounter = 1; }
+    // Custom delete color can be set, I'm using this for the preview layer
+    // where I want the brush to have a specific color.
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
     void Clear();
-	void MarkHistoryForUpdate() const;
+    void MarkHistoryForUpdate() const;
     void HandleRectShape();
 
   private:
@@ -101,7 +113,9 @@ class Layer
     int mOpacity = 255;
     std::string mLayerName;
 
+    inline static std::mutex sMutex;
     inline static int sConstructCounter = 1;
+    inline static bool sShouldUpdateWholeVBO = true;
 
     friend class UI;
     friend class Layers;
@@ -142,7 +156,7 @@ class Layers
     static void PushToHistory();
     static void Undo();
     static void Redo();
-    static void Update();
+    static void UpdateAndDraw(bool should_do_tool);
 
     inline static auto GetLayerCount() -> std::size_t
     {

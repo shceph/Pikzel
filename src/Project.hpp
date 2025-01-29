@@ -12,9 +12,10 @@ class Project
   public:
     static void New(Vec2Int canvas_dims);
     static void Open(const std::string& project_file_dest);
-    static void SaveAsImage(int magnify_factor, const std::string& save_dest);
     static void SaveAsProject(const std::string& save_dest);
     static void CloseCurrentProject();
+    [[nodiscard]] static auto SaveAsImage(int magnify_factor,
+                                          const std::string& save_dest) -> bool;
 
     inline static auto IsOpened() -> bool { return sProjectOpened; }
     inline static auto CanvasHeight() -> int { return sCanvasHeight; }
@@ -29,4 +30,4 @@ class Project
     inline static int sCanvasHeight = 0;
     inline static int sCanvasWidth = 0;
 };
-}  // namespace Pikzel
+} // namespace Pikzel

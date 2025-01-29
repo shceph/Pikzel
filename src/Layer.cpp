@@ -179,14 +179,9 @@ void Layer::HandleBrushAndEraser()
     {
         if (Tool::GetToolType() == ToolType::kEraser)
         {
-            // mCanvas[canv_coord->y][canv_coord->x] = Color{0, 0, 0, 0};
             DrawPixel(canv_coord.value(), {0, 0, 0, 0});
         }
-        else
-        {
-            DrawPixel(canv_coord.value());
-            // mCanvas[canv_coord->y][canv_coord->x] = Tool::GetColor();
-        }
+        else { DrawPixel(canv_coord.value()); }
     }
     else
     {
@@ -295,9 +290,15 @@ void Layer::HandleRectShape()
 void Layer::DrawPixel(Vec2Int coords,
                       Color color /*= Color::FromImVec4(Tool::GetColor())*/)
 {
+    std::unique_lock<std::mutex> lock{sMutex};
     mCanvas[coords.y][coords.x] = color;
+    lock.unlock();
 
-    if (mIsCanvasLayer) { VertexBufferControl::PushDirtyPixel(coords); }
+    if (mIsCanvasLayer)
+    {
+        VertexBufferControl::PushDirtyPixel(coords);
+        GetDirtyPixels().push_back(coords);
+    }
     /* VertexBufferControl::UpdatePixel(coords); */
 }
 
@@ -481,7 +482,7 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
         return;
     }
 
-    auto& fill_color = Tool::GetColorRef();
+    auto fill_color = Tool::GetColor();
 
     std::queue<std::pair<int, int>> pixel_queue;
     pixel_queue.emplace(y_coord, x_coord);
@@ -577,6 +578,13 @@ auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
     return glm::clamp(val_to_clamp, {0, 0}, Project::GetCanvasDims());
 }
 
+// Should call this func before VertexBufferControl::Update, since it needs
+// dirty pixels
+void Layer::UpdateStatic()
+{
+    sShouldUpdateWholeVBO = false;
+}
+
 auto Layers::GetCurrentLayer() -> Layer&
 {
     assert(sCurrentLayerIndex >= 0 && sCurrentLayerIndex < GetLayers().size());
@@ -588,8 +596,6 @@ auto Layers::GetCurrentLayer() -> Layer&
 
 void Layers::DoCurrentTool()
 {
-    if (!UI::ShouldDoTool()) { return; }
-
     GetCurrentLayer().DoCurrentTool();
 }
 
@@ -801,14 +807,14 @@ void Layers::Redo()
     }
 }
 
-void Layers::Update()
+void Layers::UpdateAndDraw(bool should_do_tool)
 {
     for (auto& layer : GetLayers())
     {
         layer.Update();
     }
 
-    if (Project::IsOpened()) { DoCurrentTool(); }
+    if (Project::IsOpened() && should_do_tool) { DoCurrentTool(); }
 
     if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_Z))
     {

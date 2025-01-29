@@ -240,7 +240,7 @@ auto main() -> int
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    Pikzel::UI::ImGuiInit(window);
+    Pikzel::UI ui_state{window};
 
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
@@ -269,8 +269,8 @@ auto main() -> int
         Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
         Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
 
-        Pikzel::UI::SetupToolTextures(tool_texture_ids);
-        Pikzel::UI::SetupLayerToolTextures(
+        ui_state.SetupToolTextures(tool_texture_ids);
+        ui_state.SetupLayerToolTextures(
             eye_opened_texture.GetID(), eye_closed_texture.GetID(),
             lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
 
@@ -307,13 +307,13 @@ auto main() -> int
 
             if (Pikzel::Project::IsOpened())
             {
-                Pikzel::UI::RenderUI();
-                Pikzel::UI::RenderDrawWindow(imgui_window_fb.GetTextureID(),
-                                             "Draw");
+                ui_state.RenderUI();
+                ui_state.RenderDrawWindow(imgui_window_fb.GetTextureID(),
+                                          "Draw");
             }
             else
             {
-                Pikzel::UI::RenderNoProjectWindow();
+                ui_state.RenderNoProjectWindow();
 
                 if (Pikzel::Project::IsOpened())
                 {
@@ -342,14 +342,13 @@ auto main() -> int
 
             Pikzel::UI::RenderAndEndFrame();
 
-            if (Pikzel::Project::IsOpened() &&
-                Pikzel::UI::IsDrawWindowRendered())
+            if (Pikzel::Project::IsOpened() && ui_state.IsDrawWindowRendered())
             {
                 auto proj_mat = GetProjMat();
                 shader.Bind();
                 shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
-                ImVec2 draw_window_dims = Pikzel::UI::GetDrawWinDimensions();
+                ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
                 imgui_window_fb.Bind();
                 imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
                                          static_cast<int>(draw_window_dims.y)});
@@ -387,22 +386,23 @@ auto main() -> int
 
                 Gla::FrameBuffer::BindToDefaultFB();
 
-                Pikzel::Layers::Update();
+                Pikzel::Layers::UpdateAndDraw(ui_state.ShouldDoTool());
                 vbo_update_future = std::async(
                     std::launch::async, Pikzel::VertexBufferControl::Update);
-                Pikzel::UI::Update();
+                ui_state.Update();
                 preview_layer->Update();
+                Pikzel::Layer::UpdateStatic();
             }
 
             Pikzel::Events::Update();
 
             glfwSwapBuffers(window);
 
-            Pikzel::UI::SetShouldDoToolToTrue();
+            ui_state.SetShouldDoToolToTrue();
         }
     }
 
-    Pikzel::UI::ImGuiCleanup();
+    ui_state.ImGuiCleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 }

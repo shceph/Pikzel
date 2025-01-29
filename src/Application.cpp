@@ -17,7 +17,7 @@
 
 namespace Pikzel
 {
-void UI::ImGuiInit(GLFWwindow* _window)
+UI::UI(GLFWwindow* _window)
 {
     sWindow = _window;
 
@@ -51,6 +51,9 @@ void UI::ImGuiInit(GLFWwindow* _window)
     /* style.FrameBorderSize = 1.0F; */
     /* style.WindowBorderSize = 1.0F; */
     /* style.ScaleAllSizes(1.5); */
+
+    sConstructCounter++;
+    assert(sConstructCounter < 2);
 }
 
 void UI::ImGuiCleanup()
@@ -94,9 +97,9 @@ void UI::RenderUI()
     RenderToolWindow();
     RenderLayerWindow();
 
-    if (sRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
-    if (sRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
-    if (sRenderSaveErrorPopup) { RenderSaveErrorPopup(); }
+    if (mRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
+    if (mRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
+    if (mRenderSaveErrorPopup) { RenderSaveErrorPopup(); }
 }
 
 void UI::RenderNoProjectWindow()
@@ -105,22 +108,22 @@ void UI::RenderNoProjectWindow()
 
     ImGui::Begin("No project window");
 
-    if (ImGui::Selectable("New project")) { sRenderNewProjectPopup = true; }
-    if (ImGui::Selectable("Open a project")) { sRenderOpenProjectPopup = true; }
+    if (ImGui::Selectable("New project")) { mRenderNewProjectPopup = true; }
+    if (ImGui::Selectable("Open a project")) { mRenderOpenProjectPopup = true; }
 
     ImGui::End();
 
-    if (sRenderNewProjectPopup) { RenderNewProjectPopup(); }
-    if (sRenderOpenProjectPopup) { RenderOpenProjectPopup(); }
+    if (mRenderNewProjectPopup) { RenderNewProjectPopup(); }
+    if (mRenderOpenProjectPopup) { RenderOpenProjectPopup(); }
 }
 
 void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name)
 {
-    // TODO(scheph): A lot of code in this function does not need to run every
+    // TODO: A lot of code in this function does not need to run every
     // frame as it currenlty does. Fix that
     ImGui::Begin(window_name);
-    sDrawWindowRendered = true;
+    mDrawWindowRendered = true;
 
     // ImGui window size
     float window_width = ImGui::GetContentRegionAvail().x;
@@ -176,15 +179,14 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
 
     ImGui::End();
 
-    GetDrawWinUpperleftCoords() = pos;
-    GetDrawWinDimensions() = {window_width, window_height};
-    GetCanvasUpperleftCoords() = upper_left;
-    GetCanvasBottomRightCoords() = bottom_right;
+    mDrawWinDimensions = ImVec2{window_width, window_height};
+    GetCanvasUpperleftCoordsRef() = upper_left;
+    GetCanvasBottomRightCoordsRef() = bottom_right;
 }
 
 void UI::Update()
 {
-    sDrawWindowRendered = false;
+    mDrawWindowRendered = false;
 }
 
 void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
@@ -193,19 +195,10 @@ void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
 
     for (auto tex_id : tex_ids)
     {
-        sToolTextures.at(index) =
+        mToolTextures.at(index) =
             std::bit_cast<ImTextureID>(static_cast<uintptr_t>(tex_id));
         index++;
     }
-
-    /*sBrushToolTextureID =
-        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(brush_tex_id));
-    sEraserToolTextureID =
-        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(eraser_tex_id));
-    sColorPickerToolTextureID =
-        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(color_pick_tex_id));
-    sBucketToolTextureID =
-        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(bucket_tex_id));*/
 }
 
 void UI::SetupLayerToolTextures(unsigned int eye_opened_id,
@@ -213,19 +206,19 @@ void UI::SetupLayerToolTextures(unsigned int eye_opened_id,
                                 unsigned int lock_locked_id,
                                 unsigned int lock_unlocked_id)
 {
-    sEyeOpenedTextureID =
+    mEyeOpenedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(eye_opened_id));
-    sEyeClosedTextureID =
+    mEyeClosedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(eye_closed_id));
-    sLockLockedTextureID =
+    mLockLockedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(lock_locked_id));
-    sLockUnlockedTextureID =
+    mLockUnlockedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(lock_unlocked_id));
 }
 
-auto UI::ShouldDoTool() -> bool
+auto UI::ShouldDoTool() const -> bool
 {
-    return sShouldDoTool;
+    return mShouldDoTool;
 }
 
 void UI::RenderMenuBar()
@@ -237,12 +230,12 @@ void UI::RenderMenuBar()
         if (ImGui::MenuItem("New"))
         {
             Project::CloseCurrentProject();
-            sRenderNewProjectPopup = true;
+            mRenderNewProjectPopup = true;
         }
-        if (ImGui::MenuItem("Save as image")) { sRenderSaveAsImgPopup = true; }
+        if (ImGui::MenuItem("Save as image")) { mRenderSaveAsImgPopup = true; }
         if (ImGui::MenuItem("Save as project"))
         {
-            sRenderSaveAsPrjPopup = true;
+            mRenderSaveAsPrjPopup = true;
         }
         ImGui::EndMenu();
     }
@@ -270,7 +263,7 @@ void UI::RenderMenuBar()
 
 void UI::RenderSaveAsImagePopup()
 {
-    sShouldDoTool = false; // Don't want to draw with a popup opened
+    mShouldDoTool = false; // Don't want to draw with a popup opened
 
     static std::array<char, 256> destination_str;
     static std::array<char, 64> file_name_str;
@@ -295,8 +288,13 @@ void UI::RenderSaveAsImagePopup()
             std::string destination(destination_str.data());
             destination += '/';
             destination += file_name_str.data();
-            Project::SaveAsImage(magnify_factor, destination);
-            sRenderSaveAsImgPopup = false;
+
+            if (!Project::SaveAsImage(magnify_factor, destination))
+            {
+                TriggerSaveErrorPopup();
+            }
+
+            mRenderSaveAsImgPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -304,7 +302,7 @@ void UI::RenderSaveAsImagePopup()
 
         if (ImGui::Button("Cancel"))
         {
-            sRenderSaveAsImgPopup = false;
+            mRenderSaveAsImgPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -314,7 +312,7 @@ void UI::RenderSaveAsImagePopup()
 
 void UI::RenderSaveAsProjectPopup()
 {
-    sShouldDoTool = false;
+    mShouldDoTool = false;
 
     static std::array<char, 256> destination_str;
     static std::array<char, 64> file_name_str;
@@ -337,7 +335,7 @@ void UI::RenderSaveAsProjectPopup()
             destination += '/';
             destination += file_name_str.data();
             Project::SaveAsProject(destination);
-            sRenderSaveAsPrjPopup = false;
+            mRenderSaveAsPrjPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -345,7 +343,7 @@ void UI::RenderSaveAsProjectPopup()
 
         if (ImGui::Button("Cancel"))
         {
-            sRenderSaveAsPrjPopup = false;
+            mRenderSaveAsPrjPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -469,7 +467,7 @@ void UI::RenderToolWindow()
     ToolType tool_type = Tool::GetToolType();
 
     if (tool_type == kBrush) { BeginOutline(); }
-    if (ImGui::ImageButton(sToolTextures[kBrush], {20.0F, 20.0F}))
+    if (ImGui::ImageButton(mToolTextures[kBrush], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kBrush);
     }
@@ -478,7 +476,7 @@ void UI::RenderToolWindow()
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kEraser) { BeginOutline(); }
-    if (ImGui::ImageButton(sToolTextures[kEraser], {20.0F, 20.0F}))
+    if (ImGui::ImageButton(mToolTextures[kEraser], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kEraser);
     }
@@ -487,7 +485,7 @@ void UI::RenderToolWindow()
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kColorPicker) { BeginOutline(); }
-    if (ImGui::ImageButton(sToolTextures[kColorPicker], {20.0F, 20.0F}))
+    if (ImGui::ImageButton(mToolTextures[kColorPicker], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kColorPicker);
     }
@@ -496,7 +494,7 @@ void UI::RenderToolWindow()
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kBucket) { BeginOutline(); }
-    if (ImGui::ImageButton(sToolTextures[kBucket], {20.0F, 20.0F}))
+    if (ImGui::ImageButton(mToolTextures[kBucket], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kBucket);
     }
@@ -505,7 +503,7 @@ void UI::RenderToolWindow()
     ImGui::SameLine(0.0F, 4.0F);
 
     if (tool_type == kRectShape) { BeginOutline(); }
-    if (ImGui::ImageButton(sToolTextures[kRectShape], {20.0F, 20.0F}))
+    if (ImGui::ImageButton(mToolTextures[kRectShape], {20.0F, 20.0F}))
     {
         Tool::SetToolType(kRectShape);
     }
@@ -540,11 +538,11 @@ void UI::RenderLayerWindow()
         std::string str_id_for_widgets = "Layer " + std::to_string(i + 1);
 
         ImTextureID visibility_tex =
-            (layer_traversed.IsVisible() ? sEyeOpenedTextureID
-                                         : sEyeClosedTextureID);
+            (layer_traversed.IsVisible() ? mEyeOpenedTextureID
+                                         : mEyeClosedTextureID);
         ImTextureID lock_tex =
-            (layer_traversed.IsLocked() ? sLockLockedTextureID
-                                        : sLockUnlockedTextureID);
+            (layer_traversed.IsLocked() ? mLockLockedTextureID
+                                        : mLockUnlockedTextureID);
 
         ImGui::Separator();
 
@@ -641,7 +639,7 @@ void UI::RenderLayerWinContextMenu()
                                ImGuiWindowFlags_AlwaysAutoResize))
     {
         // Don't wanna edit canvas if this popup is opened
-        sShouldDoTool = false;
+        mShouldDoTool = false;
         ImGui::InputText("##input", &buff);
 
         if (ImGui::Button("OK"))
@@ -669,7 +667,7 @@ void UI::RenderLayerWinContextMenu()
 
 void UI::RenderSaveErrorPopup()
 {
-    sShouldDoTool = false; // Don't want to draw with a popup opened
+    mShouldDoTool = false; // Don't want to draw with a popup opened
 
     ImGui::OpenPopup("Error: Failed to save");
 
@@ -681,7 +679,7 @@ void UI::RenderSaveErrorPopup()
 
         if (ImGui::Button("OK"))
         {
-            sRenderSaveErrorPopup = false;
+            mRenderSaveErrorPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -691,7 +689,7 @@ void UI::RenderSaveErrorPopup()
 
 void UI::RenderNewProjectPopup()
 {
-    sShouldDoTool = false;
+    mShouldDoTool = false;
 
     ImGui::OpenPopup("New project");
 
@@ -712,12 +710,12 @@ void UI::RenderNewProjectPopup()
         if (ImGui::Button("OK"))
         {
             Project::New({width, height});
-            sRenderNewProjectPopup = false;
+            mRenderNewProjectPopup = false;
         }
 
         ImGui::SameLine(0.0F, 5.0F);
 
-        if (ImGui::Button("Cancel")) { sRenderNewProjectPopup = false; }
+        if (ImGui::Button("Cancel")) { mRenderNewProjectPopup = false; }
 
         ImGui::EndPopup();
     }
@@ -740,7 +738,7 @@ void UI::RenderOpenProjectPopup()
         {
             std::string destination(destination_str.data());
             Project::Open(destination);
-            sRenderOpenProjectPopup = false;
+            mRenderOpenProjectPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -748,7 +746,7 @@ void UI::RenderOpenProjectPopup()
 
         if (ImGui::Button("Cancel"))
         {
-            sRenderOpenProjectPopup = false;
+            mRenderOpenProjectPopup = false;
             ImGui::CloseCurrentPopup();
         }
 
@@ -757,7 +755,8 @@ void UI::RenderOpenProjectPopup()
 }
 
 // The outline around a control. Don't forget to call EndOutline!
-void UI::BeginOutline(ImVec4& outline_color /*= selected_item_outline_color*/)
+void UI::BeginOutline(
+    ImVec4 outline_color /*= ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab)*/)
 {
     ImGui::GetStyle().FrameBorderSize = 1.0F;
     ImGui::PushStyleColor(ImGuiCol_Border, outline_color);

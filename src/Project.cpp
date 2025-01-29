@@ -1,5 +1,4 @@
 #include "Project.hpp"
-#include "Application.hpp"
 #include "Camera.hpp"
 #include "Layer.hpp"
 #include "Tool.hpp"
@@ -123,7 +122,8 @@ void Project::Open(const std::string& project_file_dest)
     proj_file.close();
 }
 
-void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
+auto Project::SaveAsImage(int magnify_factor,
+                          const std::string& save_dest) -> bool
 {
     constexpr int kChannelCount = 4;
     int arr_height = sCanvasHeight * magnify_factor;
@@ -163,20 +163,11 @@ void Project::SaveAsImage(int magnify_factor, const std::string& save_dest)
         }
     }
 
-    /*stbir_resize_uint8_srgb(&canvas_displayed[0][0].r, sCanvasWidth,
-                            sCanvasHeight, sCanvasWidth * kChannelCount,
-                            image_data.data(), sCanvasWidth * magnify_factor,
-                            sCanvasHeight * magnify_factor, arr_width,
-                            stbir_pixel_layout::STBIR_RGBA);*/
-
     int height = sCanvasHeight * magnify_factor;
     int width = sCanvasWidth * magnify_factor;
 
-    if (stbi_write_png(save_dest.c_str(), width, height, kChannelCount,
-                       image_data.data(), width * kChannelCount) == 0)
-    {
-        UI::sRenderSaveErrorPopup = true;
-    }
+    return stbi_write_png(save_dest.c_str(), width, height, kChannelCount,
+                          image_data.data(), width * kChannelCount) != 0;
 }
 
 void Project::SaveAsProject(const std::string& save_dest)

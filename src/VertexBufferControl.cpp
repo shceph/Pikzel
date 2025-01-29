@@ -1,8 +1,8 @@
-#include "VertexBufferControl.hpp"
 #include "Gla/VertexBuffer.hpp"
-#include "Gla/GlaBase.hpp"
+
 #include "Layer.hpp"
 #include "Project.hpp"
+#include "VertexBufferControl.hpp"
 
 namespace Pikzel
 {
@@ -156,7 +156,7 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
 
     std::vector<Vertex> vertices(vertex_count);
     Layers::EmplaceVertices(vertices);
-	assert(vertices.size() == vertex_count);
+    assert(vertices.size() == vertex_count);
     vbo.UpdateData(vertices.data(), vbo_size);
 
     auto* ptr_to_buffer =
@@ -166,12 +166,12 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
     sVertexCount = vertex_count;
 }
 
-void VertexBufferControl::UpdateSizeIfNeeded(Gla::VertexBuffer &vbo)
+void VertexBufferControl::UpdateSizeIfNeeded(Gla::VertexBuffer& vbo)
 {
-	if (vbo.GetSize() != GetNeededVBOSizeForLayer() * Layers::GetLayerCount())
-	{
-		UpdateSize(vbo);
-	}
+    if (vbo.GetSize() != GetNeededVBOSizeForLayer() * Layers::GetLayerCount())
+    {
+        UpdateSize(vbo);
+    }
 }
 
 } // namespace Pikzel
