@@ -18,19 +18,20 @@ class VertexBufferControl
 {
   public:
     // Should run this after creating/opening a project
-    static void Init(Vertex* ptr_to_buffer, std::size_t count);
-    static void Update();
-    static void PushDirtyPixel(Vec2Int dirty_pixel);
-    static void UpdatePixel(Vec2Int coords);
+    VertexBufferControl(Vertex* ptr_to_buffer, std::size_t count);
+    void Update(bool should_update_all,
+                const std::vector<Vec2Int>& dirty_pixels);
+    void UpdatePixel(Vec2Int coords);
     // Be vary; this funtion binds the vertex buffer
-    static void UpdateSize(Gla::VertexBuffer& vbo);
-	static void UpdateSizeIfNeeded(Gla::VertexBuffer& vbo);
+    void UpdateSize(Gla::VertexBuffer& vbo);
+    void UpdateSizeIfNeeded(Gla::VertexBuffer& vbo);
 
+    static void PushDirtyPixel(Vec2Int dirty_pixel);
     static inline void SetUpdateAllToTrue() { sUpdateAll = true; }
 
-    [[nodiscard]] static inline auto GetVertexCount() -> std::size_t
+    [[nodiscard]] inline auto GetVertexCount() const -> std::size_t
     {
-        return sVertexCount;
+        return mVertexCount;
     }
     [[nodiscard]] static inline auto GetNeededVBOSizeForLayer() -> std::size_t
     {
@@ -42,8 +43,8 @@ class VertexBufferControl
 
   private:
     static inline std::vector<Vec2Int> sDirtyPixels;
-    static inline std::span<Vertex> sBufferData;
-    static inline std::size_t sVertexCount = 0;
+    std::span<Vertex> mBufferData;
+    std::size_t mVertexCount = 0;
     static inline bool sUpdateAll = true;
 };
 } // namespace Pikzel

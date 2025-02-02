@@ -33,6 +33,8 @@ Checks: >
 # WarningsAsErrors: "*"
 
 CheckOptions:
+  - { key: readability-function-cognitive-complexity.DescribeBasicIncrements, value: true }
+  - { key: readability-function-cognitive-complexity.IgnoreMacros, value: true }
   - { key: cppcoreguidelines-pro-bounds-pointer-arithmetic.Enabled,   value: false }
   - { key: readability-identifier-naming.NamespaceCase,          value: CamelCase  }
   - { key: readability-identifier-naming.ClassCase,              value: CamelCase  }

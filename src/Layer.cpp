@@ -294,12 +294,7 @@ void Layer::DrawPixel(Vec2Int coords,
     mCanvas[coords.y][coords.x] = color;
     lock.unlock();
 
-    if (mIsCanvasLayer)
-    {
-        VertexBufferControl::PushDirtyPixel(coords);
-        GetDirtyPixels().push_back(coords);
-    }
-    /* VertexBufferControl::UpdatePixel(coords); */
+    if (mIsCanvasLayer) { GetDirtyPixels().push_back(coords); }
 }
 
 void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
@@ -580,9 +575,10 @@ auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
 
 // Should call this func before VertexBufferControl::Update, since it needs
 // dirty pixels
-void Layer::UpdateStatic()
+void Layer::ResetDirtyPixelData()
 {
     sShouldUpdateWholeVBO = false;
+    GetDirtyPixels().clear();
 }
 
 auto Layers::GetCurrentLayer() -> Layer&
@@ -792,6 +788,7 @@ void Layers::Undo()
         auto& history = GetHistory();
         sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
         VertexBufferControl::SetUpdateAllToTrue();
+        Layer::SetUpdateWholeVBOToTrue();
     }
 }
 
@@ -804,6 +801,7 @@ void Layers::Redo()
         sCurrentCapture++;
         sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
         VertexBufferControl::SetUpdateAllToTrue();
+        Layer::SetUpdateWholeVBOToTrue();
     }
 }
 

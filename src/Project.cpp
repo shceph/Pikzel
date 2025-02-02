@@ -194,7 +194,7 @@ void Project::SaveAsProject(const std::string& save_dest)
         save_file << layer.GetOpacity() << "\n";
         // save_file << layer.GetName() << "\n";
 
-        for (auto& canvas_row : layer.mCanvas)
+        for (const auto& canvas_row : layer.GetCanvas())
         {
             for (Color elem : canvas_row)
             {

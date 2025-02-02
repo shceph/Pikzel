@@ -177,17 +177,15 @@ auto GetTransMatIfShouldDrawPreview() -> std::optional<glm::mat4>
 }
 
 // Binds the vbo
-void UpdatePreviewVboIfNeeded(
-    std::unique_ptr<Pikzel::PreviewLayer>& preview_layer,
-    std::vector<Vertex>& preview_vertices, Gla::VertexBuffer& vbo_preview)
+void UpdatePreviewVboIfNeeded(Pikzel::PreviewLayer& preview_layer,
+                              std::vector<Vertex>& preview_vertices,
+                              Gla::VertexBuffer& vbo_preview)
 {
     vbo_preview.Bind();
-    if (preview_layer->IsPreviewLayerChanged())
+    if (preview_layer.IsPreviewLayerChanged())
     {
-        assert(preview_layer != nullptr);
-
         preview_vertices.clear();
-        preview_layer->EmplaceVertices(preview_vertices);
+        preview_layer.EmplaceVertices(preview_vertices);
         vbo_preview.UpdateSizeIfNeeded(preview_vertices.size() *
                                        sizeof(Vertex));
         vbo_preview.UpdateData(preview_vertices.data(),
@@ -298,7 +296,8 @@ auto main() -> int
                                    "shader/FragShader.frag");
         Gla::Group group_preview(vao_preview, shader_preview);
         std::vector<Vertex> preview_vertices;
-        std::unique_ptr<Pikzel::PreviewLayer> preview_layer;
+        std::optional<Pikzel::PreviewLayer> preview_layer;
+        std::optional<Pikzel::VertexBufferControl> vbo_control;
 
         std::future<void> vbo_update_future;
         while (glfwWindowShouldClose(window) == 0)
@@ -335,8 +334,8 @@ auto main() -> int
                     auto* buff_data = static_cast<Vertex*>(
                         glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
 
-                    Pikzel::VertexBufferControl::Init(buff_data, vertex_count);
-                    preview_layer = std::make_unique<Pikzel::PreviewLayer>();
+                    vbo_control.emplace(buff_data, vertex_count);
+                    preview_layer.emplace();
                 }
             }
 
@@ -344,6 +343,9 @@ auto main() -> int
 
             if (Pikzel::Project::IsOpened() && ui_state.IsDrawWindowRendered())
             {
+                assert(preview_layer.has_value());
+                assert(vbo_control.has_value());
+
                 auto proj_mat = GetProjMat();
                 shader.Bind();
                 shader.SetUniformMat4f("u_ViewProjection", proj_mat);
@@ -358,8 +360,8 @@ auto main() -> int
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
 
-                UpdatePreviewVboIfNeeded(preview_layer, preview_vertices,
-                                         vbo_preview);
+                UpdatePreviewVboIfNeeded(preview_layer.value(),
+                                         preview_vertices, vbo_preview);
                 auto trans_mat = GetTransMatIfShouldDrawPreview();
                 if (trans_mat.has_value())
                 {
@@ -379,19 +381,24 @@ auto main() -> int
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
                 group_canvas.Bind();
-                Pikzel::VertexBufferControl::UpdateSizeIfNeeded(vbo_canvas);
-                Gla::Renderer::DrawArrays(
-                    Gla::kTriangles,
-                    Pikzel::VertexBufferControl::GetVertexCount());
+                vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
+                Gla::Renderer::DrawArrays(Gla::kTriangles,
+                                          vbo_control.value().GetVertexCount());
 
                 Gla::FrameBuffer::BindToDefaultFB();
 
                 Pikzel::Layers::UpdateAndDraw(ui_state.ShouldDoTool());
-                vbo_update_future = std::async(
-                    std::launch::async, Pikzel::VertexBufferControl::Update);
+                vbo_update_future =
+                    std::async(std::launch::async,
+                               [&vbo_control]()
+                               {
+                                   vbo_control.value().Update(
+                                       Pikzel::Layer::ShouldUpdateWholeVBO(),
+                                       Pikzel::Layer::GetDirtyPixels());
+                                   Pikzel::Layer::ResetDirtyPixelData();
+                               });
                 ui_state.Update();
                 preview_layer->Update();
-                Pikzel::Layer::UpdateStatic();
             }
 
             Pikzel::Events::Update();

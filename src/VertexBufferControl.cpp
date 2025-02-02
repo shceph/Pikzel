@@ -6,19 +6,21 @@
 
 namespace Pikzel
 {
-void VertexBufferControl::Init(Vertex* ptr_to_buffer, std::size_t count)
+VertexBufferControl::VertexBufferControl(Vertex* ptr_to_buffer,
+                                         std::size_t count)
 {
     assert(Project::IsOpened());
-    sBufferData = std::span<Vertex>(ptr_to_buffer, count);
-    sVertexCount = count;
+    mBufferData = std::span<Vertex>(ptr_to_buffer, count);
+    mVertexCount = count;
     sUpdateAll = true;
 }
 
-void VertexBufferControl::Update()
+void VertexBufferControl::Update(bool should_update_all,
+                                 const std::vector<Vec2Int>& dirty_pixels)
 {
     assert(Project::IsOpened());
 
-    if (sUpdateAll)
+    if (should_update_all)
     {
         const auto& capture = Layers::GetCapture();
 
@@ -40,19 +42,19 @@ void VertexBufferControl::Update()
                                      kVerticesPerPixel;
                     // first triangle
                     // upper left corner
-                    sBufferData[index] = Vertex{x_flt, y_flt, color};
+                    mBufferData[index] = Vertex{x_flt, y_flt, color};
                     // upper right corner
-                    sBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
+                    mBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
                     // bottom left corner
-                    sBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
+                    mBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
                     // second triangle
                     // upper right corner
-                    sBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
+                    mBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
                     // bottom right corner
-                    sBufferData[index + 4] =
+                    mBufferData[index + 4] =
                         Vertex{x_flt + 1, y_flt + 1, color};
                     // bottom left corner
-                    sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+                    mBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
                 }
             }
 
@@ -61,20 +63,18 @@ void VertexBufferControl::Update()
                       Project::CanvasHeight() * kVerticesPerPixel;
         }
 
-        sUpdateAll = false;
         return;
     }
 
     const auto& layer = Layers::GetCurrentLayer();
-    /* const auto& dirty_pixels = Layers::GetCurrentLayer().GetDirtyPixels(); */
 
-    if (sDirtyPixels.empty()) { return; }
+    if (dirty_pixels.empty()) { return; }
 
     const auto offset = Layers::GetCurrentLayerIndex() *
                         Project::CanvasWidth() * Project::CanvasHeight() *
                         kVerticesPerPixel;
 
-    for (const auto px_coords : sDirtyPixels)
+    for (const auto px_coords : dirty_pixels)
     {
         const auto index =
             offset + static_cast<std::size_t>(
@@ -86,21 +86,19 @@ void VertexBufferControl::Update()
 
         // first triangle
         // upper left corner
-        sBufferData[index] = Vertex{x_flt, y_flt, color};
+        mBufferData[index] = Vertex{x_flt, y_flt, color};
         // upper right corner
-        sBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
+        mBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
         // bottom left corner
-        sBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
+        mBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
         // second triangle
         // upper right corner
-        sBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
+        mBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
         // bottom right corner
-        sBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
+        mBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
         // bottom left corner
-        sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+        mBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
     }
-
-    sDirtyPixels.clear();
 }
 
 void VertexBufferControl::PushDirtyPixel(Vec2Int dirty_pixel)
@@ -130,18 +128,18 @@ void VertexBufferControl::UpdatePixel(Vec2Int coords)
 
     // first triangle
     // upper left corner
-    sBufferData[index] = Vertex{x_flt, y_flt, color};
+    mBufferData[index] = Vertex{x_flt, y_flt, color};
     // upper right corner
-    sBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
+    mBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
     // bottom left corner
-    sBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
+    mBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
     // second triangle
     // upper right corner
-    sBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
+    mBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
     // bottom right corner
-    sBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
+    mBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
     // bottom left corner
-    sBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+    mBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
 }
 
 void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
@@ -162,8 +160,8 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
     auto* ptr_to_buffer =
         static_cast<Vertex*>(glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
 
-    sBufferData = std::span<Vertex>(ptr_to_buffer, vertex_count);
-    sVertexCount = vertex_count;
+    mBufferData = std::span<Vertex>(ptr_to_buffer, vertex_count);
+    mVertexCount = vertex_count;
 }
 
 void VertexBufferControl::UpdateSizeIfNeeded(Gla::VertexBuffer& vbo)

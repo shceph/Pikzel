@@ -68,6 +68,10 @@ class Layer
         std::lock_guard<std::mutex> lock{sMutex};
         return mCanvas[coords.y][coords.x];
     }
+    [[nodiscard]] inline auto GetCanvas() const -> const CanvasData&
+    {
+        return mCanvas;
+    }
     [[nodiscard]] inline auto IsPreviewLayer() const -> bool
     {
         return !mIsCanvasLayer;
@@ -77,8 +81,12 @@ class Layer
     // std::nullopt
     static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
     static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    static void ResetDirtyPixelData();
     static void SetUpdateWholeVBOToTrue() { sShouldUpdateWholeVBO = true; }
-    static void UpdateStatic();
+    static inline auto ShouldUpdateWholeVBO() -> bool
+    {
+        return sShouldUpdateWholeVBO;
+    }
     static inline auto GetDirtyPixels() -> std::vector<Vec2Int>&
     {
         static std::vector<Vec2Int> dirty_pixels;
@@ -119,7 +127,6 @@ class Layer
 
     friend class UI;
     friend class Layers;
-    friend void Project::SaveAsProject(const std::string&);
     friend void Project::Open(const std::string&);
 };
 
