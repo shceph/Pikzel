@@ -1,10 +1,12 @@
 #pragma once
 
+#include "Layer.hpp"
 #include "Tool.hpp"
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
+#include <memory>
 #include <span>
 
 namespace Pikzel
@@ -12,9 +14,10 @@ namespace Pikzel
 class UI
 {
   public:
-    explicit UI(GLFWwindow* _window);
+    UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
+       GLFWwindow* _window);
     void ImGuiCleanup();
-    void RenderUI();
+    void RenderUI(Layers& layers, Camera& camera);
     void RenderNoProjectWindow();
     void RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name);
@@ -58,17 +61,17 @@ class UI
     inline void SetShouldDoToolToTrue() { mShouldDoTool = true; }
 
   private:
-    void RenderMenuBar();
+    void RenderMenuBar(Layers& layers, Camera& camera);
     void RenderSaveAsImagePopup();
     void RenderSaveAsProjectPopup();
     void RenderToolWindow();
-    void RenderLayerWinContextMenu();
-    void RenderLayerWindow();
+    void RenderLayerWindow(Layers& layers);
+    void RenderLayerWinContextMenu(Layers& layers);
     void RenderSaveErrorPopup();
     void RenderNewProjectPopup();
     void RenderOpenProjectPopup();
 
-    static void RenderColorWindow();
+    void RenderColorWindow();
     static void RenderColorPalette(ImVec4& color);
     static void BeginOutline(
         ImVec4 outline_color = ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab));
@@ -91,6 +94,8 @@ class UI
         return mSelectedItemOutlineColor;
     }
 
+    std::shared_ptr<Tool> mTool;
+    std::shared_ptr<Project> mProject;
     std::array<ImTextureID, kToolCount> mToolTextures{};
 
     ImTextureID mEyeOpenedTextureID = nullptr;

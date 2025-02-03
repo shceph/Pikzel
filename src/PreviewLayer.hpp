@@ -3,13 +3,19 @@
 #include "Layer.hpp"
 #include "Tool.hpp"
 #include <glm/glm.hpp>
+#include <utility>
 
 namespace Pikzel
 {
 class PreviewLayer
 {
   public:
-    PreviewLayer() : mLayer{false}, mTranslationMat{0.0F} {}
+    explicit PreviewLayer(std::shared_ptr<Tool> tool,
+                          std::shared_ptr<Camera> camera, Vec2Int canvas_dims)
+        : mTool{std::move(tool)}, mLayer{mTool, std::move(camera), canvas_dims},
+          mTranslationMat{0.0F}
+    {
+    }
 
     void UpdateCircleSize(int size);
     void Clear();
@@ -28,10 +34,11 @@ class PreviewLayer
     inline void SetPreviewLayerChangedToTrue() { mPreviewLayerChanged = true; }
 
   private:
+    std::shared_ptr<Tool> mTool;
     Layer mLayer;
     glm::mat4 mTranslationMat;
     Color mToolColor{0, 0, 0, 0};
-    ToolType mToolType = Tool::GetToolType();
+    ToolType mToolType = kBrush;
     int mBrushSize = 1;
     bool mPreviewLayerChanged = true;
     bool mApplyCursorBasedTranslation = true;

@@ -1,8 +1,8 @@
 #include "Events.hpp"
 
-#include "Camera.hpp"
 #include "GLFW/glfw3.h"
 
+#include <cassert>
 #include <chrono>
 
 namespace Pikzel

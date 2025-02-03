@@ -1,7 +1,6 @@
 #include "Layer.hpp"
 
 #include "Application.hpp"
-#include "Camera.hpp"
 #include "Events.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
@@ -17,6 +16,7 @@
 #include <list>
 #include <queue>
 #include <ranges>
+#include <utility>
 #include <vector>
 
 namespace Pikzel
@@ -85,37 +85,40 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
             static_cast<uint8_t>(color.w * 0xff)};
 }
 
-Layer::Layer(bool is_canvas_layer /*= true*/) noexcept
-    : mCanvas(Project::CanvasHeight(),
-              std::vector<Color>(Project::CanvasWidth())),
-      mIsCanvasLayer(is_canvas_layer),
-      mLayerName("Layer " + std::to_string(sConstructCounter))
+Layer::Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
+             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/) noexcept
+    : mCanvas(canvas_dims.y, std::vector<Color>(canvas_dims.x)),
+      mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
+      mLayerName{"Layer " + std::to_string(sConstructCounter)},
+      mTool{std::move(tool)}, mCamera{std::move(camera)}
 {
     if (mIsCanvasLayer) { sConstructCounter++; }
 }
 
-void Layer::DoCurrentTool()
+auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
 {
-    if (mLocked || !mVisible) { return; }
+    if (mLocked || !mVisible) { return false; }
 
-    switch (Tool::GetToolType())
+    switch (mTool->GetToolType())
     {
     case kBrush:
     case kEraser:
-        HandleBrushAndEraser();
+        return HandleBrushAndEraser();
         break;
     case kColorPicker:
         HandleColorPicker();
         break;
     case kBucket:
-        HandleBucket();
+        return HandleBucket();
         break;
     case kRectShape:
-        HandleRectShape();
+        return HandleRectShape();
         break;
     case kToolCount:
         assert(false);
     }
+
+    return false;
 }
 
 void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
@@ -123,9 +126,9 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
 {
     if (!mVisible || mOpacity == 0) { return; }
 
-    for (int i = 0; i < Project::CanvasHeight(); i++)
+    for (int i = 0; i < mCanvasDims.y; i++)
     {
-        for (int j = 0; j < Project::CanvasWidth(); j++)
+        for (int j = 0; j < mCanvasDims.x; j++)
         {
             /* if (mCanvas[i][j].a == 0) { continue; } */
 
@@ -165,19 +168,20 @@ void Layer::Update()
 {
 }
 
-void Layer::HandleBrushAndEraser()
+auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
 {
-    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return false; }
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return; }
+    if (!canv_coord.has_value()) { return false; }
 
     constexpr auto kMaxDelay = std::chrono::milliseconds(100);
     static auto time_last_drawn = std::chrono::steady_clock::now();
     static auto position_last_drawn = canv_coord.value();
+    bool should_update_history = false;
 
-    if (Tool::GetBrushRadius() == 1)
+    if (mTool->GetBrushRadius() == 1)
     {
-        if (Tool::GetToolType() == ToolType::kEraser)
+        if (mTool->GetToolType() == ToolType::kEraser)
         {
             DrawPixel(canv_coord.value(), {0, 0, 0, 0});
         }
@@ -185,7 +189,7 @@ void Layer::HandleBrushAndEraser()
     }
     else
     {
-        DrawCircle({canv_coord->x, canv_coord->y}, Tool::GetBrushRadius(),
+        DrawCircle({canv_coord->x, canv_coord->y}, mTool->GetBrushRadius(),
                    true);
     }
 
@@ -194,12 +198,13 @@ void Layer::HandleBrushAndEraser()
         std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay)
     {
         DrawLine(canv_coord.value(), position_last_drawn,
-                 Tool::GetBrushRadius() * 2);
+                 mTool->GetBrushRadius() * 2);
     }
-    else { MarkHistoryForUpdate(); }
+    else { should_update_history = true; }
 
     time_last_drawn = std::chrono::steady_clock::now();
     position_last_drawn = canv_coord.value();
+    return should_update_history;
 }
 
 void Layer::HandleColorPicker()
@@ -208,31 +213,30 @@ void Layer::HandleColorPicker()
     auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return; }
 
-    auto displayed_canvas = Layers::GetDisplayedCanvas();
-    const Color picked_color = displayed_canvas[canv_coord->y][canv_coord->x];
+    auto picked_color = GetPixel(canv_coord.value());
 
     if (picked_color.a == 0) { return; }
 
-    Tool::sCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
-    Tool::sCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
-    Tool::sCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
+    mTool->mCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
+    mTool->mCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
+    mTool->mCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
 }
 
-void Layer::HandleBucket()
+auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory
 {
-    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return false; }
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return; }
+    if (!canv_coord.has_value()) { return false; }
 
     Color clicked_color = GetPixel(canv_coord.value());
     Fill(canv_coord->x, canv_coord->y, clicked_color);
-    MarkHistoryForUpdate();
+    return true;
 }
 
-void Layer::HandleRectShape()
+auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
 {
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return; }
+    if (!canv_coord.has_value()) { return false; }
     bool left_button_pressed =
         Events::IsMouseButtonPressed(Events::kButtonLeft);
 
@@ -246,7 +250,7 @@ void Layer::HandleRectShape()
             mHandleRectShapeData.shape_begin_coords = canv_coord.value();
             mHandleRectShapeData.shape_began = true;
         }
-        return;
+        return false;
     }
 
     // Use left shift to force drawing a square
@@ -273,7 +277,7 @@ void Layer::HandleRectShape()
                      canv_coord.value(), true);
         }
 
-        return;
+        return false;
     }
 
     if (mIsCanvasLayer)
@@ -284,11 +288,15 @@ void Layer::HandleRectShape()
     else { Clear(); }
 
     mHandleRectShapeData.shape_began = false;
-    MarkHistoryForUpdate();
+    return true;
 }
 
-void Layer::DrawPixel(Vec2Int coords,
-                      Color color /*= Color::FromImVec4(Tool::GetColor())*/)
+void Layer::DrawPixel(Vec2Int coords)
+{
+    DrawPixel(coords, Color::FromImVec4(mTool->GetColor()));
+}
+
+void Layer::DrawPixel(Vec2Int coords, Color color)
 {
     std::unique_lock<std::mutex> lock{sMutex};
     mCanvas[coords.y][coords.x] = color;
@@ -304,9 +312,9 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
     Color draw_color = delete_color;
 
-    if (Tool::GetToolType() != ToolType::kEraser)
+    if (mTool->GetToolType() != ToolType::kEraser)
     {
-        draw_color = Tool::GetColor();
+        draw_color = mTool->GetColor();
         draw_color.a = 0xff;
     }
 
@@ -316,8 +324,6 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         return;
     }
 
-    Vec2Int dims = {Project::CanvasWidth(), Project::CanvasHeight()};
-
     if (fill)
     {
         for (int xcrd = -radius; xcrd <= radius; xcrd++)
@@ -326,8 +332,10 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
             {
                 if (xcrd * xcrd + ycrd * ycrd < radius * radius)
                 {
-                    int real_x = std::clamp(xcrd + center.x, 0, dims.x - 1);
-                    int real_y = std::clamp(ycrd + center.y, 0, dims.y - 1);
+                    int real_x =
+                        std::clamp(xcrd + center.x, 0, mCanvasDims.x - 1);
+                    int real_y =
+                        std::clamp(ycrd + center.y, 0, mCanvasDims.y - 1);
                     DrawPixel({real_x, real_y}, draw_color);
                 }
             }
@@ -337,8 +345,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
     }
 
     for (int x_coord = std::max(0, center.x - radius + 1);
-         x_coord < std::min(Project::CanvasWidth(), center.x + radius);
-         x_coord++)
+         x_coord < std::min(mCanvasDims.x, center.x + radius); x_coord++)
     {
         int x_relative = x_coord - center.x;
         double y1_coord = std::sqrt(radius * radius - x_relative * x_relative);
@@ -354,16 +361,10 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         int y2_ceil = std::ceil(y2_coord);
 
         if (y1_floor < 0) { y1_floor = 0; }
-        else if (y1_floor >= Project::CanvasHeight())
-        {
-            y1_floor = Project::CanvasHeight() - 1;
-        }
+        else if (y1_floor >= mCanvasDims.y) { y1_floor = mCanvasDims.y - 1; }
 
         if (y2_ceil < 0) { y2_ceil = 0; }
-        else if (y2_ceil >= Project::CanvasHeight())
-        {
-            y2_ceil = Project::CanvasHeight() - 1;
-        }
+        else if (y2_ceil >= mCanvasDims.y) { y2_ceil = mCanvasDims.y - 1; }
 
         /* mCanvas[y1_floor][x_coord] = draw_color; */
         /* mCanvas[y2_ceil][x_coord] = draw_color; */
@@ -374,18 +375,13 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
 void Layer::Clear()
 {
-    for (int i = 0; i < Project::CanvasHeight(); i++)
+    for (int i = 0; i < mCanvasDims.y; i++)
     {
-        for (int j = 0; j < Project::CanvasWidth(); j++)
+        for (int j = 0; j < mCanvasDims.x; j++)
         {
             DrawPixel({j, i}, {0, 0, 0, 0});
         }
     }
-}
-
-void Layer::MarkHistoryForUpdate() const
-{
-    if (mIsCanvasLayer) { Layers::MarkHistoryForUpdate(); }
 }
 
 void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
@@ -471,13 +467,13 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b)
 
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
 {
-    if (x_coord < 0 || x_coord >= Project::CanvasWidth() || y_coord < 0 ||
-        y_coord >= Project::CanvasHeight())
+    if (x_coord < 0 || x_coord >= mCanvasDims.x || y_coord < 0 ||
+        y_coord >= mCanvasDims.y)
     {
         return;
     }
 
-    auto fill_color = Tool::GetColor();
+    auto fill_color = mTool->GetColor();
 
     std::queue<std::pair<int, int>> pixel_queue;
     pixel_queue.emplace(y_coord, x_coord);
@@ -493,17 +489,11 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
         {
             DrawPixel({col, row}, Color::FromImVec4(fill_color));
 
-            if (col + 1 < Project::CanvasWidth())
-            {
-                pixel_queue.emplace(row, col + 1);
-            }
+            if (col + 1 < mCanvasDims.x) { pixel_queue.emplace(row, col + 1); }
 
             if (col - 1 >= 0) { pixel_queue.emplace(row, col - 1); }
 
-            if (row + 1 < Project::CanvasHeight())
-            {
-                pixel_queue.emplace(row + 1, col);
-            }
+            if (row + 1 < mCanvasDims.y) { pixel_queue.emplace(row + 1, col); }
 
             if (row - 1 >= 0) { pixel_queue.emplace(row - 1, col); }
         }
@@ -512,7 +502,7 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
     }
 }
 
-auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
+auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
 {
     double cursor_x = NAN;
     double cursor_y = NAN;
@@ -540,27 +530,26 @@ auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
                                        cursor_y - canvas_upperleft.y};
     glm::vec2 canvas_on_screen_dims{canvas_bottomtright.x - canvas_upperleft.x,
                                     canvas_bottomtright.y - canvas_upperleft.y};
-    glm::vec2 canvas_dims{Project::GetCanvasDims()};
 
-    Vec2Int coords =
-        cursor_draw_win_relative / (canvas_on_screen_dims / canvas_dims);
+    Vec2Int coords = cursor_draw_win_relative /
+                     (canvas_on_screen_dims / glm::vec2{mCanvasDims});
 
-    double zoom_val = Camera::GetZoomValue();
+    double zoom_val = mCamera->GetZoomValue();
     if (zoom_val != 0)
     {
         double inv_zoom = 1 - zoom_val;
-        int new_width = static_cast<int>(Project::CanvasWidth() * inv_zoom);
-        int new_height = static_cast<int>(Project::CanvasHeight() * inv_zoom);
+        int new_width = static_cast<int>(mCanvasDims.x * inv_zoom);
+        int new_height = static_cast<int>(mCanvasDims.y * inv_zoom);
         coords.x = static_cast<int>(coords.x * inv_zoom);
         coords.y = static_cast<int>(coords.y * inv_zoom);
-        coords.x += (Project::CanvasWidth() - new_width) / 2;
-        coords.y += (Project::CanvasHeight() - new_height) / 2;
+        coords.x += (mCanvasDims.x - new_width) / 2;
+        coords.y += (mCanvasDims.y - new_height) / 2;
     }
 
-    coords += Camera::GetCenterAsVec2Int() - Project::GetCanvasDims() / 2;
+    coords += mCamera->GetCenterAsVec2Int() - mCanvasDims / 2;
 
-    if (coords.x < 0 || coords.x >= Project::CanvasWidth() || coords.y < 0 ||
-        coords.y >= Project::CanvasHeight())
+    if (coords.x < 0 || coords.x >= mCanvasDims.x || coords.y < 0 ||
+        coords.y >= mCanvasDims.y)
     {
         return std::nullopt;
     }
@@ -570,7 +559,7 @@ auto Layer::CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>
 
 auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
 {
-    return glm::clamp(val_to_clamp, {0, 0}, Project::GetCanvasDims());
+    return glm::clamp(val_to_clamp, {0, 0}, mCanvasDims);
 }
 
 // Should call this func before VertexBufferControl::Update, since it needs
@@ -583,21 +572,27 @@ void Layer::ResetDirtyPixelData()
 
 auto Layers::GetCurrentLayer() -> Layer&
 {
-    assert(sCurrentLayerIndex >= 0 && sCurrentLayerIndex < GetLayers().size());
+    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
 
     auto iter = GetLayers().begin();
-    std::advance(iter, sCurrentLayerIndex);
+    std::advance(iter, mCurrentLayerIndex);
     return *iter;
+}
+
+auto Layers::GetCanvasDims() const -> Vec2Int
+{
+    return mCanvasDims;
 }
 
 void Layers::DoCurrentTool()
 {
-    GetCurrentLayer().DoCurrentTool();
+    if (GetCurrentLayer().DoCurrentTool()) { MarkHistoryForUpdate(); }
 }
 
-void Layers::AddLayer()
+void Layers::AddLayer(std::shared_ptr<Tool> tool,
+                      std::shared_ptr<Camera> camera)
 {
-    GetLayers().emplace_back();
+    GetLayers().emplace_back(std::move(tool), std::move(camera), mCanvasDims);
 }
 
 void Layers::MoveUp(std::size_t layer_index)
@@ -610,8 +605,8 @@ void Layers::MoveUp(std::size_t layer_index)
     std::advance(it2, layer_index - 1);
     std::iter_swap(it1, it2);
 
-    if (sCurrentLayerIndex == layer_index) { sCurrentLayerIndex--; }
-    else if (sCurrentLayerIndex == layer_index - 1) { sCurrentLayerIndex++; }
+    if (mCurrentLayerIndex == layer_index) { mCurrentLayerIndex--; }
+    else if (mCurrentLayerIndex == layer_index - 1) { mCurrentLayerIndex++; }
 }
 
 void Layers::MoveDown(std::size_t layer_index)
@@ -624,35 +619,35 @@ void Layers::MoveDown(std::size_t layer_index)
     std::advance(it2, layer_index + 1);
     std::iter_swap(it1, it2);
 
-    if (sCurrentLayerIndex == layer_index) { sCurrentLayerIndex++; }
-    else if (sCurrentLayerIndex == layer_index + 1) { sCurrentLayerIndex--; }
+    if (mCurrentLayerIndex == layer_index) { mCurrentLayerIndex++; }
+    else if (mCurrentLayerIndex == layer_index + 1) { mCurrentLayerIndex--; }
 }
 
-void Layers::EmplaceVertices(std::vector<Vertex>& vertices)
+void Layers::EmplaceVertices(std::vector<Vertex>& vertices) const
 {
-    assert(Project::IsOpened());
     vertices.clear();
 
-    for (auto& layer : GetLayers())
+    for (const auto& layer : GetLayersConst())
     {
         layer.EmplaceVertices(vertices);
     }
 }
 
-void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices)
+void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices) const
 {
-    assert(Project::IsOpened());
-
     constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
                                                 Color{201, 201, 201, 255}};
 
-    for (int i = 0; i < Project::CanvasHeight(); i += 6)
+    auto canvas_width = GetCanvasDims().x;
+    auto canvas_height = GetCanvasDims().y;
+
+    for (int i = 0; i < canvas_height; i += 6)
     {
-        for (int j = 0; j < Project::CanvasWidth(); j += 6)
+        for (int j = 0; j < canvas_width; j += 6)
         {
             auto x_coord = static_cast<float>(j);
             auto y_coord = static_cast<float>(i);
-            glm::vec2 dims = Project::GetCanvasDims();
+            glm::vec2 dims = GetCanvasDims();
 
             // upper left corner
             vertices.emplace_back(x_coord, y_coord,
@@ -693,51 +688,22 @@ auto Layers::AtIndex(std::size_t index) -> Layer&
 void Layers::ResetDataToDefault()
 {
     GetLayers().clear();
-    sCurrentLayerIndex = 0;
+    mCurrentLayerIndex = 0;
 }
-
-/*void Layers::DrawToTempLayer()
-{
-    constexpr Color kNoColor = {0, 0, 0, 0};
-    constexpr Color kDeleteColor = {255, 255, 255, 110};
-
-    auto& tmp_layer = GetTempLayer();
-
-    for (std::size_t i = 0;
-         i < static_cast<std::size_t>(Project::CanvasHeight()); i++)
-    {
-        for (std::size_t j = 0;
-             j < static_cast<std::size_t>(Project::CanvasWidth()); j++)
-        {
-            // tmp_layer.mCanvas[i][j] = kNoColor;
-            tmp_layer.DrawPixel({j, i}, kNoColor);
-        }
-    }
-
-    auto curr_tool = Tool::GetToolType();
-
-    if (curr_tool != ToolType::kBrush && curr_tool != ToolType::kEraser)
-    {
-        return;
-    }
-
-    std::optional<Vec2Int> canvas_coords = Layer::CanvasCoordsFromCursorPos();
-    if (!canvas_coords.has_value()) { return; }
-
-    tmp_layer.DrawCircle(canvas_coords.value(), Tool::GetBrushRadius(), true,
-                         kDeleteColor);
-}*/
 
 auto Layers::GetDisplayedCanvas() -> CanvasData
 {
-    CanvasData displayed_canvas(Project::CanvasHeight(),
-                                std::vector<Color>(Project::CanvasWidth()));
+    auto canvas_width = GetCanvasDims().x;
+    auto canvas_height = GetCanvasDims().y;
+
+    CanvasData displayed_canvas(canvas_height,
+                                std::vector<Color>(canvas_width));
 
     for (auto& layer_traversed : std::ranges::reverse_view(GetLayers()))
     {
-        for (int i = 0; i < Project::CanvasHeight(); i++)
+        for (int i = 0; i < canvas_width; i++)
         {
-            for (int j = 0; j < Project::CanvasWidth(); j++)
+            for (int j = 0; j < canvas_height; j++)
             {
                 Color pixel = layer_traversed.GetPixel({j, i});
 
@@ -758,35 +724,32 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
 
 void Layers::PushToHistory()
 {
-    auto& history = GetHistory();
-
-    if (sCurrentCapture < history.size() - 1)
+    if (mCurrentCapture < mHistory.size() - 1)
     {
-        auto delete_begin = history.begin();
-        std::advance(delete_begin, sCurrentCapture + 1);
-        history.erase(delete_begin, history.end());
+        auto delete_begin = mHistory.begin();
+        std::advance(delete_begin, mCurrentCapture + 1);
+        mHistory.erase(delete_begin, mHistory.end());
     }
 
-    history.emplace_back(GetLayers(), sCurrentLayerIndex);
+    mHistory.emplace_back(GetLayers(), mCurrentLayerIndex);
 
-    if (history.size() > kMaxHistoryLenght)
+    if (mHistory.size() > kMaxHistoryLenght)
     {
         auto delete_end =
-            history.begin() +
-            static_cast<std::ptrdiff_t>(history.size() - kMaxHistoryLenght);
-        history.erase(history.begin(), delete_end);
+            mHistory.begin() +
+            static_cast<std::ptrdiff_t>(mHistory.size() - kMaxHistoryLenght);
+        mHistory.erase(mHistory.begin(), delete_end);
     }
 
-    sCurrentCapture = history.size() - 1;
+    mCurrentCapture = mHistory.size() - 1;
 }
 
 void Layers::Undo()
 {
-    if (sCurrentCapture != 0)
+    if (mCurrentCapture != 0)
     {
-        sCurrentCapture--;
-        auto& history = GetHistory();
-        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+        mCurrentCapture--;
+        mCurrentLayerIndex = mHistory[mCurrentCapture].selected_layer_index;
         VertexBufferControl::SetUpdateAllToTrue();
         Layer::SetUpdateWholeVBOToTrue();
     }
@@ -794,37 +757,44 @@ void Layers::Undo()
 
 void Layers::Redo()
 {
-    auto& history = GetHistory();
-
-    if (sCurrentCapture != history.size() - 1)
+    if (mCurrentCapture != mHistory.size() - 1)
     {
-        sCurrentCapture++;
-        sCurrentLayerIndex = history[sCurrentCapture].selected_layer_index;
+        mCurrentCapture++;
+        mCurrentLayerIndex = mHistory[mCurrentCapture].selected_layer_index;
         VertexBufferControl::SetUpdateAllToTrue();
         Layer::SetUpdateWholeVBOToTrue();
     }
 }
 
-void Layers::UpdateAndDraw(bool should_do_tool)
+void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
+                           std::shared_ptr<Camera> camera)
 {
     for (auto& layer : GetLayers())
     {
         layer.Update();
     }
 
-    if (Project::IsOpened() && should_do_tool) { DoCurrentTool(); }
+    if (should_do_tool) { DoCurrentTool(); }
 
-    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_Z))
+    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_Z) ||
+        mShouldUndo)
     {
         Undo();
     }
 
-    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_R))
+    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_R) ||
+        mShouldRedo)
     {
         Redo();
     }
 
-    if (sShouldUpdateHistory) { PushToHistory(); }
-    sShouldUpdateHistory = false;
+    if (mShouldAddLayer) { AddLayer(std::move(tool), std::move(camera)); }
+
+    if (mShouldUpdateHistory) { PushToHistory(); }
+
+    mShouldUpdateHistory = false;
+    mShouldUndo = false;
+    mShouldRedo = false;
+    mShouldAddLayer = false;
 }
 } // namespace Pikzel

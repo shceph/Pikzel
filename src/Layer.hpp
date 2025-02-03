@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Application.hpp"
+#include "Camera.hpp"
 #include "Project.hpp"
 #include "Tool.hpp"
 
@@ -8,6 +8,7 @@
 
 #include <deque>
 #include <list>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -47,8 +48,11 @@ class Layer
         Vec2Int shape_begin_coords{0, 0};
     };
 
-    explicit Layer(bool is_canvas_layer = true) noexcept;
-    void DoCurrentTool();
+    explicit Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
+                   Vec2Int canvas_dims, bool is_canvas_layer = true) noexcept;
+
+    using ShouldUpdateHistory = bool;
+    auto DoCurrentTool() -> ShouldUpdateHistory;
     void EmplaceVertices(std::vector<Vertex>& vertices,
                          bool use_color_alpha = false) const;
     void Update();
@@ -72,6 +76,10 @@ class Layer
     {
         return mCanvas;
     }
+    [[nodiscard]] inline auto GetCanvasDims() const -> Vec2Int
+    {
+        return mCanvasDims;
+    }
     [[nodiscard]] inline auto IsPreviewLayer() const -> bool
     {
         return !mIsCanvasLayer;
@@ -79,8 +87,9 @@ class Layer
 
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
-    static auto CanvasCoordsFromCursorPos() -> std::optional<Vec2Int>;
-    static auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    [[nodiscard]]
+    auto CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>;
+    auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
     static void ResetDirtyPixelData();
     static void SetUpdateWholeVBOToTrue() { sShouldUpdateWholeVBO = true; }
     static inline auto ShouldUpdateWholeVBO() -> bool
@@ -99,15 +108,14 @@ class Layer
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {0, 0, 0, 0});
     void Clear();
-    void MarkHistoryForUpdate() const;
-    void HandleRectShape();
 
   private:
-    void HandleBrushAndEraser();
-    static void HandleColorPicker();
-    void HandleBucket();
-    void DrawPixel(Vec2Int coords,
-                   Color color = Color::FromImVec4(Tool::GetColor()));
+    auto HandleBrushAndEraser() -> ShouldUpdateHistory;
+    void HandleColorPicker();
+    auto HandleBucket() -> ShouldUpdateHistory;
+    auto HandleRectShape() -> ShouldUpdateHistory;
+    void DrawPixel(Vec2Int coords);
+    void DrawPixel(Vec2Int coords, Color color);
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
@@ -115,11 +123,14 @@ class Layer
 
     CanvasData mCanvas;
     RectShapeData mHandleRectShapeData;
+    Vec2Int mCanvasDims;
     bool mIsCanvasLayer;
     bool mVisible = true;
     bool mLocked = false;
     int mOpacity = 255;
     std::string mLayerName;
+    std::shared_ptr<Tool> mTool;
+    std::shared_ptr<Camera> mCamera;
 
     inline static std::mutex sMutex;
     inline static int sConstructCounter = 1;
@@ -127,6 +138,7 @@ class Layer
 
     friend class UI;
     friend class Layers;
+    friend class PreviewLayer;
     friend void Project::Open(const std::string&);
 };
 
@@ -135,9 +147,13 @@ class Layers
   public:
     struct Capture
     {
-        Capture() : selected_layer_index{sCurrentLayerIndex}
+        explicit Capture(std::shared_ptr<Tool> tool,
+                         std::shared_ptr<Camera> camera, Vec2Int canvas_dims,
+                         std::size_t selected_layer_ind)
+            : selected_layer_index{selected_layer_ind}
         {
-            layers.emplace_back();
+            layers.emplace_back(std::move(tool), std::move(camera),
+                                canvas_dims);
         }
 
         Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
@@ -149,65 +165,79 @@ class Layers
         std::size_t selected_layer_index;
     };
 
-    static auto GetCurrentLayer() -> Layer&;
-    static void DoCurrentTool();
-    static void MoveUp(std::size_t layer_index);
-    static void MoveDown(std::size_t layer_index);
-    static void AddLayer();
-    static void EmplaceVertices(std::vector<Vertex>& vertices);
-    static void EmplaceBckgVertices(std::vector<Vertex>& vertices);
-    static void ResetDataToDefault();
-    static void DrawToTempLayer();
-    static auto AtIndex(std::size_t index) -> Layer&;
-    static auto GetDisplayedCanvas() -> CanvasData;
-    static void PushToHistory();
-    static void Undo();
-    static void Redo();
-    static void UpdateAndDraw(bool should_do_tool);
+    auto GetCurrentLayer() -> Layer&;
+    [[nodiscard]]
+    auto GetCanvasDims() const -> Vec2Int;
+    void DoCurrentTool();
+    void MoveUp(std::size_t layer_index);
+    void MoveDown(std::size_t layer_index);
+    void AddLayer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera);
+    void EmplaceVertices(std::vector<Vertex>& vertices) const;
+    void EmplaceBckgVertices(std::vector<Vertex>& vertices) const;
+    void ResetDataToDefault();
+    void DrawToTempLayer();
+    auto AtIndex(std::size_t index) -> Layer&;
+    auto GetDisplayedCanvas() -> CanvasData;
+    void PushToHistory();
+    void Undo();
+    void Redo();
+    void UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
+                       std::shared_ptr<Camera> camera);
 
-    inline static auto GetLayerCount() -> std::size_t
+    [[nodiscard]] inline auto GetLayerCount() const -> std::size_t
     {
-        assert(!GetLayers().empty());
-        return GetLayers().size();
+        assert(!GetLayersConst().empty());
+        return GetLayersConst().size();
     }
-    inline static auto GetLayersConst() -> const std::list<Layer>&
+    [[nodiscard]] inline auto GetLayersConst() const -> const std::list<Layer>&
     {
-        return GetLayers();
+        return mHistory[mCurrentCapture].layers;
     }
-    inline static auto GetCurrentLayerIndex() -> std::size_t
+    [[nodiscard]] inline auto
+    CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
     {
-        return sCurrentLayerIndex;
+        return GetLayersConst().cbegin()->CanvasCoordsFromCursorPos();
     }
-    inline static void InitHistory()
+    [[nodiscard]] inline auto GetCurrentLayerIndex() const -> std::size_t
     {
-        auto& history = GetHistory();
-        history.clear();
-        history.emplace_back();
-        sCurrentCapture = 0;
+        return mCurrentLayerIndex;
     }
+    inline void SetCanvasDims(Vec2Int canvas_dims)
+    {
+        mCanvasDims = canvas_dims;
+    }
+    inline void InitHistory(std::shared_ptr<Camera> camera,
+                            std::shared_ptr<Tool> tool)
+    {
+        mHistory.clear();
+        mHistory.emplace_back(std::move(tool), std::move(camera), mCanvasDims,
+                              0);
+        mCurrentCapture = 0;
+    }
+    inline void MarkForUndo() { mShouldUndo = true; }
+    inline void MarkForRedo() { mShouldRedo = true; }
+    inline void MarkToAddLayer() { mShouldAddLayer = true; }
 
   private:
-    inline static auto GetCapture() -> Capture&
+    inline auto GetCapture() -> Capture&
     {
-        auto& history = GetHistory();
-        assert(sCurrentCapture < history.size());
-        return history[sCurrentCapture];
+        assert(mCurrentCapture < mHistory.size());
+        return mHistory[mCurrentCapture];
     }
-    inline static auto GetLayers() -> std::list<Layer>&
-    {
-        return GetCapture().layers;
-    }
-    inline static auto GetHistory() -> std::deque<Capture>&
-    {
-        static std::deque<Capture> history;
-        return history;
-    }
-    inline static void MarkHistoryForUpdate() { sShouldUpdateHistory = true; }
+    inline auto GetLayers() -> std::list<Layer>& { return GetCapture().layers; }
+    /* inline auto GetHistory() -> std::deque<Capture>& { return mHistory; } */
+    inline void MarkHistoryForUpdate() { mShouldUpdateHistory = true; }
 
     static constexpr int kMaxHistoryLenght = 30;
-    inline static std::size_t sCurrentCapture = 0;
-    inline static std::size_t sCurrentLayerIndex = 0;
-    inline static bool sShouldUpdateHistory = false;
+
+    std::deque<Capture> mHistory;
+    std::size_t mCurrentCapture = 0;
+    std::size_t mCurrentLayerIndex = 0;
+    Vec2Int mCanvasDims{0, 0};
+    bool mShouldUpdateHistory = false;
+    bool mShouldUndo = false;
+    bool mShouldRedo = false;
+    bool mShouldAddLayer = false;
 
     friend class Layer;
     friend class UI;

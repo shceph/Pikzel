@@ -13,9 +13,16 @@
 
 namespace Pikzel
 {
+Project::Project(std::shared_ptr<Layers> layers, std::shared_ptr<Tool> tool,
+                 std::shared_ptr<Camera> camera)
+    : mLayers{std::move(layers)}, mTool{std::move(tool)},
+      mCamera{std::move(camera)}
+{
+}
+
 void Project::New(Vec2Int canvas_dims)
 {
-    if (sProjectOpened)
+    if (mProjectOpened)
     {
         // TODO: Should handle the case if the user is trying to create
         // a new project whilst having one already opened. Maybe I could make a
@@ -23,15 +30,16 @@ void Project::New(Vec2Int canvas_dims)
         // if they continue;
     }
 
-    sCanvasWidth = canvas_dims.x;
-    sCanvasHeight = canvas_dims.y;
+    mCanvasWidth = canvas_dims.x;
+    mCanvasHeight = canvas_dims.y;
 
-    sProjectOpened = true;
+    mProjectOpened = true;
 
     Layer::ResetConstructCounter();
-    Tool::SetDataToDefault();
-    Layers::InitHistory();
-    Camera::SetCenter({sCanvasWidth / 2, sCanvasHeight / 2});
+    *mTool = Tool{};
+    mLayers->SetCanvasDims(canvas_dims);
+    mLayers->InitHistory(mCamera, mTool);
+    mCamera->SetCenter({mCanvasWidth / 2, mCanvasHeight / 2});
 }
 
 void Project::Open(const std::string& project_file_dest)
@@ -66,13 +74,13 @@ void Project::Open(const std::string& project_file_dest)
 
     Vec2Int canvas_dims{width, height};
     Project::New(canvas_dims);
-    auto& layers = Layers::GetCapture().layers;
+    auto& layers = mLayers->GetCapture().layers;
     layers.clear();
     Layer::ResetConstructCounter();
 
     for (auto lay = 0UZ; lay < layer_count; lay++)
     {
-        layers.emplace_back();
+        layers.emplace_back(mTool, mCamera, canvas_dims);
         auto iter = layers.begin();
         std::advance(iter, lay);
 
@@ -123,19 +131,19 @@ void Project::Open(const std::string& project_file_dest)
 }
 
 auto Project::SaveAsImage(int magnify_factor,
-                          const std::string& save_dest) -> bool
+                          const std::string& save_dest) const -> bool
 {
     constexpr int kChannelCount = 4;
-    int arr_height = sCanvasHeight * magnify_factor;
-    int arr_width = sCanvasWidth * magnify_factor * kChannelCount;
+    int arr_height = mCanvasHeight * magnify_factor;
+    int arr_width = mCanvasWidth * magnify_factor * kChannelCount;
     std::vector<uint8_t> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
-    const CanvasData canvas_displayed = Layers::GetDisplayedCanvas();
+    const CanvasData& canvas_displayed = mLayers->GetDisplayedCanvas();
 
-    for (int i = 0; i < sCanvasHeight; i++)
+    for (int i = 0; i < mCanvasHeight; i++)
     {
-        for (int j = 0; j < sCanvasWidth; j++)
+        for (int j = 0; j < mCanvasWidth; j++)
         {
             for (int k = 0; k < magnify_factor; k++)
             {
@@ -163,8 +171,8 @@ auto Project::SaveAsImage(int magnify_factor,
         }
     }
 
-    int height = sCanvasHeight * magnify_factor;
-    int width = sCanvasWidth * magnify_factor;
+    int height = mCanvasHeight * magnify_factor;
+    int width = mCanvasWidth * magnify_factor;
 
     return stbi_write_png(save_dest.c_str(), width, height, kChannelCount,
                           image_data.data(), width * kChannelCount) != 0;
@@ -184,7 +192,7 @@ void Project::SaveAsProject(const std::string& save_dest)
         return;
     }
 
-    auto& layers = Layers::GetCapture().layers;
+    auto& layers = mLayers->GetCapture().layers;
     save_file << static_cast<std::size_t>(layers.size()) << " ";
     save_file << Project::CanvasWidth() << " ";
     save_file << Project::CanvasHeight() << "\n";
@@ -211,8 +219,8 @@ void Project::SaveAsProject(const std::string& save_dest)
 
 void Project::CloseCurrentProject()
 {
-    Layers::ResetDataToDefault();
-    Tool::SetDataToDefault();
-    sProjectOpened = false;
+    mLayers->ResetDataToDefault();
+    *mTool = Tool{};
+    mProjectOpened = false;
 }
 } // namespace Pikzel

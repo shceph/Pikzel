@@ -10,68 +10,48 @@ enum ToolType
     kEraser,
     kColorPicker,
     kBucket,
-	kRectShape,
-	kToolCount,
+    kRectShape,
+    kToolCount,
 };
 
 class Tool
 {
   public:
-    inline static auto GetColor() -> ImVec4
+    Tool();
+
+    inline auto GetColor() -> ImVec4 { return *mCurrentColor; }
+    inline auto GetColorRef() -> ImVec4& { return *mCurrentColor; }
+
+    inline auto GetColor1() -> ImVec4& { return mColor2; }
+    inline auto GetColor2() -> ImVec4& { return mColor1; }
+
+    inline void SetCurrentColorToColor1()
     {
-        return *sCurrentColor;
+        mSelectedColorSlot = kColorSlot1;
+        mCurrentColor = &GetColor1();
     }
-    inline static auto GetColorRef() -> ImVec4&
+    inline void SetCurrentColorToColor2()
     {
-        return *sCurrentColor;
+        mSelectedColorSlot = kColorSlot2;
+        mCurrentColor = &GetColor2();
     }
 
-    inline static auto GetColor1() -> ImVec4&
+    [[nodiscard]] inline auto GetSelectedColorSlot() const -> int
     {
-	   static ImVec4 color1{0.0F, 0.0F, 0.0F, 1.0F};
-        return color1;
-    }
-    inline static auto GetColor2() -> ImVec4&
-    {
-	   static ImVec4 color2{0.0F, 0.0F, 0.0F, 1.0F};
-        return color2;
+        return mSelectedColorSlot;
     }
 
-    inline static void SetCurrentColorToColor1()
+    [[nodiscard]] inline auto GetToolType() const -> ToolType
     {
-        sSelectedColorSlot = kColorSlot1;
-        sCurrentColor = &GetColor1();
+        return mCurrentToolType;
     }
-    inline static void SetCurrentColorToColor2()
-    {
-        sSelectedColorSlot = kColorSlot2;
-        sCurrentColor = &GetColor2();
-    }
+    inline void SetToolType(ToolType type) { mCurrentToolType = type; }
 
-    inline static auto GetSelectedColorSlot() -> int
+    [[nodiscard]] inline auto GetBrushRadius() const -> int
     {
-        return sSelectedColorSlot;
+        return mBrushRadius;
     }
-
-    inline static auto GetToolType() -> ToolType
-    {
-        return sCurrentToolType;
-    }
-    inline static void SetToolType(ToolType type)
-    {
-        sCurrentToolType = type;
-    }
-
-    inline static auto GetBrushRadius() -> int
-    {
-        return sBrushRadius;
-    }
-    inline static void SetBrushRadius(int radius)
-    {
-        sBrushRadius = radius;
-    }
-
-    static void SetDataToDefault();
+    inline void SetBrushRadius(int radius) { mBrushRadius = radius; }
 
     constexpr static int kColorSlot1 = 1, kColorSlot2 = 2;
 
@@ -80,11 +60,12 @@ class Tool
     friend class Layers;
 
   private:
-    inline static ImVec4* sCurrentColor = nullptr;
+    ImVec4 mColor1;
+    ImVec4 mColor2;
+    ImVec4* mCurrentColor = nullptr;
 
-    inline static ToolType sCurrentToolType = kBrush;
-
-    inline static int sBrushRadius = 1;
-    inline static int sSelectedColorSlot = kColorSlot1;
+    ToolType mCurrentToolType = kBrush;
+    int mBrushRadius = 1;
+    int mSelectedColorSlot = kColorSlot1;
 };
-}  // namespace Pikzel
+} // namespace Pikzel

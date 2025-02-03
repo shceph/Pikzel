@@ -1,33 +1,54 @@
 #pragma once
 
+#include "Camera.hpp"
+
 #include <glm/vec2.hpp>
+
+#include <memory>
 #include <string>
 
 namespace Pikzel
 {
 using Vec2Int = glm::vec<2, int>;
 
+class Layers;
+class Tool;
+
 class Project
 {
   public:
-    static void New(Vec2Int canvas_dims);
-    static void Open(const std::string& project_file_dest);
-    static void SaveAsProject(const std::string& save_dest);
-    static void CloseCurrentProject();
-    [[nodiscard]] static auto SaveAsImage(int magnify_factor,
-                                          const std::string& save_dest) -> bool;
+    Project(std::shared_ptr<Layers> layers, std::shared_ptr<Tool> tool,
+            std::shared_ptr<Camera> camera);
+    void New(Vec2Int canvas_dims);
+    void Open(const std::string& project_file_dest);
+    void SaveAsProject(const std::string& save_dest);
+    void CloseCurrentProject();
+    [[nodiscard]] auto SaveAsImage(int magnify_factor,
+                                   const std::string& save_dest) const -> bool;
 
-    inline static auto IsOpened() -> bool { return sProjectOpened; }
-    inline static auto CanvasHeight() -> int { return sCanvasHeight; }
-    inline static auto CanvasWidth() -> int { return sCanvasWidth; }
-    inline static auto GetCanvasDims() -> Vec2Int
+    [[nodiscard]] inline auto IsOpened() const -> bool
     {
-        return {sCanvasWidth, sCanvasHeight};
+        return mProjectOpened;
+    }
+    [[nodiscard]] inline auto CanvasHeight() const -> int
+    {
+        return mCanvasHeight;
+    }
+    [[nodiscard]] inline auto CanvasWidth() const -> int
+    {
+        return mCanvasWidth;
+    }
+    [[nodiscard]] inline auto GetCanvasDims() const -> Vec2Int
+    {
+        return {mCanvasWidth, mCanvasHeight};
     }
 
   private:
-    inline static bool sProjectOpened = false;
-    inline static int sCanvasHeight = 0;
-    inline static int sCanvasWidth = 0;
+    std::shared_ptr<Layers> mLayers;
+    std::shared_ptr<Tool> mTool;
+    std::shared_ptr<Camera> mCamera;
+    bool mProjectOpened = false;
+    int mCanvasHeight = 0;
+    int mCanvasWidth = 0;
 };
 } // namespace Pikzel
