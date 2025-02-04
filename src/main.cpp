@@ -236,7 +236,7 @@ auto main() -> int
     Pikzel::Events::PushToScrollCallback(
         [camera](double x_offset, double y_offset)
         { camera->ScrollCallback(x_offset, y_offset); });
-    Pikzel::Events::PushToScrollCallback(
+    Pikzel::Events::PushToCursorPosCallback(
         [camera](double x_offset, double y_offset)
         { camera->CursorPosCallback(x_offset, y_offset); });
 
@@ -409,7 +409,6 @@ auto main() -> int
         }
     }
 
-    ui_state.ImGuiCleanup();
     glfwDestroyWindow(window);
     glfwTerminate();
 }

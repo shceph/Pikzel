@@ -16,7 +16,6 @@ class UI
   public:
     UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
        GLFWwindow* _window);
-    void ImGuiCleanup();
     void RenderUI(Layers& layers, Camera& camera);
     void RenderNoProjectWindow();
     void RenderDrawWindow(unsigned int framebuffer_texture_id,

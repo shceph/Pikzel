@@ -6,6 +6,7 @@ namespace Pikzel
 {
 using Vec2Int = glm::vec<2, int>;
 
+// Don't dorget to SetCanvasDims!!!
 class Camera
 {
   public:
@@ -32,6 +33,7 @@ class Camera
 
   private:
     glm::vec2 mCenter;
+    glm::vec<2, double> mOldCursorPos{0, 0};
     Vec2Int mCanvasDims;
     double mZoomValue = 0.0;
     constexpr static double kZoomMin = 0.0;

@@ -59,10 +59,6 @@ UI::UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
     assert(sConstructCounter < 2);
 }
 
-void UI::ImGuiCleanup()
-{
-}
-
 void UI::NewFrame()
 {
     ImGui_ImplOpenGL3_NewFrame();
@@ -359,7 +355,8 @@ void UI::RenderColorWindow()
     ImGui::Begin("Color");
     ImGui::NewLine();
 
-    ImGui::ColorPicker4("Current color", &(mTool->GetColorRef().x),
+    ImGui::ColorPicker4("Current color",
+                        std::bit_cast<float*>(mTool->GetCurrentColorPtr()),
                         ImGuiColorEditFlags_NoAlpha);
 
     ImGui::NewLine();
@@ -369,7 +366,7 @@ void UI::RenderColorWindow()
 
     int selected_color_slot = mTool->GetSelectedColorSlot();
 
-    if (selected_color_slot == mTool->kColorSlot1) { BeginOutline(); }
+    if (selected_color_slot == Tool::kColorSlot1) { BeginOutline(); }
 
     if (ImGui::ColorButton("Color 1", mTool->GetColor1(), flags))
     {
@@ -519,7 +516,7 @@ void UI::RenderToolWindow()
                      mProject->CanvasWidth());
     ImGui::PopItemWidth();
 
-    if (mTool->mBrushRadius < 1) { mTool->mBrushRadius = 1; }
+    if (mTool->GetBrushRadius() < 1) { mTool->SetBrushRadius(1); }
 
     ImGui::End();
 }

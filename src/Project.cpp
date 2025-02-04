@@ -36,10 +36,11 @@ void Project::New(Vec2Int canvas_dims)
     mProjectOpened = true;
 
     Layer::ResetConstructCounter();
-    *mTool = Tool{};
+    mTool->SetDataToDefault();
     mLayers->SetCanvasDims(canvas_dims);
     mLayers->InitHistory(mCamera, mTool);
     mCamera->SetCenter({mCanvasWidth / 2, mCanvasHeight / 2});
+    mCamera->SetCanvasDims({mCanvasWidth, mCanvasHeight});
 }
 
 void Project::Open(const std::string& project_file_dest)
@@ -220,7 +221,7 @@ void Project::SaveAsProject(const std::string& save_dest)
 void Project::CloseCurrentProject()
 {
     mLayers->ResetDataToDefault();
-    *mTool = Tool{};
+    mTool->SetDataToDefault();
     mProjectOpened = false;
 }
 } // namespace Pikzel

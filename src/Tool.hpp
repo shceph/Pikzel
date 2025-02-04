@@ -18,22 +18,40 @@ class Tool
 {
   public:
     Tool();
+	~Tool() = default;
+    Tool(const Tool&) = delete;
+    Tool(Tool&&) = delete;
+    auto operator=(Tool&&) -> Tool& = delete;
+    auto operator=(const Tool&) -> Tool& = delete;
 
-    inline auto GetColor() -> ImVec4 { return *mCurrentColor; }
+    void SetDataToDefault();
+
+    [[nodiscard]] inline auto GetColor() const -> ImVec4 { return *mCurrentColor; }
     inline auto GetColorRef() -> ImVec4& { return *mCurrentColor; }
+    inline auto GetCurrentColorPtr() -> ImVec4* { return mCurrentColor; }
 
-    inline auto GetColor1() -> ImVec4& { return mColor2; }
-    inline auto GetColor2() -> ImVec4& { return mColor1; }
+    [[nodiscard]] inline auto GetColor1() const -> ImVec4 { return mColor2; }
+    [[nodiscard]] inline auto GetColor2() const -> ImVec4 { return mColor1; }
+
+	inline void SetColor1(ImVec4 color)
+	{
+		mColor1 = color;
+	}
+
+	inline void SetColor2(ImVec4 color)
+	{
+		mColor2 = color;
+	}
 
     inline void SetCurrentColorToColor1()
     {
         mSelectedColorSlot = kColorSlot1;
-        mCurrentColor = &GetColor1();
+        mCurrentColor = &mColor1;
     }
     inline void SetCurrentColorToColor2()
     {
         mSelectedColorSlot = kColorSlot2;
-        mCurrentColor = &GetColor2();
+        mCurrentColor = &mColor2;
     }
 
     [[nodiscard]] inline auto GetSelectedColorSlot() const -> int
@@ -62,7 +80,7 @@ class Tool
   private:
     ImVec4 mColor1;
     ImVec4 mColor2;
-    ImVec4* mCurrentColor = nullptr;
+    ImVec4* mCurrentColor;
 
     ToolType mCurrentToolType = kBrush;
     int mBrushRadius = 1;
