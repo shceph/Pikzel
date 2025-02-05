@@ -11,7 +11,7 @@ file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
 file(COPY ${CMAKE_SOURCE_DIR}/shader DESTINATION ${CMAKE_BINARY_DIR})
 
 file(GLOB PIKZEL_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
-file(GLOB GLA_SOURCES ${CMAKE_SOURCE_DIR}/src/Gla/*.cpp)
+file(GLOB GLA_SOURCES ${CMAKE_SOURCE_DIR}/src/gla/*.cpp)
 
 # Compiler can't find this file when building stb's image-resize,
 # so I'm copying it to the dir of the source file that makes the problem

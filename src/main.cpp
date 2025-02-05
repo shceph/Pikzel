@@ -2,11 +2,11 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
-#include "Gla/FrameBuffer.hpp"
-#include "Gla/Mesh.hpp"
-#include "Gla/Renderer.hpp"
-#include "Gla/VertexArray.hpp"
-#include "Gla/VertexBuffer.hpp"
+#include "gla/frame_buffer.hpp"
+#include "gla/group.hpp"
+#include "gla/renderer.hpp"
+#include "gla/vertex_array.hpp"
+#include "gla/vertex_buffer.hpp"
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
@@ -18,11 +18,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include "Application.hpp"
-#include "Events.hpp"
-#include "Layer.hpp"
-#include "PreviewLayer.hpp"
-#include "VertexBufferControl.hpp"
+#include "application.hpp"
+#include "events.hpp"
+#include "layer.hpp"
+#include "preview_layer.hpp"
+#include "vertex_buffer_control.hpp"
 
 using Pikzel::Vertex;
 
@@ -147,23 +147,16 @@ auto GetProjMat(Pikzel::Camera& camera,
     return proj;
 }
 
-auto GetTransMatIfShouldDrawPreview(const Pikzel::Layers& layers)
-    -> std::optional<glm::mat4>
+auto GetTransMat(Pikzel::Vec2Int canvas_coord_behind_cursor,
+                 Pikzel::Vec2Int canvas_dims) -> glm::mat4
 {
-    auto cursor_pos = layers.CanvasCoordsFromCursorPos();
     glm::mat4 translation_mat(1.0);
+    auto move_distance = canvas_coord_behind_cursor - (canvas_dims / 2);
 
-    if (cursor_pos.has_value())
-    {
-        auto move_distance = cursor_pos.value() - (layers.GetCanvasDims() / 2);
+    translation_mat = glm::translate(
+        glm::mat4(1.0), glm::vec3(move_distance.x, move_distance.y, 1.0));
 
-        translation_mat = glm::translate(
-            glm::mat4(1.0), glm::vec3(move_distance.x, move_distance.y, 1.0));
-
-        return translation_mat;
-    }
-
-    return std::nullopt;
+    return translation_mat;
 }
 
 // Binds the vbo
@@ -355,28 +348,11 @@ auto main() -> int
                 imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
                                          static_cast<int>(draw_window_dims.y)});
 
-                group_bckg.Bind();
                 Gla::Renderer::Clear();
+
+                group_bckg.Bind();
                 glClearColor(0.8, 0.8, 0.8, 1.0);
                 Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
-
-                UpdatePreviewVboIfNeeded(preview_layer.value(),
-                                         preview_vertices, vbo_preview);
-                auto trans_mat = GetTransMatIfShouldDrawPreview(*layers);
-                if (trans_mat.has_value())
-                {
-                    group_preview.Bind();
-                    glm::mat4 result = proj_mat;
-
-                    if (preview_layer->ShouldApplyCursorBasedTranslation())
-                    {
-                        result *= trans_mat.value();
-                    }
-
-                    shader_preview.SetUniformMat4f("u_ViewProjection", result);
-                    Gla::Renderer::DrawArrays(Gla::kTriangles,
-                                              preview_vertices.size());
-                }
 
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
@@ -384,8 +360,6 @@ auto main() -> int
                 vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
                 Gla::Renderer::DrawArrays(Gla::kTriangles,
                                           vbo_control.value().GetVertexCount());
-
-                Gla::FrameBuffer::BindToDefaultFB();
 
                 layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
                 vbo_update_future =
@@ -397,6 +371,31 @@ auto main() -> int
                                        Pikzel::Layer::GetDirtyPixels());
                                    Pikzel::Layer::ResetDirtyPixelData();
                                });
+
+                UpdatePreviewVboIfNeeded(preview_layer.value(),
+                                         preview_vertices, vbo_preview);
+                auto canvas_coord_behind_cursor =
+                    layers->CanvasCoordsFromCursorPos();
+                if (canvas_coord_behind_cursor.has_value())
+                {
+                    glm::mat4 trans_mat =
+                        GetTransMat(canvas_coord_behind_cursor.value(),
+                                    layers->GetCanvasDims());
+                    group_preview.Bind();
+                    glm::mat4 result = proj_mat;
+
+                    if (preview_layer->ShouldApplyCursorBasedTranslation())
+                    {
+                        result *= trans_mat;
+                    }
+
+                    shader_preview.SetUniformMat4f("u_ViewProjection", result);
+                    Gla::Renderer::DrawArrays(Gla::kTriangles,
+                                              preview_vertices.size());
+                }
+
+                Gla::FrameBuffer::BindToDefaultFB();
+
                 ui_state.Update();
                 preview_layer->Update();
             }
