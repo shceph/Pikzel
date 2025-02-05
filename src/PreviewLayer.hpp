@@ -12,7 +12,8 @@ class PreviewLayer
   public:
     explicit PreviewLayer(std::shared_ptr<Tool> tool,
                           std::shared_ptr<Camera> camera, Vec2Int canvas_dims)
-        : mTool{std::move(tool)}, mLayer{mTool, std::move(camera), canvas_dims},
+        : mTool{std::move(tool)},
+          mLayer{mTool, std::move(camera), canvas_dims, false},
           mTranslationMat{0.0F}
     {
     }

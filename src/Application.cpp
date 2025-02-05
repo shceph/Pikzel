@@ -356,7 +356,7 @@ void UI::RenderColorWindow()
     ImGui::NewLine();
 
     ImGui::ColorPicker4("Current color",
-                        std::bit_cast<float*>(mTool->GetCurrentColorPtr()),
+                        std::bit_cast<float*>(&mTool->GetColorRef()),
                         ImGuiColorEditFlags_NoAlpha);
 
     ImGui::NewLine();

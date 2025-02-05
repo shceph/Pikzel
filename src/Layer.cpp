@@ -217,9 +217,9 @@ void Layer::HandleColorPicker()
 
     if (picked_color.a == 0) { return; }
 
-    mTool->mCurrentColor->x = static_cast<float>(picked_color.r) / 0xff;
-    mTool->mCurrentColor->y = static_cast<float>(picked_color.g) / 0xff;
-    mTool->mCurrentColor->z = static_cast<float>(picked_color.b) / 0xff;
+    mTool->GetColorRef().x = static_cast<float>(picked_color.r) / 0xff;
+    mTool->GetColorRef().y = static_cast<float>(picked_color.g) / 0xff;
+    mTool->GetColorRef().z = static_cast<float>(picked_color.b) / 0xff;
 }
 
 auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory
