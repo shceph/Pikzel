@@ -33,7 +33,6 @@ class Tool
     [[nodiscard]] inline auto GetColor2() const -> ImVec4 { return mColor2; }
 
     inline void SetColor1(ImVec4 color) { mColor1 = color; }
-
     inline void SetColor2(ImVec4 color) { mColor2 = color; }
 
     inline void SetCurrentColorToColor1() { mSelectedColorSlot = kColorSlot1; }

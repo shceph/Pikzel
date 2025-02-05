@@ -5,6 +5,14 @@ namespace Pikzel
 {
 constexpr Color kEraserToolPreviewColor{100, 100, 100, 100};
 
+PreviewLayer::PreviewLayer(std::shared_ptr<Tool> tool,
+                           std::shared_ptr<Camera> camera, Vec2Int canvas_dims)
+    : mTool{std::move(tool)},
+      mLayer{mTool, std::move(camera), canvas_dims, false},
+      mTranslationMat{0.0F}
+{
+}
+
 void PreviewLayer::UpdateCircleSize(int size)
 {
     mLayer.Clear();
