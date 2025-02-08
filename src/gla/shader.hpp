@@ -30,6 +30,7 @@ class Shader
     void SetUniform1i(const std::string& name, int value);
     void SetUniform3i(const std::string& name, int val0, int val1, int val2);
     void SetUniform1f(const std::string& name, float value);
+    void SetUniform2f(const std::string& name, float val0, float val1);
     void SetUniform3f(const std::string& name, float val0, float val1,
                       float val2);
     void SetUniform4f(const std::string& name, float val0, float val1,

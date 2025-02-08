@@ -633,13 +633,17 @@ void Layers::EmplaceVertices(std::vector<Vertex>& vertices) const
     }
 }
 
-void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices) const
+void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices,
+                                 std::optional<Vec2Int> custom_dims) const
 {
     constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
                                                 Color{201, 201, 201, 255}};
 
-    auto canvas_width = GetCanvasDims().x;
-    auto canvas_height = GetCanvasDims().y;
+    if (!custom_dims.has_value()) { custom_dims.emplace(GetCanvasDims()); }
+    assert(custom_dims.has_value());
+
+    auto canvas_width = custom_dims.value().x;
+    auto canvas_height = custom_dims.value().y;
 
     for (int i = 0; i < canvas_height; i += 6)
     {
@@ -647,7 +651,7 @@ void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices) const
         {
             auto x_coord = static_cast<float>(j);
             auto y_coord = static_cast<float>(i);
-            glm::vec2 dims = GetCanvasDims();
+            glm::vec2 dims = custom_dims.value();
 
             // upper left corner
             vertices.emplace_back(x_coord, y_coord,

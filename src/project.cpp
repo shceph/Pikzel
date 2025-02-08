@@ -49,7 +49,7 @@ void Project::Open(const std::string& project_file_dest)
 
     if (!proj_file.is_open())
     {
-#ifdef _DEBUG
+#ifndef NDEBUG
         std::cerr << "Couldn't open the file: " << project_file_dest
                   << " in Project::Open(const std::string&)"
                   << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << '\n';
@@ -64,7 +64,7 @@ void Project::Open(const std::string& project_file_dest)
     if (!(proj_file >> layer_count) || !(proj_file >> width) ||
         !(proj_file >> height))
     {
-#ifdef _DEBUG
+#ifndef NDEBUG
         std::cerr
             << "Invalid project file, at Project::Open(const std::string&)\n";
 
@@ -88,7 +88,7 @@ void Project::Open(const std::string& project_file_dest)
         int opacity = 0;
         if (!(proj_file >> opacity))
         {
-#ifdef _DEBUG
+#ifndef NDEBUG
             std::cerr << "Invalid project file, at Project::Open(const "
                          "std::string&), copying opacity\n";
 #endif
@@ -99,7 +99,7 @@ void Project::Open(const std::string& project_file_dest)
         /*std::string name;
         if (!std::getline(proj_file, name))
         {
-#ifdef _DEBUG
+#ifndef NDEBUG
             std::cerr << "Invalid project file, at Project::Open(const "
                          "std::string&), copying name\n";
 #endif
@@ -116,7 +116,7 @@ void Project::Open(const std::string& project_file_dest)
                 if (!(proj_file >> col.r) || !(proj_file >> col.g) ||
                     !(proj_file >> col.b) || !(proj_file >> col.a))
                 {
-#ifdef _DEBUG
+#ifndef NDEBUG
                     std::cerr << "Invalid project file, at Project::Open(const "
                                  "std::string&), copying colors\n";
 #endif
@@ -185,7 +185,7 @@ void Project::SaveAsProject(const std::string& save_dest)
 
     if (!save_file.is_open())
     {
-#ifdef _DEBUG
+#ifndef NDEBUG
         std::cerr << "Couldn't open the file in "
                      "Project::SaveAsProject(std::string save_dest)"
                   << "\nFile: " << __FILE__ << "\nLine: " << __LINE__ << '\n';

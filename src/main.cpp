@@ -22,6 +22,7 @@
 #include "events.hpp"
 #include "layer.hpp"
 #include "preview_layer.hpp"
+#include "project.hpp"
 #include "vertex_buffer_control.hpp"
 
 using Pikzel::Vertex;
@@ -129,8 +130,6 @@ void GlfwError(int err_id, const char* message)
 auto GetProjMat(Pikzel::Camera& camera,
                 Pikzel::Vec2Int canvas_dims) -> glm::mat4
 {
-    /* const auto width = static_cast<float>(project->CanvasWidth()); */
-    /* const auto height = static_cast<float>(project->CanvasHeight()); */
     const auto width = static_cast<float>(canvas_dims.x);
     const auto height = static_cast<float>(canvas_dims.y);
     const glm::vec2 camera_top_left =
@@ -179,7 +178,7 @@ void UpdatePreviewVboIfNeeded(Pikzel::PreviewLayer& preview_layer,
 
 auto main() -> int
 {
-    if (glfwInit() == 0) { return -1; }
+    if (glfwInit() == GLFW_FALSE) { return 1; }
 
     constexpr int kWindowWidth = 1280;
     constexpr int kWindowHeight = 700;
@@ -191,8 +190,7 @@ auto main() -> int
     {
         std::cout << "Failed to create window\n";
         glfwTerminate();
-        std::cin.get();
-        return -1;
+        return 1;
     }
 
     glfwMakeContextCurrent(window);
@@ -202,12 +200,20 @@ auto main() -> int
     Pikzel::Events::SetWindowPtr(window);
     glfwSetScrollCallback(window, &Pikzel::Events::GlfwScrollCallback);
     glfwSetCursorPosCallback(window, &Pikzel::Events::GlfwCursorPosCallback);
+
 #ifndef NDEBUG
     glfwSetErrorCallback(&GlfwError);
     std::cout << "C++ standard: " << __cplusplus << '\n';
+#endif
 
-    if (glewInit() != GLEW_OK) { std::cout << "Glew init error\n"; }
+    if (glewInit() != GLEW_OK)
+    {
+        std::cout << "Glew init error\n";
+        std::cout << glewGetErrorString(glewInit()) << '\n';
+        return 1;
+    }
 
+#ifndef NDEBUG
     std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
@@ -235,7 +241,6 @@ auto main() -> int
 
     { // Made this block so all the OpenGL objects would get destroyed before
       // calling glfwTerminate.
-
         Gla::FrameBuffer imgui_window_fb({kWindowWidth, kWindowHeight});
         Gla::FrameBuffer::BindToDefaultFB();
 
@@ -268,7 +273,8 @@ auto main() -> int
         Gla::VertexBufferLayout layout;
         layout.Push<float>(2);
         layout.Push<uint8_t>(4, GL_TRUE);
-        Gla::Shader shader("shader/VertShader.vert", "shader/FragShader.frag");
+        Gla::Shader shader("shader/vert_shader.vert",
+                           "shader/frag_shader.frag");
         shader.Bind();
 
         Gla::VertexArray vao_canvas;
@@ -277,16 +283,19 @@ auto main() -> int
         Gla::Group group_canvas(vao_canvas, shader);
 
         Gla::VertexArray vao_bckg;
-        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kDynamicArray);
+        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kStaticDraw);
         vao_bckg.AddBuffer(vbo_bckg, layout);
-        Gla::Group group_bckg(vao_bckg, shader);
+        Gla::Shader shader_bckg("shader/background_vert_shader.vert",
+                                "shader/background_frag_shader.frag");
+        shader_bckg.Bind();
+        Gla::Group group_bckg(vao_bckg, shader_bckg);
         auto bckg_vertices_count = 0UZ;
 
         Gla::VertexArray vao_preview;
         Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicArray);
         vao_preview.AddBuffer(vbo_preview, layout);
-        Gla::Shader shader_preview("shader/VertShader.vert",
-                                   "shader/FragShader.frag");
+        Gla::Shader shader_preview("shader/vert_shader.vert",
+                                   "shader/frag_shader.frag");
         Gla::Group group_preview(vao_preview, shader_preview);
         std::vector<Vertex> preview_vertices;
 
@@ -310,7 +319,8 @@ auto main() -> int
                 if (project->IsOpened())
                 {
                     std::vector<Vertex> bckg_vertices;
-                    layers->EmplaceBckgVertices(bckg_vertices);
+                    layers->EmplaceBckgVertices(bckg_vertices,
+                                                project->GetCanvasDims());
                     bckg_vertices_count = bckg_vertices.size();
                     auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
                     vbo_bckg.UpdateSize(bckg_buff_size);
@@ -349,9 +359,12 @@ auto main() -> int
                                          static_cast<int>(draw_window_dims.y)});
 
                 Gla::Renderer::Clear();
+                glClearColor(0.8, 0.8, 0.8, 1.0);
 
                 group_bckg.Bind();
-                glClearColor(0.8, 0.8, 0.8, 1.0);
+                shader_bckg.SetUniformMat4f(
+                    "u_ViewProjection",
+                    GetProjMat(*camera, project->GetCanvasDims()));
                 Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
 
                 if (vbo_update_future.valid()) { vbo_update_future.wait(); }

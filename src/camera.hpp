@@ -10,6 +10,10 @@ using Vec2Int = glm::vec<2, int>;
 class Camera
 {
   public:
+    constexpr static double kZoomMin = -1.0;
+    constexpr static double kZoomMax = 0.93;
+    constexpr static double kZoomDefault = 0.0;
+
     void AddToZoom(double val_to_add);
     void SetCenter(glm::vec2 center);
     void MoveCenter(glm::vec2 offset);
@@ -36,8 +40,5 @@ class Camera
     glm::vec<2, double> mOldCursorPos{0, 0};
     Vec2Int mCanvasDims;
     double mZoomValue = 0.0;
-    constexpr static double kZoomMin = -1.0;
-    constexpr static double kZoomMax = 0.93;
-    constexpr static double kZoomDefault = 0.0;
 };
 } // namespace Pikzel
