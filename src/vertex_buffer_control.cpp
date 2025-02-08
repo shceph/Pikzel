@@ -16,6 +16,27 @@ VertexBufferControl::VertexBufferControl(std::shared_ptr<Layers> layers,
     sUpdateAll = true;
 }
 
+void VertexBufferControl::Map(Gla::VertexBuffer& vbo)
+{
+    vbo.Bind();
+
+    auto vbo_size = GetNeededVBOSizeForLayer(mLayers->GetCanvasDims()) *
+                    mLayers->GetLayerCount();
+    auto vertex_count = vbo_size / sizeof(Vertex);
+
+    auto* ptr_to_buffer =
+        static_cast<Vertex*>(glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
+
+    mBufferData = std::span<Vertex>(ptr_to_buffer, vertex_count);
+    mVertexCount = vertex_count;
+}
+
+void VertexBufferControl::Unmap(Gla::VertexBuffer& vbo)
+{
+    vbo.Bind();
+    glUnmapBuffer(GL_ARRAY_BUFFER);
+}
+
 void VertexBufferControl::Update(bool should_update_all,
                                  const std::vector<Vec2Int>& dirty_pixels)
 {

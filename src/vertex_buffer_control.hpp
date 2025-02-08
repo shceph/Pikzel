@@ -20,6 +20,8 @@ class VertexBufferControl
     // Should run this after creating/opening a project
     VertexBufferControl(std::shared_ptr<Layers> layers, Vertex* ptr_to_buffer,
                         std::size_t count);
+    void Map(Gla::VertexBuffer& vbo);
+    static void Unmap(Gla::VertexBuffer& vbo);
     void Update(bool should_update_all,
                 const std::vector<Vec2Int>& dirty_pixels);
 

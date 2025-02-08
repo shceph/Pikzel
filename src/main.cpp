@@ -371,15 +371,17 @@ auto main() -> int
 
                 group_canvas.Bind();
                 vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
+                Pikzel::VertexBufferControl::Unmap(vbo_canvas);
                 Gla::Renderer::DrawArrays(Gla::kTriangles,
-                                          vbo_control.value().GetVertexCount());
+                                          vbo_control->GetVertexCount());
+                vbo_control->Map(vbo_canvas);
 
                 layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
                 vbo_update_future =
                     std::async(std::launch::async,
                                [&vbo_control]()
                                {
-                                   vbo_control.value().Update(
+                                   vbo_control->Update(
                                        Pikzel::Layer::ShouldUpdateWholeVBO(),
                                        Pikzel::Layer::GetDirtyPixels());
                                    Pikzel::Layer::ResetDirtyPixelData();
