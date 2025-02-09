@@ -117,7 +117,8 @@ class Layer
     void DrawPixel(Vec2Int coords);
     void DrawPixel(Vec2Int coords, Color color);
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
-    void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness);
+    void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
+                  std::optional<Color> color = std::nullopt);
     void DrawLine(Vec2Int point_a, Vec2Int point_b);
     void Fill(int x_coord, int y_coord, Color clicked_color);
 

@@ -197,8 +197,16 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
                                 glm::vec2(position_last_drawn)) > 1 &&
         std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay)
     {
-        DrawLine(canv_coord.value(), position_last_drawn,
-                 mTool->GetBrushRadius() * 2);
+        if (mTool->GetToolType() == ToolType::kEraser)
+        {
+            DrawLine(canv_coord.value(), position_last_drawn,
+                     mTool->GetBrushRadius() * 2, Color{0, 0, 0, 0});
+        }
+        else
+        {
+            DrawLine(canv_coord.value(), position_last_drawn,
+                     mTool->GetBrushRadius() * 2);
+        }
     }
     else { should_update_history = true; }
 
@@ -401,7 +409,8 @@ void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
     }
 }
 
-void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness)
+void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
+                     std::optional<Color> color /*= std::nullopt*/)
 {
     if (thickness == 1)
     {
@@ -409,30 +418,55 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness)
         return;
     }
 
-    int radius = thickness / 2;
-    int diff_x = std::abs(point_a.x - point_b.x);
-    int diff_y = std::abs(point_a.y - point_b.y);
-    int sign_x = (point_a.x < point_b.x) ? 1 : -1;
-    int sign_y = (point_a.y < point_b.y) ? 1 : -1;
-    int err = diff_x - diff_y;
+    Color col = color.value_or(Color::FromImVec4(mTool->GetColor()));
 
-    while (point_a != point_b)
+    int x_0 = point_a.x;
+    int y_0 = point_a.y;
+    int x_1 = point_b.x;
+    int y_1 = point_b.y;
+
+    bool steep = abs(y_1 - y_0) > abs(x_1 - x_0);
+    if (steep)
     {
-        int err2 = err;
+        std::swap(x_0, y_0);
+        std::swap(x_1, y_1);
+    }
 
-        if (err2 > -diff_y)
+    if (x_0 > x_1)
+    {
+        std::swap(x_0, x_1);
+        std::swap(y_0, y_1);
+    }
+
+    int d_x = x_1 - x_0;
+    int d_y = abs(y_1 - y_0);
+    int error = d_x / 2;
+    int y_step = (y_0 < y_1) ? 1 : -1;
+    int y_coord = y_0;
+
+    int offset = thickness / 2;
+
+    for (int x_coord = x_0; x_coord <= x_1; ++x_coord)
+    {
+        int draw_x = steep ? y_coord : x_coord;
+        int draw_y = steep ? x_coord : y_coord;
+
+        // Draw the thick line by offsetting the perpendicular direction
+        for (int i = -offset; i <= offset; ++i)
         {
-            err -= diff_y;
-            point_a.x += sign_x;
+            if (steep)
+            {
+                DrawPixel(ClampToCanvasDims({draw_x + i, draw_y}), col);
+            }
+            else { DrawPixel(ClampToCanvasDims({draw_x, draw_y + i}), col); }
         }
 
-        if (err2 < diff_x)
+        error -= d_y;
+        if (error < 0)
         {
-            err += diff_x;
-            point_a.y += sign_y;
+            y_coord += y_step;
+            error += d_x;
         }
-
-        DrawCircle(point_a, radius, true);
     }
 }
 
