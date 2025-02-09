@@ -593,7 +593,7 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
 
 auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
 {
-    return glm::clamp(val_to_clamp, {0, 0}, mCanvasDims);
+    return glm::clamp(val_to_clamp, {0, 0}, mCanvasDims - 1);
 }
 
 // Should call this func before VertexBufferControl::Update, since it needs
