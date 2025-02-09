@@ -29,6 +29,9 @@ using Pikzel::Vertex;
 
 namespace
 {
+constexpr int kWindowWidth = 1280;
+constexpr int kWindowHeight = 700;
+
 #ifndef NDEBUG
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
@@ -174,14 +177,206 @@ void UpdatePreviewVboIfNeeded(Pikzel::PreviewLayer& preview_layer,
                                preview_vertices.size() * sizeof(Vertex));
     }
 }
+
+void MainLoop(GLFWwindow* window)
+{
+    auto tool = std::make_shared<Pikzel::Tool>();
+    auto layers = std::make_shared<Pikzel::Layers>();
+    auto camera = std::make_shared<Pikzel::Camera>();
+    auto project = std::make_shared<Pikzel::Project>(layers, tool, camera);
+    Pikzel::UI ui_state{project, tool, window};
+
+    Pikzel::Events::PushToScrollCallback(
+        [camera](double x_offset, double y_offset)
+        { camera->ScrollCallback(x_offset, y_offset); });
+    Pikzel::Events::PushToCursorPosCallback(
+        [camera](double x_offset, double y_offset)
+        { camera->CursorPosCallback(x_offset, y_offset); });
+
+    Gla::FrameBuffer imgui_window_fb({kWindowWidth, kWindowHeight});
+    Gla::FrameBuffer::BindToDefaultFB();
+
+    Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
+                                      Gla::GLMinMagFilter::kNearest, true);
+    Gla::Texture2D eraser_tool_texture("assets/eraser_tool.png",
+                                       Gla::GLMinMagFilter::kNearest);
+    Gla::Texture2D color_picker_tool_texture("assets/color_picker_tool.png",
+                                             Gla::GLMinMagFilter::kNearest);
+    Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
+                                       Gla::GLMinMagFilter::kNearest);
+    Gla::Texture2D square_tool_texture("assets/square_tool.png");
+
+    std::array<unsigned int, Pikzel::kToolCount> tool_texture_ids = {
+        brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
+        color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
+        square_tool_texture.GetID(),
+    };
+
+    Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
+    Gla::Texture2D eye_closed_texture("assets/eye_closed.png");
+    Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
+    Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
+
+    ui_state.SetupToolTextures(tool_texture_ids);
+    ui_state.SetupLayerToolTextures(
+        eye_opened_texture.GetID(), eye_closed_texture.GetID(),
+        lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
+
+    Gla::VertexBufferLayout layout;
+    layout.Push<float>(2);
+    layout.Push<uint8_t>(4, GL_TRUE);
+    Gla::Shader shader("shader/vert_shader.vert", "shader/frag_shader.frag");
+    shader.Bind();
+
+    Gla::VertexArray vao_canvas;
+    Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicArray);
+    vao_canvas.AddBuffer(vbo_canvas, layout);
+    Gla::Group group_canvas(vao_canvas, shader);
+
+    Gla::VertexArray vao_bckg;
+    Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kStaticDraw);
+    vao_bckg.AddBuffer(vbo_bckg, layout);
+    Gla::Shader shader_bckg("shader/background_vert_shader.vert",
+                            "shader/background_frag_shader.frag");
+    shader_bckg.Bind();
+    Gla::Group group_bckg(vao_bckg, shader_bckg);
+    auto bckg_vertices_count = 0UZ;
+
+    Gla::VertexArray vao_preview;
+    Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicArray);
+    vao_preview.AddBuffer(vbo_preview, layout);
+    Gla::Shader shader_preview("shader/vert_shader.vert",
+                               "shader/frag_shader.frag");
+    Gla::Group group_preview(vao_preview, shader_preview);
+    std::vector<Vertex> preview_vertices;
+
+    std::optional<Pikzel::PreviewLayer> preview_layer;
+    std::optional<Pikzel::VertexBufferControl> vbo_control;
+    std::future<void> vbo_update_future;
+
+    while (glfwWindowShouldClose(window) == 0)
+    {
+        Pikzel::UI::NewFrame();
+
+        if (project->IsOpened())
+        {
+            ui_state.RenderUI(*layers, *camera);
+            ui_state.RenderDrawWindow(imgui_window_fb.GetTextureID(), "Draw");
+        }
+        else
+        {
+            ui_state.RenderNoProjectWindow();
+
+            if (project->IsOpened())
+            {
+                std::vector<Vertex> bckg_vertices;
+                layers->EmplaceBckgVertices(bckg_vertices,
+                                            project->GetCanvasDims());
+                bckg_vertices_count = bckg_vertices.size();
+                auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
+                vbo_bckg.UpdateSize(bckg_buff_size);
+                vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
+
+                std::size_t vertex_count =
+                    static_cast<std::size_t>(project->CanvasWidth() *
+                                             project->CanvasHeight()) *
+                    Pikzel::kVerticesPerPixel;
+
+                vbo_canvas.UpdateSize(vertex_count * sizeof(Vertex));
+
+                auto* buff_data = static_cast<Vertex*>(
+                    glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
+
+                vbo_control.emplace(layers, buff_data, vertex_count);
+                preview_layer.emplace(tool, camera, layers->GetCanvasDims());
+            }
+        }
+
+        Pikzel::UI::RenderAndEndFrame();
+
+        if (project->IsOpened() && ui_state.IsDrawWindowRendered())
+        {
+            assert(preview_layer.has_value());
+            assert(vbo_control.has_value());
+
+            auto proj_mat = GetProjMat(*camera, project->GetCanvasDims());
+            shader.Bind();
+            shader.SetUniformMat4f("u_ViewProjection", proj_mat);
+
+            ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
+            imgui_window_fb.Bind();
+            imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
+                                     static_cast<int>(draw_window_dims.y)});
+
+            Gla::Renderer::Clear();
+            glClearColor(0.8, 0.8, 0.8, 1.0);
+
+            group_bckg.Bind();
+            shader_bckg.SetUniformMat4f(
+                "u_ViewProjection",
+                GetProjMat(*camera, project->GetCanvasDims()));
+            Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
+
+            if (vbo_update_future.valid()) { vbo_update_future.wait(); }
+
+            group_canvas.Bind();
+            vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
+
+            Pikzel::VertexBufferControl::Unmap(vbo_canvas);
+            Gla::Renderer::DrawArrays(Gla::kTriangles,
+                                      vbo_control->GetVertexCount());
+            vbo_control->Map(vbo_canvas);
+
+            layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
+            vbo_update_future = std::async(
+                std::launch::async,
+                [&vbo_control]()
+                {
+                    vbo_control->Update(Pikzel::Layer::ShouldUpdateWholeVBO(),
+                                        Pikzel::Layer::GetDirtyPixels());
+                    Pikzel::Layer::ResetDirtyPixelData();
+                });
+
+            UpdatePreviewVboIfNeeded(preview_layer.value(), preview_vertices,
+                                     vbo_preview);
+            auto canvas_coord_behind_cursor =
+                layers->CanvasCoordsFromCursorPos();
+            if (canvas_coord_behind_cursor.has_value())
+            {
+                glm::mat4 trans_mat =
+                    GetTransMat(canvas_coord_behind_cursor.value(),
+                                layers->GetCanvasDims());
+                group_preview.Bind();
+                glm::mat4 result = proj_mat;
+
+                if (preview_layer->ShouldApplyCursorBasedTranslation())
+                {
+                    result *= trans_mat;
+                }
+
+                shader_preview.SetUniformMat4f("u_ViewProjection", result);
+                Gla::Renderer::DrawArrays(Gla::kTriangles,
+                                          preview_vertices.size());
+            }
+
+            Gla::FrameBuffer::BindToDefaultFB();
+
+            ui_state.Update();
+            preview_layer->Update();
+        }
+
+        Pikzel::Events::Update();
+
+        glfwSwapBuffers(window);
+
+        ui_state.SetShouldDoToolToTrue();
+    }
+}
 } // namespace
 
 auto main() -> int
 {
     if (glfwInit() == GLFW_FALSE) { return 1; }
-
-    constexpr int kWindowWidth = 1280;
-    constexpr int kWindowHeight = 700;
 
     GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Pikzel",
                                           nullptr, nullptr);
@@ -226,202 +421,7 @@ auto main() -> int
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-    auto tool = std::make_shared<Pikzel::Tool>();
-    auto layers = std::make_shared<Pikzel::Layers>();
-    auto camera = std::make_shared<Pikzel::Camera>();
-    auto project = std::make_shared<Pikzel::Project>(layers, tool, camera);
-    Pikzel::UI ui_state{project, tool, window};
-
-    Pikzel::Events::PushToScrollCallback(
-        [camera](double x_offset, double y_offset)
-        { camera->ScrollCallback(x_offset, y_offset); });
-    Pikzel::Events::PushToCursorPosCallback(
-        [camera](double x_offset, double y_offset)
-        { camera->CursorPosCallback(x_offset, y_offset); });
-
-    { // Made this block so all the OpenGL objects would get destroyed before
-      // calling glfwTerminate.
-        Gla::FrameBuffer imgui_window_fb({kWindowWidth, kWindowHeight});
-        Gla::FrameBuffer::BindToDefaultFB();
-
-        Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
-                                          Gla::GLMinMagFilter::kNearest, true);
-        Gla::Texture2D eraser_tool_texture("assets/eraser_tool.png",
-                                           Gla::GLMinMagFilter::kNearest);
-        Gla::Texture2D color_picker_tool_texture("assets/color_picker_tool.png",
-                                                 Gla::GLMinMagFilter::kNearest);
-        Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
-                                           Gla::GLMinMagFilter::kNearest);
-        Gla::Texture2D square_tool_texture("assets/square_tool.png");
-
-        std::array<unsigned int, Pikzel::kToolCount> tool_texture_ids = {
-            brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
-            color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
-            square_tool_texture.GetID(),
-        };
-
-        Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
-        Gla::Texture2D eye_closed_texture("assets/eye_closed.png");
-        Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
-        Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
-
-        ui_state.SetupToolTextures(tool_texture_ids);
-        ui_state.SetupLayerToolTextures(
-            eye_opened_texture.GetID(), eye_closed_texture.GetID(),
-            lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
-
-        Gla::VertexBufferLayout layout;
-        layout.Push<float>(2);
-        layout.Push<uint8_t>(4, GL_TRUE);
-        Gla::Shader shader("shader/vert_shader.vert",
-                           "shader/frag_shader.frag");
-        shader.Bind();
-
-        Gla::VertexArray vao_canvas;
-        Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicArray);
-        vao_canvas.AddBuffer(vbo_canvas, layout);
-        Gla::Group group_canvas(vao_canvas, shader);
-
-        Gla::VertexArray vao_bckg;
-        Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kStaticDraw);
-        vao_bckg.AddBuffer(vbo_bckg, layout);
-        Gla::Shader shader_bckg("shader/background_vert_shader.vert",
-                                "shader/background_frag_shader.frag");
-        shader_bckg.Bind();
-        Gla::Group group_bckg(vao_bckg, shader_bckg);
-        auto bckg_vertices_count = 0UZ;
-
-        Gla::VertexArray vao_preview;
-        Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicArray);
-        vao_preview.AddBuffer(vbo_preview, layout);
-        Gla::Shader shader_preview("shader/vert_shader.vert",
-                                   "shader/frag_shader.frag");
-        Gla::Group group_preview(vao_preview, shader_preview);
-        std::vector<Vertex> preview_vertices;
-
-        std::optional<Pikzel::PreviewLayer> preview_layer;
-        std::optional<Pikzel::VertexBufferControl> vbo_control;
-        std::future<void> vbo_update_future;
-        while (glfwWindowShouldClose(window) == 0)
-        {
-            Pikzel::UI::NewFrame();
-
-            if (project->IsOpened())
-            {
-                ui_state.RenderUI(*layers, *camera);
-                ui_state.RenderDrawWindow(imgui_window_fb.GetTextureID(),
-                                          "Draw");
-            }
-            else
-            {
-                ui_state.RenderNoProjectWindow();
-
-                if (project->IsOpened())
-                {
-                    std::vector<Vertex> bckg_vertices;
-                    layers->EmplaceBckgVertices(bckg_vertices,
-                                                project->GetCanvasDims());
-                    bckg_vertices_count = bckg_vertices.size();
-                    auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
-                    vbo_bckg.UpdateSize(bckg_buff_size);
-                    vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
-
-                    std::size_t vertex_count =
-                        static_cast<std::size_t>(project->CanvasWidth() *
-                                                 project->CanvasHeight()) *
-                        Pikzel::kVerticesPerPixel;
-
-                    vbo_canvas.UpdateSize(vertex_count * sizeof(Vertex));
-
-                    auto* buff_data = static_cast<Vertex*>(
-                        glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
-
-                    vbo_control.emplace(layers, buff_data, vertex_count);
-                    preview_layer.emplace(tool, camera,
-                                          layers->GetCanvasDims());
-                }
-            }
-
-            Pikzel::UI::RenderAndEndFrame();
-
-            if (project->IsOpened() && ui_state.IsDrawWindowRendered())
-            {
-                assert(preview_layer.has_value());
-                assert(vbo_control.has_value());
-
-                auto proj_mat = GetProjMat(*camera, project->GetCanvasDims());
-                shader.Bind();
-                shader.SetUniformMat4f("u_ViewProjection", proj_mat);
-
-                ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
-                imgui_window_fb.Bind();
-                imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
-                                         static_cast<int>(draw_window_dims.y)});
-
-                Gla::Renderer::Clear();
-                glClearColor(0.8, 0.8, 0.8, 1.0);
-
-                group_bckg.Bind();
-                shader_bckg.SetUniformMat4f(
-                    "u_ViewProjection",
-                    GetProjMat(*camera, project->GetCanvasDims()));
-                Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
-
-                if (vbo_update_future.valid()) { vbo_update_future.wait(); }
-
-                group_canvas.Bind();
-                vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
-                Pikzel::VertexBufferControl::Unmap(vbo_canvas);
-                Gla::Renderer::DrawArrays(Gla::kTriangles,
-                                          vbo_control->GetVertexCount());
-                vbo_control->Map(vbo_canvas);
-
-                layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
-                vbo_update_future =
-                    std::async(std::launch::async,
-                               [&vbo_control]()
-                               {
-                                   vbo_control->Update(
-                                       Pikzel::Layer::ShouldUpdateWholeVBO(),
-                                       Pikzel::Layer::GetDirtyPixels());
-                                   Pikzel::Layer::ResetDirtyPixelData();
-                               });
-
-                UpdatePreviewVboIfNeeded(preview_layer.value(),
-                                         preview_vertices, vbo_preview);
-                auto canvas_coord_behind_cursor =
-                    layers->CanvasCoordsFromCursorPos();
-                if (canvas_coord_behind_cursor.has_value())
-                {
-                    glm::mat4 trans_mat =
-                        GetTransMat(canvas_coord_behind_cursor.value(),
-                                    layers->GetCanvasDims());
-                    group_preview.Bind();
-                    glm::mat4 result = proj_mat;
-
-                    if (preview_layer->ShouldApplyCursorBasedTranslation())
-                    {
-                        result *= trans_mat;
-                    }
-
-                    shader_preview.SetUniformMat4f("u_ViewProjection", result);
-                    Gla::Renderer::DrawArrays(Gla::kTriangles,
-                                              preview_vertices.size());
-                }
-
-                Gla::FrameBuffer::BindToDefaultFB();
-
-                ui_state.Update();
-                preview_layer->Update();
-            }
-
-            Pikzel::Events::Update();
-
-            glfwSwapBuffers(window);
-
-            ui_state.SetShouldDoToolToTrue();
-        }
-    }
+    MainLoop(window);
 
     glfwDestroyWindow(window);
     glfwTerminate();
