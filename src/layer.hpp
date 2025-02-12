@@ -34,7 +34,7 @@ struct Color
 struct Vertex
 {
     float pos_x{}, pos_y{};
-    Color color{0, 0, 0, 0};
+    Color color{.r = 0, .g = 0, .b = 0, .a = 0};
 };
 
 using CanvasData = std::vector<std::vector<Color>>;
@@ -57,30 +57,27 @@ class Layer
                          bool use_color_alpha = false) const;
     void Update();
 
-    inline void SwitchVisibilityState() { mVisible = !mVisible; }
-    inline void SwitchLockState() { mLocked = !mLocked; }
+    void SwitchVisibilityState() { mVisible = !mVisible; }
+    void SwitchLockState() { mLocked = !mLocked; }
 
-    [[nodiscard]] inline auto IsVisible() const -> bool { return mVisible; }
-    [[nodiscard]] inline auto IsLocked() const -> bool { return mLocked; }
-    [[nodiscard]] inline auto GetOpacity() const -> int { return mOpacity; }
-    [[nodiscard]] inline auto GetName() const -> const std::string&
+    [[nodiscard]] auto IsVisible() const -> bool { return mVisible; }
+    [[nodiscard]] auto IsLocked() const -> bool { return mLocked; }
+    [[nodiscard]] auto GetOpacity() const -> int { return mOpacity; }
+    [[nodiscard]] auto GetName() const -> const std::string&
     {
         return mLayerName;
     }
-    [[nodiscard]] inline auto GetPixel(Vec2Int coords) const -> Color
+    [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
     {
         std::lock_guard<std::mutex> lock{sMutex};
         return mCanvas[coords.y][coords.x];
     }
-    [[nodiscard]] inline auto GetCanvas() const -> const CanvasData&
+    [[nodiscard]] auto GetCanvas() const -> const CanvasData&
     {
         return mCanvas;
     }
-    [[nodiscard]] inline auto GetCanvasDims() const -> Vec2Int
-    {
-        return mCanvasDims;
-    }
-    [[nodiscard]] inline auto IsPreviewLayer() const -> bool
+    [[nodiscard]] auto GetCanvasDims() const -> Vec2Int { return mCanvasDims; }
+    [[nodiscard]] auto IsPreviewLayer() const -> bool
     {
         return !mIsCanvasLayer;
     }
@@ -92,21 +89,18 @@ class Layer
     auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
     static void ResetDirtyPixelData();
     static void SetUpdateWholeVBOToTrue() { sShouldUpdateWholeVBO = true; }
-    static inline auto ShouldUpdateWholeVBO() -> bool
-    {
-        return sShouldUpdateWholeVBO;
-    }
-    static inline auto GetDirtyPixels() -> std::vector<Vec2Int>&
+    static auto ShouldUpdateWholeVBO() -> bool { return sShouldUpdateWholeVBO; }
+    static auto GetDirtyPixels() -> std::vector<Vec2Int>&
     {
         static std::vector<Vec2Int> dirty_pixels;
         return dirty_pixels;
     }
 
-    static inline void ResetConstructCounter() { sConstructCounter = 1; }
+    static void ResetConstructCounter() { sConstructCounter = 1; }
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color.
     void DrawCircle(Vec2Int center, int radius, bool fill,
-                    Color delete_color = {0, 0, 0, 0});
+                    Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0});
     void Clear();
 
   private:
@@ -186,49 +180,45 @@ class Layers
     void UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
                        std::shared_ptr<Camera> camera);
 
-    [[nodiscard]] inline auto GetLayerCount() const -> std::size_t
+    [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
         assert(!GetLayers().empty());
         return GetLayers().size();
     }
-    [[nodiscard]] inline auto GetLayers() const -> const std::list<Layer>&
+    [[nodiscard]] auto GetLayers() const -> const std::list<Layer>&
     {
         return mHistory[mCurrentCapture].layers;
     }
-    [[nodiscard]] inline auto
-    CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
+    [[nodiscard]] auto CanvasCoordsFromCursorPos() const
+        -> std::optional<Vec2Int>
     {
         return GetLayers().cbegin()->CanvasCoordsFromCursorPos();
     }
-    [[nodiscard]] inline auto GetCurrentLayerIndex() const -> std::size_t
+    [[nodiscard]] auto GetCurrentLayerIndex() const -> std::size_t
     {
         return mCurrentLayerIndex;
     }
-    inline void SetCanvasDims(Vec2Int canvas_dims)
-    {
-        mCanvasDims = canvas_dims;
-    }
-    inline void InitHistory(std::shared_ptr<Camera> camera,
-                            std::shared_ptr<Tool> tool)
+    void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
+    void InitHistory(std::shared_ptr<Camera> camera, std::shared_ptr<Tool> tool)
     {
         mHistory.clear();
         mHistory.emplace_back(std::move(tool), std::move(camera), mCanvasDims,
                               0);
         mCurrentCapture = 0;
     }
-    inline void MarkForUndo() { mShouldUndo = true; }
-    inline void MarkForRedo() { mShouldRedo = true; }
-    inline void MarkToAddLayer() { mShouldAddLayer = true; }
+    void MarkForUndo() { mShouldUndo = true; }
+    void MarkForRedo() { mShouldRedo = true; }
+    void MarkToAddLayer() { mShouldAddLayer = true; }
 
   private:
-    inline auto GetCapture() -> Capture&
+    auto GetCapture() -> Capture&
     {
         assert(mCurrentCapture < mHistory.size());
         return mHistory[mCurrentCapture];
     }
-    inline auto GetLayers() -> std::list<Layer>& { return GetCapture().layers; }
+    auto GetLayers() -> std::list<Layer>& { return GetCapture().layers; }
     /* inline auto GetHistory() -> std::deque<Capture>& { return mHistory; } */
-    inline void MarkHistoryForUpdate() { mShouldUpdateHistory = true; }
+    void MarkHistoryForUpdate() { mShouldUpdateHistory = true; }
 
     static constexpr int kMaxHistoryLenght = 30;
 

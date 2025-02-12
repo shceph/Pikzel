@@ -12,17 +12,19 @@ namespace Pikzel
 class Events
 {
   public:
-    enum MouseButtons
+    enum class MouseButtons : std::uint8_t
     {
         kButtonLeft = GLFW_MOUSE_BUTTON_LEFT,
         kButtonRight = GLFW_MOUSE_BUTTON_RIGHT,
         kButtonMiddle = GLFW_MOUSE_BUTTON_MIDDLE,
-        kMouseButtonCount
+        kMouseButtonCount = 3
     };
 
     using CallbackType = std::function<void(double, double)>;
     using TimePointType = std::chrono::time_point<std::chrono::steady_clock>;
-    using ArrayOfTimePoints = std::array<TimePointType, kMouseButtonCount>;
+    using ArrayOfTimePoints =
+        std::array<TimePointType,
+                   static_cast<int>(MouseButtons::kMouseButtonCount)>;
 
     // Just int for now; use GLFW macros
     using KeyboardKey = int;

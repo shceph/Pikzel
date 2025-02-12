@@ -58,24 +58,30 @@ void VertexBufferControl::Update(bool should_update_all,
                     const auto color = layer.GetPixel({j, i});
                     const auto x_flt = static_cast<float>(j);
                     const auto y_flt = static_cast<float>(i);
-                    const auto index = offset + static_cast<std::size_t>(
-                                                    i * canvas_dims.x + j) *
-                                                    kVerticesPerPixel;
+                    const auto index =
+                        offset +
+                        (static_cast<std::size_t>((i * canvas_dims.x) + j) *
+                         kVerticesPerPixel);
                     // first triangle
                     // upper left corner
-                    mBufferData[index] = Vertex{x_flt, y_flt, color};
+                    mBufferData[index] =
+                        Vertex{.pos_x = x_flt, .pos_y = y_flt, .color = color};
                     // upper right corner
-                    mBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
+                    mBufferData[index + 1] = Vertex{
+                        .pos_x = x_flt + 1, .pos_y = y_flt, .color = color};
                     // bottom left corner
-                    mBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
+                    mBufferData[index + 2] = Vertex{
+                        .pos_x = x_flt, .pos_y = y_flt + 1, .color = color};
                     // second triangle
                     // upper right corner
-                    mBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
+                    mBufferData[index + 3] = Vertex{
+                        .pos_x = x_flt + 1, .pos_y = y_flt, .color = color};
                     // bottom right corner
-                    mBufferData[index + 4] =
-                        Vertex{x_flt + 1, y_flt + 1, color};
+                    mBufferData[index + 4] = Vertex{
+                        .pos_x = x_flt + 1, .pos_y = y_flt + 1, .color = color};
                     // bottom left corner
-                    mBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+                    mBufferData[index + 5] = Vertex{
+                        .pos_x = x_flt, .pos_y = y_flt + 1, .color = color};
                 }
             }
 
@@ -97,27 +103,33 @@ void VertexBufferControl::Update(bool should_update_all,
     for (const auto px_coords : dirty_pixels)
     {
         const auto index =
-            offset + static_cast<std::size_t>(px_coords.y * canvas_dims.x +
-                                              px_coords.x) *
-                         kVerticesPerPixel;
+            offset + (static_cast<std::size_t>((px_coords.y * canvas_dims.x) +
+                                               px_coords.x) *
+                      kVerticesPerPixel);
         const auto color = layer.GetPixel(px_coords);
         const auto x_flt = static_cast<float>(px_coords.x);
         const auto y_flt = static_cast<float>(px_coords.y);
 
         // first triangle
         // upper left corner
-        mBufferData[index] = Vertex{x_flt, y_flt, color};
+        mBufferData[index] =
+            Vertex{.pos_x = x_flt, .pos_y = y_flt, .color = color};
         // upper right corner
-        mBufferData[index + 1] = Vertex{x_flt + 1, y_flt, color};
+        mBufferData[index + 1] =
+            Vertex{.pos_x = x_flt + 1, .pos_y = y_flt, .color = color};
         // bottom left corner
-        mBufferData[index + 2] = Vertex{x_flt, y_flt + 1, color};
+        mBufferData[index + 2] =
+            Vertex{.pos_x = x_flt, .pos_y = y_flt + 1, .color = color};
         // second triangle
         // upper right corner
-        mBufferData[index + 3] = Vertex{x_flt + 1, y_flt, color};
+        mBufferData[index + 3] =
+            Vertex{.pos_x = x_flt + 1, .pos_y = y_flt, .color = color};
         // bottom right corner
-        mBufferData[index + 4] = Vertex{x_flt + 1, y_flt + 1, color};
+        mBufferData[index + 4] =
+            Vertex{.pos_x = x_flt + 1, .pos_y = y_flt + 1, .color = color};
         // bottom left corner
-        mBufferData[index + 5] = Vertex{x_flt, y_flt + 1, color};
+        mBufferData[index + 5] =
+            Vertex{.pos_x = x_flt, .pos_y = y_flt + 1, .color = color};
     }
 }
 

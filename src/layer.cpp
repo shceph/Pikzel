@@ -39,10 +39,10 @@ auto Color::operator==(const ImVec4& other) const -> bool
 {
     constexpr float kTolerance = 0.0025F;
 
-    return std::abs(static_cast<float>(r) / 0xff - other.x) <= kTolerance &&
-           std::abs(static_cast<float>(g) / 0xff - other.y) <= kTolerance &&
-           std::abs(static_cast<float>(b) / 0xff - other.z) <= kTolerance &&
-           std::abs(static_cast<float>(a) / 0xff - other.w) <= kTolerance;
+    return std::abs((static_cast<float>(r) / 0xff) - other.x) <= kTolerance &&
+           std::abs((static_cast<float>(g) / 0xff) - other.y) <= kTolerance &&
+           std::abs((static_cast<float>(b) / 0xff) - other.z) <= kTolerance &&
+           std::abs((static_cast<float>(a) / 0xff) - other.w) <= kTolerance;
 }
 
 auto Color::BlendColor(Color color1, Color color2) -> Color
@@ -63,9 +63,9 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
 
     float alpha1 = col1.w;
     float alpha2 = col2.w;
-    float out_alpha = alpha1 + alpha2 * (1.0F - alpha1);
+    float out_alpha = alpha1 + (alpha2 * (1.0F - alpha1));
 
-    if (out_alpha == 0) { return {0, 0, 0, 0}; }
+    if (out_alpha == 0) { return {.r = 0, .g = 0, .b = 0, .a = 0}; }
 
     float out_r =
         (col1.x * alpha1 + col2.x * alpha2 * (1.0F - alpha1)) / out_alpha;
@@ -79,10 +79,10 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
 
 auto Color::FromImVec4(const ImVec4 color) -> Color
 {
-    return {static_cast<uint8_t>(color.x * 0xff),
-            static_cast<uint8_t>(color.y * 0xff),
-            static_cast<uint8_t>(color.z * 0xff),
-            static_cast<uint8_t>(color.w * 0xff)};
+    return {.r = static_cast<uint8_t>(color.x * 0xff),
+            .g = static_cast<uint8_t>(color.y * 0xff),
+            .b = static_cast<uint8_t>(color.z * 0xff),
+            .a = static_cast<uint8_t>(color.w * 0xff)};
 }
 
 Layer::Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
@@ -170,7 +170,10 @@ void Layer::Update()
 
 auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
 {
-    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return false; }
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
+    {
+        return false;
+    }
     auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return false; }
 
@@ -183,7 +186,7 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
     {
         if (mTool->GetToolType() == ToolType::kEraser)
         {
-            DrawPixel(canv_coord.value(), {0, 0, 0, 0});
+            DrawPixel(canv_coord.value(), {.r = 0, .g = 0, .b = 0, .a = 0});
         }
         else { DrawPixel(canv_coord.value()); }
     }
@@ -200,7 +203,8 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
         if (mTool->GetToolType() == ToolType::kEraser)
         {
             DrawLine(canv_coord.value(), position_last_drawn,
-                     mTool->GetBrushRadius() * 2, Color{0, 0, 0, 0});
+                     mTool->GetBrushRadius() * 2,
+                     Color{.r = 0, .g = 0, .b = 0, .a = 0});
         }
         else
         {
@@ -217,7 +221,10 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
 
 void Layer::HandleColorPicker()
 {
-    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return; }
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
+    {
+        return;
+    }
     auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return; }
 
@@ -232,7 +239,10 @@ void Layer::HandleColorPicker()
 
 auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory
 {
-    if (!Events::IsMouseButtonPressed(Events::kButtonLeft)) { return false; }
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
+    {
+        return false;
+    }
     auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return false; }
 
@@ -246,7 +256,7 @@ auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
     auto canv_coord = CanvasCoordsFromCursorPos();
     if (!canv_coord.has_value()) { return false; }
     bool left_button_pressed =
-        Events::IsMouseButtonPressed(Events::kButtonLeft);
+        Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
 
     /* static bool shape_began = false; */
     /* static Vec2Int shape_begin_coords{0, 0}; */
@@ -356,7 +366,8 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
          x_coord < std::min(mCanvasDims.x, center.x + radius); x_coord++)
     {
         int x_relative = x_coord - center.x;
-        double y1_coord = std::sqrt(radius * radius - x_relative * x_relative);
+        double y1_coord =
+            std::sqrt((radius * radius) - (x_relative * x_relative));
         double y2_coord = -y1_coord;
         y1_coord += center.y;
         y2_coord += center.y;
@@ -387,7 +398,7 @@ void Layer::Clear()
     {
         for (int j = 0; j < mCanvasDims.x; j++)
         {
-            DrawPixel({j, i}, {0, 0, 0, 0});
+            DrawPixel({j, i}, {.r = 0, .g = 0, .b = 0, .a = 0});
         }
     }
 }
@@ -670,8 +681,9 @@ void Layers::EmplaceVertices(std::vector<Vertex>& vertices) const
 void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices,
                                  std::optional<Vec2Int> custom_dims) const
 {
-    constexpr std::array<Color, 2> kBgColors = {Color{131, 131, 131, 255},
-                                                Color{201, 201, 201, 255}};
+    constexpr std::array<Color, 2> kBgColors = {
+        Color{.r = 131, .g = 131, .b = 131, .a = 255},
+        Color{.r = 201, .g = 201, .b = 201, .a = 255}};
 
     if (!custom_dims.has_value()) { custom_dims.emplace(GetCanvasDims()); }
     assert(custom_dims.has_value());
@@ -746,10 +758,12 @@ auto Layers::GetDisplayedCanvas() -> CanvasData
                 Color pixel = layer_traversed.GetPixel({j, i});
 
                 Color dst_color = {
-                    pixel.r, pixel.g, pixel.b,
-                    pixel.a == 0
-                        ? pixel.a
-                        : static_cast<uint8_t>(layer_traversed.mOpacity)};
+                    .r = pixel.r,
+                    .g = pixel.g,
+                    .b = pixel.b,
+                    .a = pixel.a == 0
+                             ? pixel.a
+                             : static_cast<uint8_t>(layer_traversed.mOpacity)};
 
                 displayed_canvas[i][j] =
                     Color::BlendColor(dst_color, displayed_canvas[i][j]);

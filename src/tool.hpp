@@ -1,10 +1,11 @@
 #pragma once
 
+#include <cstdint>
 #include <imgui.h>
 
 namespace Pikzel
 {
-enum ToolType
+enum class ToolType : std::uint8_t
 {
     kBrush,
     kEraser,
@@ -29,31 +30,28 @@ class Tool
     [[nodiscard]] auto GetColorRef() const -> const ImVec4&;
     [[nodiscard]] auto GetColor() const -> ImVec4;
 
-    [[nodiscard]] inline auto GetColor1() const -> ImVec4 { return mColor1; }
-    [[nodiscard]] inline auto GetColor2() const -> ImVec4 { return mColor2; }
+    [[nodiscard]] auto GetColor1() const -> ImVec4 { return mColor1; }
+    [[nodiscard]] auto GetColor2() const -> ImVec4 { return mColor2; }
 
-    inline void SetColor1(ImVec4 color) { mColor1 = color; }
-    inline void SetColor2(ImVec4 color) { mColor2 = color; }
+    void SetColor1(ImVec4 color) { mColor1 = color; }
+    void SetColor2(ImVec4 color) { mColor2 = color; }
 
-    inline void SetCurrentColorToColor1() { mSelectedColorSlot = kColorSlot1; }
-    inline void SetCurrentColorToColor2() { mSelectedColorSlot = kColorSlot2; }
+    void SetCurrentColorToColor1() { mSelectedColorSlot = kColorSlot1; }
+    void SetCurrentColorToColor2() { mSelectedColorSlot = kColorSlot2; }
 
-    [[nodiscard]] inline auto GetSelectedColorSlot() const -> int
+    [[nodiscard]] auto GetSelectedColorSlot() const -> int
     {
         return mSelectedColorSlot;
     }
 
-    [[nodiscard]] inline auto GetToolType() const -> ToolType
+    [[nodiscard]] auto GetToolType() const -> ToolType
     {
         return mCurrentToolType;
     }
-    inline void SetToolType(ToolType type) { mCurrentToolType = type; }
+    void SetToolType(ToolType type) { mCurrentToolType = type; }
 
-    [[nodiscard]] inline auto GetBrushRadius() const -> int
-    {
-        return mBrushRadius;
-    }
-    inline void SetBrushRadius(int radius) { mBrushRadius = radius; }
+    [[nodiscard]] auto GetBrushRadius() const -> int { return mBrushRadius; }
+    void SetBrushRadius(int radius) { mBrushRadius = radius; }
 
     constexpr static int kColorSlot1 = 1, kColorSlot2 = 2;
 
@@ -65,7 +63,7 @@ class Tool
     ImVec4 mColor1;
     ImVec4 mColor2;
 
-    ToolType mCurrentToolType = kBrush;
+    ToolType mCurrentToolType = ToolType::kBrush;
     int mBrushRadius = 1;
     int mSelectedColorSlot = kColorSlot1;
 };

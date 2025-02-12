@@ -56,18 +56,20 @@ auto Events::IsKeyboardKeyPressed(KeyboardKey key) -> bool
 
 auto Events::IsMouseButtonPressed(MouseButtons button) -> bool
 {
-    assert(button != kMouseButtonCount);
-    return glfwGetMouseButton(sWindow, button) == GLFW_PRESS;
+    assert(button != MouseButtons::kMouseButtonCount);
+    return glfwGetMouseButton(sWindow, static_cast<int>(button)) == GLFW_PRESS;
 }
 
 auto Events::IsMouseButtonHeld(MouseButtons button) -> bool
 {
     constexpr auto kDelay = std::chrono::milliseconds(25);
-    assert(button != kMouseButtonCount);
+    assert(button != MouseButtons::kMouseButtonCount);
     auto& last_time_clicked = GetLastTimeClickedArrayForEachButton();
 
-    return glfwGetMouseButton(sWindow, button) == GLFW_PRESS &&
-           std::chrono::steady_clock::now() - last_time_clicked.at(button) <=
+    return glfwGetMouseButton(sWindow, static_cast<int>(button)) ==
+               GLFW_PRESS &&
+           std::chrono::steady_clock::now() -
+                   last_time_clicked.at(static_cast<int>(button)) <=
                kDelay;
 }
 

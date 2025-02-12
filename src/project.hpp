@@ -26,19 +26,10 @@ class Project
     [[nodiscard]] auto SaveAsImage(int magnify_factor,
                                    const std::string& save_dest) const -> bool;
 
-    [[nodiscard]] inline auto IsOpened() const -> bool
-    {
-        return mProjectOpened;
-    }
-    [[nodiscard]] inline auto CanvasHeight() const -> int
-    {
-        return mCanvasHeight;
-    }
-    [[nodiscard]] inline auto CanvasWidth() const -> int
-    {
-        return mCanvasWidth;
-    }
-    [[nodiscard]] inline auto GetCanvasDims() const -> Vec2Int
+    [[nodiscard]] auto IsOpened() const -> bool { return mProjectOpened; }
+    [[nodiscard]] auto CanvasHeight() const -> int { return mCanvasHeight; }
+    [[nodiscard]] auto CanvasWidth() const -> int { return mCanvasWidth; }
+    [[nodiscard]] auto GetCanvasDims() const -> Vec2Int
     {
         return {mCanvasWidth, mCanvasHeight};
     }

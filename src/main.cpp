@@ -130,8 +130,8 @@ void GlfwError(int err_id, const char* message)
 }
 #endif
 
-auto GetProjMat(Pikzel::Camera& camera,
-                Pikzel::Vec2Int canvas_dims) -> glm::mat4
+auto GetProjMat(Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
+    -> glm::mat4
 {
     const auto width = static_cast<float>(canvas_dims.x);
     const auto height = static_cast<float>(canvas_dims.y);
@@ -140,11 +140,11 @@ auto GetProjMat(Pikzel::Camera& camera,
     auto zoom_half = static_cast<float>(camera.GetZoomValue()) / 2;
 
     glm::mat4 proj =
-        glm::ortho(zoom_half * width + camera_top_left.x,
-                   width - zoom_half * width + camera_top_left.x,
+        glm::ortho((zoom_half * width) + camera_top_left.x,
+                   width - (zoom_half * width) + camera_top_left.x,
 
-                   zoom_half * height + camera_top_left.y,
-                   height - zoom_half * height + camera_top_left.y);
+                   (zoom_half * height) + camera_top_left.y,
+                   height - (zoom_half * height) + camera_top_left.y);
 
     return proj;
 }
@@ -193,7 +193,8 @@ void MainLoop(GLFWwindow* window)
         [camera](double x_offset, double y_offset)
         { camera->CursorPosCallback(x_offset, y_offset); });
 
-    Gla::FrameBuffer imgui_window_fb({kWindowWidth, kWindowHeight});
+    Gla::FrameBuffer imgui_window_fb(
+        {.width = kWindowWidth, .height = kWindowHeight});
     Gla::FrameBuffer::BindToDefaultFB();
 
     Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
@@ -305,8 +306,9 @@ void MainLoop(GLFWwindow* window)
 
             ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
             imgui_window_fb.Bind();
-            imgui_window_fb.Rescale({static_cast<int>(draw_window_dims.x),
-                                     static_cast<int>(draw_window_dims.y)});
+            imgui_window_fb.Rescale(
+                {.width = static_cast<int>(draw_window_dims.x),
+                 .height = static_cast<int>(draw_window_dims.y)});
 
             Gla::Renderer::Clear();
             glClearColor(0.8, 0.8, 0.8, 1.0);

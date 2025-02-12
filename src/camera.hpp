@@ -24,16 +24,13 @@ class Camera
     void CursorPosCallback(double x_pos, double y_pos);
     // The zoom value times width/height shows how much will be taken from
     // the width and the height of the canvas.
-    [[nodiscard]] inline auto GetZoomValue() const -> double
-    {
-        return mZoomValue;
-    }
-    [[nodiscard]] inline auto GetCenter() -> glm::vec2 { return mCenter; }
-    [[nodiscard]] inline auto GetCenterAsVec2Int() const -> Vec2Int
+    [[nodiscard]] auto GetZoomValue() const -> double { return mZoomValue; }
+    [[nodiscard]] auto GetCenter() -> glm::vec2 { return mCenter; }
+    [[nodiscard]] auto GetCenterAsVec2Int() const -> Vec2Int
     {
         return Vec2Int{mCenter};
     }
-    inline void SetCanvasDims(Vec2Int dims) { mCanvasDims = dims; }
+    void SetCanvasDims(Vec2Int dims) { mCanvasDims = dims; }
 
   private:
     glm::vec2 mCenter;

@@ -151,21 +151,21 @@ auto Project::SaveAsImage(int magnify_factor,
                 // NOLINTNEXTLINE(readability-identifier-length)
                 for (int l = 0; l < magnify_factor; l++)
                 {
-                    image_data[(i * magnify_factor + k) * arr_width +
-                               j * magnify_factor * kChannelCount +
-                               l * kChannelCount + 0] =
+                    image_data[((i * magnify_factor + k) * arr_width) +
+                               (j * magnify_factor * kChannelCount) +
+                               (l * kChannelCount) + 0] =
                         canvas_displayed[i][j].r;
-                    image_data[(i * magnify_factor + k) * arr_width +
-                               j * magnify_factor * kChannelCount +
-                               l * kChannelCount + 1] =
+                    image_data[((i * magnify_factor + k) * arr_width) +
+                               (j * magnify_factor * kChannelCount) +
+                               (l * kChannelCount) + 1] =
                         canvas_displayed[i][j].g;
-                    image_data[(i * magnify_factor + k) * arr_width +
-                               j * magnify_factor * kChannelCount +
-                               l * kChannelCount + 2] =
+                    image_data[((i * magnify_factor + k) * arr_width) +
+                               (j * magnify_factor * kChannelCount) +
+                               (l * kChannelCount) + 2] =
                         canvas_displayed[i][j].b;
-                    image_data[(i * magnify_factor + k) * arr_width +
-                               j * magnify_factor * kChannelCount +
-                               l * kChannelCount + 3] =
+                    image_data[((i * magnify_factor + k) * arr_width) +
+                               (j * magnify_factor * kChannelCount) +
+                               (l * kChannelCount) + 3] =
                         canvas_displayed[i][j].a;
                 }
             }

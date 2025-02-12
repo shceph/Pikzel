@@ -38,27 +38,27 @@ class UI
         return mDrawWindowRendered;
     }
 
-    [[nodiscard]] inline auto GetDrawWinDimensions() const -> ImVec2
+    [[nodiscard]] auto GetDrawWinDimensions() const -> ImVec2
     {
         return mDrawWinDimensions;
     }
 
-    inline static auto GetCanvasUpperleftCoords() -> ImVec2
+    static auto GetCanvasUpperleftCoords() -> ImVec2
     {
         return GetCanvasUpperleftCoordsRef();
     }
-    inline static auto GetCanvasBottomRightCoords() -> ImVec2
+    static auto GetCanvasBottomRightCoords() -> ImVec2
     {
         return GetCanvasBottomRightCoordsRef();
     }
 
-    inline void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
+    void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
 
-    [[nodiscard]] static inline auto GetWindowPointer() -> GLFWwindow*
+    [[nodiscard]] static auto GetWindowPointer() -> GLFWwindow*
     {
         return sWindow;
     }
-    inline void SetShouldDoToolToTrue() { mShouldDoTool = true; }
+    void SetShouldDoToolToTrue() { mShouldDoTool = true; }
 
   private:
     void RenderMenuBar(Layers& layers, Camera& camera);
@@ -77,19 +77,19 @@ class UI
         ImVec4 outline_color = ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab));
     static void EndOutline();
 
-    inline static auto GetCanvasUpperleftCoordsRef() -> ImVec2&
+    static auto GetCanvasUpperleftCoordsRef() -> ImVec2&
     {
         static ImVec2 can_upper_left;
         return can_upper_left;
     }
 
-    inline static auto GetCanvasBottomRightCoordsRef() -> ImVec2&
+    static auto GetCanvasBottomRightCoordsRef() -> ImVec2&
     {
         static ImVec2 can_bottom_right;
         return can_bottom_right;
     }
 
-    inline auto GetSelectedItemOutlineColor() -> ImVec4&
+    auto GetSelectedItemOutlineColor() -> ImVec4&
     {
         return mSelectedItemOutlineColor;
     }

@@ -148,8 +148,8 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
         // canvas_height / canvas_width
 
         float val_to_take =
-            (static_cast<float>(mProject->CanvasHeight()) * window_width) /
-                static_cast<float>(mProject->CanvasWidth()) -
+            ((static_cast<float>(mProject->CanvasHeight()) * window_width) /
+             static_cast<float>(mProject->CanvasWidth())) -
             window_height;
 
         // Taking a half from the top and adding a half to the bottom centers
@@ -163,8 +163,8 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
         // window_height = canvas_width / canvas_height
 
         float val_to_take =
-            (static_cast<float>(mProject->CanvasWidth()) * window_height) /
-                static_cast<float>(mProject->CanvasHeight()) -
+            ((static_cast<float>(mProject->CanvasWidth()) * window_height) /
+             static_cast<float>(mProject->CanvasHeight())) -
             window_width;
 
         upper_left.x -= val_to_take / 2;

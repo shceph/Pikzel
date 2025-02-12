@@ -30,14 +30,14 @@ class VertexBufferControl
     void UpdateSizeIfNeeded(Gla::VertexBuffer& vbo);
 
     static void PushDirtyPixel(Vec2Int dirty_pixel);
-    static inline void SetUpdateAllToTrue() { sUpdateAll = true; }
+    static void SetUpdateAllToTrue() { sUpdateAll = true; }
 
-    [[nodiscard]] inline auto GetVertexCount() const -> std::size_t
+    [[nodiscard]] auto GetVertexCount() const -> std::size_t
     {
         return mVertexCount;
     }
-    [[nodiscard]] static inline auto
-    GetNeededVBOSizeForLayer(Vec2Int dims) -> std::size_t
+    [[nodiscard]] static auto GetNeededVBOSizeForLayer(Vec2Int dims)
+        -> std::size_t
     {
         return static_cast<std::size_t>(dims.x * dims.y) * kVerticesPerPixel *
                sizeof(Vertex);
