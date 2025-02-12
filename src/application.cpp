@@ -466,48 +466,58 @@ void UI::RenderToolWindow()
 
     ToolType tool_type = mTool->GetToolType();
 
-    if (tool_type == kBrush) { BeginOutline(); }
-    if (ImGui::ImageButton(mToolTextures[kBrush], {20.0F, 20.0F}))
+    if (tool_type == ToolType::kBrush) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            mToolTextures[static_cast<std::size_t>(ToolType::kBrush)],
+            {20.0F, 20.0F}))
     {
-        mTool->SetToolType(kBrush);
+        mTool->SetToolType(ToolType::kBrush);
     }
-    if (tool_type == kBrush) { EndOutline(); }
+    if (tool_type == ToolType::kBrush) { EndOutline(); }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == kEraser) { BeginOutline(); }
-    if (ImGui::ImageButton(mToolTextures[kEraser], {20.0F, 20.0F}))
+    if (tool_type == ToolType::kEraser) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            mToolTextures[static_cast<std::size_t>(ToolType::kEraser)],
+            {20.0F, 20.0F}))
     {
-        mTool->SetToolType(kEraser);
+        mTool->SetToolType(ToolType::kEraser);
     }
-    if (tool_type == kEraser) { EndOutline(); }
+    if (tool_type == ToolType::kEraser) { EndOutline(); }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == kColorPicker) { BeginOutline(); }
-    if (ImGui::ImageButton(mToolTextures[kColorPicker], {20.0F, 20.0F}))
+    if (tool_type == ToolType::kColorPicker) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            mToolTextures[static_cast<std::size_t>(ToolType::kColorPicker)],
+            {20.0F, 20.0F}))
     {
-        mTool->SetToolType(kColorPicker);
+        mTool->SetToolType(ToolType::kColorPicker);
     }
-    if (tool_type == kColorPicker) { EndOutline(); }
+    if (tool_type == ToolType::kColorPicker) { EndOutline(); }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == kBucket) { BeginOutline(); }
-    if (ImGui::ImageButton(mToolTextures[kBucket], {20.0F, 20.0F}))
+    if (tool_type == ToolType::kBucket) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            mToolTextures[static_cast<std::size_t>(ToolType::kBucket)],
+            {20.0F, 20.0F}))
     {
-        mTool->SetToolType(kBucket);
+        mTool->SetToolType(ToolType::kBucket);
     }
-    if (tool_type == kBucket) { EndOutline(); }
+    if (tool_type == ToolType::kBucket) { EndOutline(); }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == kRectShape) { BeginOutline(); }
-    if (ImGui::ImageButton(mToolTextures[kRectShape], {20.0F, 20.0F}))
+    if (tool_type == ToolType::kRectShape) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            mToolTextures[static_cast<std::size_t>(ToolType::kRectShape)],
+            {20.0F, 20.0F}))
     {
-        mTool->SetToolType(kRectShape);
+        mTool->SetToolType(ToolType::kRectShape);
     }
-    if (tool_type == kRectShape) { EndOutline(); }
+    if (tool_type == ToolType::kRectShape) { EndOutline(); }
 
     ImGui::NewLine();
 

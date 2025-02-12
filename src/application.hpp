@@ -96,7 +96,8 @@ class UI
 
     std::shared_ptr<Tool> mTool;
     std::shared_ptr<Project> mProject;
-    std::array<ImTextureID, kToolCount> mToolTextures{};
+    std::array<ImTextureID, static_cast<std::size_t>(ToolType::kToolCount)>
+        mToolTextures{};
 
     ImTextureID mEyeOpenedTextureID = nullptr;
     ImTextureID mEyeClosedTextureID = nullptr;

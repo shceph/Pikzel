@@ -101,20 +101,20 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
 
     switch (mTool->GetToolType())
     {
-    case kBrush:
-    case kEraser:
+    case ToolType::kBrush:
+    case ToolType::kEraser:
         return HandleBrushAndEraser();
         break;
-    case kColorPicker:
+    case ToolType::kColorPicker:
         HandleColorPicker();
         break;
-    case kBucket:
+    case ToolType::kBucket:
         return HandleBucket();
         break;
-    case kRectShape:
+    case ToolType::kRectShape:
         return HandleRectShape();
         break;
-    case kToolCount:
+    case ToolType::kToolCount:
         assert(false);
     }
 

@@ -33,7 +33,7 @@ class PreviewLayer
     Layer mLayer;
     glm::mat4 mTranslationMat;
     Color mToolColor{.r = 0, .g = 0, .b = 0, .a = 0};
-    ToolType mToolType = kBrush;
+    ToolType mToolType = ToolType::kBrush;
     int mBrushSize = 1;
     bool mPreviewLayerChanged = true;
     bool mApplyCursorBasedTranslation = true;

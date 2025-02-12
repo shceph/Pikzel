@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -207,11 +208,13 @@ void MainLoop(GLFWwindow* window)
                                        Gla::GLMinMagFilter::kNearest);
     Gla::Texture2D square_tool_texture("assets/square_tool.png");
 
-    std::array<unsigned int, Pikzel::kToolCount> tool_texture_ids = {
-        brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
-        color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
-        square_tool_texture.GetID(),
-    };
+    std::array<unsigned int,
+               static_cast<std::size_t>(Pikzel::ToolType::kToolCount)>
+        tool_texture_ids = {
+            brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
+            color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
+            square_tool_texture.GetID(),
+        };
 
     Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
     Gla::Texture2D eye_closed_texture("assets/eye_closed.png");

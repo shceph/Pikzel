@@ -40,8 +40,8 @@ void PreviewLayer::Update()
     auto tool_type = mTool->GetToolType();
     auto tool_curr_color = Color::FromImVec4(mTool->GetColor());
 
-    if (tool_type == kEraser) { mToolColor = kEraserToolPreviewColor; }
-    else if (tool_type == kBrush && mToolColor != tool_curr_color)
+    if (tool_type == ToolType::kEraser) { mToolColor = kEraserToolPreviewColor; }
+    else if (tool_type == ToolType::kBrush && mToolColor != tool_curr_color)
     {
         mToolColor = tool_curr_color;
         mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, mBrushSize, true,
@@ -49,7 +49,7 @@ void PreviewLayer::Update()
         SetPreviewLayerChangedToTrue();
     }
 
-    if ((tool_type == kBrush || tool_type == kEraser) &&
+    if ((tool_type == ToolType::kBrush || tool_type == ToolType::kEraser) &&
         (IsToolTypeChanged() || mBrushSize != mTool->GetBrushRadius()))
     {
         mBrushSize = mTool->GetBrushRadius();
@@ -57,7 +57,7 @@ void PreviewLayer::Update()
     }
     else if (IsToolTypeChanged()) { Clear(); }
 
-    if (tool_type == kRectShape)
+    if (tool_type == ToolType::kRectShape)
     {
         Clear();
         mLayer.HandleRectShape();

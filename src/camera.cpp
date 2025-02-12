@@ -47,7 +47,7 @@ void Camera::CursorPosCallback(double x_pos, double y_pos)
     static double old_x = x_pos;
     static double old_y = y_pos;
 
-    if (Events::IsMouseButtonHeld(Events::kButtonRight))
+    if (Events::IsMouseButtonHeld(Events::MouseButtons::kButtonRight))
     {
         glm::vec2 offset{old_x - x_pos, old_y - y_pos};
         glm::vec2 resolution_at_no_additinal_offset{500, 500};
