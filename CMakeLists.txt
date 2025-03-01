@@ -7,11 +7,14 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
 set(glew-cmake_BUILD_SHARED FALSE)
 set(ONLY_LIBS ON) # for glew
 
-file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION ${CMAKE_BINARY_DIR})
-file(COPY ${CMAKE_SOURCE_DIR}/shader DESTINATION ${CMAKE_BINARY_DIR})
+# file(COPY ${CMAKE_SOURCE_DIR}/assets DESTINATION "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+# file(COPY ${CMAKE_SOURCE_DIR}/shader DESTINATION "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 file(GLOB PIKZEL_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
 file(GLOB GLA_SOURCES ${CMAKE_SOURCE_DIR}/src/gla/*.cpp)
+
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
 # Compiler can't find this file when building stb's image-resize,
 # so I'm copying it to the dir of the source file that makes the problem
@@ -22,6 +25,18 @@ file(COPY ${CMAKE_SOURCE_DIR}/vendor/stb/stb/stb_image_resize2.h
 project(pikzel)
 
 add_executable(${PROJECT_NAME} ${PIKZEL_SOURCES} ${GLA_SOURCES})
+
+add_custom_command(
+	TARGET ${PROJECT_NAME}
+	POST_BUILD
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/assets
+	${CMAKE_BINARY_DIR}/$<CONFIGURATION>/assets
+	COMMAND ${CMAKE_COMMAND} -E copy_directory
+	${CMAKE_SOURCE_DIR}/shader
+	${CMAKE_BINARY_DIR}/$<CONFIGURATION>/shader
+	COMMENT "Copying assets and shaders to build directory"
+)
 
 add_subdirectory(vendor/glfw)
 add_subdirectory(vendor/glew)

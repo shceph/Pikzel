@@ -8,7 +8,7 @@ constexpr Color kEraserToolPreviewColor{.r = 100, .g = 100, .b = 100, .a = 100};
 PreviewLayer::PreviewLayer(std::shared_ptr<Tool> tool,
                            std::shared_ptr<Camera> camera, Vec2Int canvas_dims)
     : mTool{std::move(tool)},
-      mLayer{mTool, std::move(camera), canvas_dims, false},
+      mLayer{mTool, std::move(camera), canvas_dims, false, true},
       mTranslationMat{0.0F}
 {
 }
@@ -27,7 +27,7 @@ void PreviewLayer::Clear()
     SetPreviewLayerChangedToTrue();
 }
 
-void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices)
+void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices) const
 {
     mLayer.EmplaceVertices(vertices, true);
 }
@@ -40,7 +40,10 @@ void PreviewLayer::Update()
     auto tool_type = mTool->GetToolType();
     auto tool_curr_color = Color::FromImVec4(mTool->GetColor());
 
-    if (tool_type == ToolType::kEraser) { mToolColor = kEraserToolPreviewColor; }
+    if (tool_type == ToolType::kEraser)
+    {
+        mToolColor = kEraserToolPreviewColor;
+    }
     else if (tool_type == ToolType::kBrush && mToolColor != tool_curr_color)
     {
         mToolColor = tool_curr_color;

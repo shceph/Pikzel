@@ -49,7 +49,8 @@ class Layer
     };
 
     explicit Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
-                   Vec2Int canvas_dims, bool is_canvas_layer = true) noexcept;
+                   Vec2Int canvas_dims, bool is_canvas_layer = true,
+                   bool draw_visible_pixels_only = false) noexcept;
 
     using ShouldUpdateHistory = bool;
     auto DoCurrentTool() -> ShouldUpdateHistory;
@@ -110,11 +111,18 @@ class Layer
     auto HandleRectShape() -> ShouldUpdateHistory;
     void DrawPixel(Vec2Int coords);
     void DrawPixel(Vec2Int coords, Color color);
+    void DrawPixelClampCoords(Vec2Int coords, Color color);
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
+    void DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
+                       Color color);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                   std::optional<Color> color = std::nullopt);
-    void DrawLine(Vec2Int point_a, Vec2Int point_b);
+    void DrawLine(Vec2Int point_a, Vec2Int point_b,
+                  std::optional<Color> color = std::nullopt);
     void Fill(int x_coord, int y_coord, Color clicked_color);
+    void Fill(int x_coord, int y_coord, Color clicked_color, Color fill_color);
+    void FillUntil(Color until_color, int x_coord, int y_coord,
+                   Color fill_color);
 
     CanvasData mCanvas;
     RectShapeData mHandleRectShapeData;
@@ -122,6 +130,7 @@ class Layer
     bool mIsCanvasLayer;
     bool mVisible = true;
     bool mLocked = false;
+    bool mDrawVisiblePixelsOnly = false;
     int mOpacity = 255;
     std::string mLayerName;
     std::shared_ptr<Tool> mTool;

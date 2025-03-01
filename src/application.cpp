@@ -37,6 +37,8 @@ UI::UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
     /* imgui_io.Fonts->AddFontDefault(); */
 
     ImGui::StyleColorsDark();
+    /* ImGui::StyleColorsClassic(); */
+    /* ImGui::StyleColorsLight(); */
     ImGui_ImplGlfw_InitForOpenGL(sWindow, true);
     ImGui_ImplOpenGL3_Init();
 

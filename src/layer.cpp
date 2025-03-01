@@ -7,6 +7,7 @@
 #include "vertex_buffer_control.hpp"
 
 #include "GLFW/glfw3.h"
+#include <cstddef>
 #include <glm/geometric.hpp>
 
 #include <algorithm>
@@ -86,9 +87,11 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
 }
 
 Layer::Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
-             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/) noexcept
+             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/,
+             bool draw_visible_pixels_only /*= false*/) noexcept
     : mCanvas(canvas_dims.y, std::vector<Color>(canvas_dims.x)),
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
+      mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)},
       mTool{std::move(tool)}, mCamera{std::move(camera)}
 {
@@ -130,7 +133,7 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
     {
         for (int j = 0; j < mCanvasDims.x; j++)
         {
-            /* if (mCanvas[i][j].a == 0) { continue; } */
+            if (mDrawVisiblePixelsOnly && mCanvas[i][j].a == 0) { continue; }
 
             uint8_t alpha_val = 0;
             if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
@@ -192,8 +195,9 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
     }
     else
     {
-        DrawCircle({canv_coord->x, canv_coord->y}, mTool->GetBrushRadius(),
-                   true);
+        // TODO: Fix
+        // DrawCircle({canv_coord->x, canv_coord->y}, mTool->GetBrushRadius(),
+        //            true);
     }
 
     if (glm::distance<2, float>(glm::vec2(canv_coord.value()),
@@ -208,8 +212,9 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
         }
         else
         {
-            DrawLine(canv_coord.value(), position_last_drawn,
-                     mTool->GetBrushRadius() * 2);
+            int thickness =
+                mTool->GetBrushRadius() == 1 ? 1 : mTool->GetBrushRadius() * 2;
+            DrawLine(canv_coord.value(), position_last_drawn, thickness);
         }
     }
     else { should_update_history = true; }
@@ -323,6 +328,11 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
     if (mIsCanvasLayer) { GetDirtyPixels().push_back(coords); }
 }
 
+void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)
+{
+    DrawPixel(ClampToCanvasDims(coords), color);
+}
+
 void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
                        Color delete_color /*= {0, 0, 0, 0}*/)
 {
@@ -420,6 +430,71 @@ void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
     }
 }
 
+void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
+                          Color color)
+{
+    Vec2Int diff = point_a - point_b;
+    auto angle = std::atan2(diff.y, diff.x) + M_PI_2;
+    auto angle_plus_180 = angle + M_PI;
+
+    Vec2Int point_a1;
+    point_a1.x = static_cast<int>(std::cos(angle) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_a1.y = static_cast<int>(std::sin(angle) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_a1 += point_a;
+    point_a1 = ClampToCanvasDims(point_a1);
+
+    Vec2Int point_a2;
+    point_a2.x = static_cast<int>(std::cos(angle_plus_180) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_a2.y = static_cast<int>(std::sin(angle_plus_180) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_a2 += point_a;
+    point_a2 = ClampToCanvasDims(point_a2);
+
+    Vec2Int point_b1;
+    point_b1.x = static_cast<int>(std::cos(angle) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_b1.y = static_cast<int>(std::sin(angle) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_b1 += point_b;
+    point_b1 = ClampToCanvasDims(point_b1);
+
+    Vec2Int point_b2;
+    point_b2.x = static_cast<int>(std::cos(angle_plus_180) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_b2.y = static_cast<int>(std::sin(angle_plus_180) *
+                                  (static_cast<float>(thickness) / 2.0));
+    point_b2 += point_b;
+    point_b2 = ClampToCanvasDims(point_b2);
+
+    constexpr Color kOutlineColor = {.r = 253, .g = 254, .b = 255, .a = 255};
+    DrawLine(point_a1, point_a2, kOutlineColor);
+    DrawLine(point_b1, point_b2, kOutlineColor);
+    DrawLine(point_a1, point_b1, kOutlineColor);
+    DrawLine(point_a2, point_b2, kOutlineColor);
+    DrawPixel(point_a1, kOutlineColor);
+    DrawPixel(point_a2, kOutlineColor);
+    DrawPixel(point_b1, kOutlineColor);
+    DrawPixel(point_b2, kOutlineColor);
+
+    Vec2Int line_middle = (point_a1 + point_a2 + point_b1 + point_b2) / 4;
+    FillUntil(kOutlineColor, line_middle.x, line_middle.y, color);
+
+    DrawLine(point_a1, point_a2, color);
+    DrawLine(point_b1, point_b2, color);
+    DrawLine(point_a1, point_b1, color);
+    DrawLine(point_a2, point_b2, color);
+    DrawPixel(point_a1, color);
+    DrawPixel(point_a2, color);
+    DrawPixel(point_b1, color);
+    DrawPixel(point_b2, color);
+
+    DrawCircle(point_a, thickness / 2, true);
+    DrawCircle(point_b, thickness / 2, true);
+}
+
 void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                      std::optional<Color> color /*= std::nullopt*/)
 {
@@ -430,6 +505,8 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     }
 
     Color col = color.value_or(Color::FromImVec4(mTool->GetColor()));
+    DrawThickLine(point_a, point_b, thickness, col);
+    return;
 
     int x_0 = point_a.x;
     int y_0 = point_a.y;
@@ -463,7 +540,7 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
         int draw_y = steep ? x_coord : y_coord;
 
         // Draw the thick line by offsetting the perpendicular direction
-        for (int i = -offset; i <= offset; ++i)
+        for (int i = -offset + 1; i < offset; ++i)
         {
             if (steep)
             {
@@ -481,8 +558,11 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     }
 }
 
-void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b)
+void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
+                     std::optional<Color> color /*= std::nullopt*/)
 {
+    Color draw_color = color.value_or(Color::FromImVec4(mTool->GetColor()));
+
     int diff_x = std::abs(point_a.x - point_b.x);
     int diff_y = std::abs(point_a.y - point_b.y);
     int sign_x = (point_a.x < point_b.x) ? 1 : -1;
@@ -506,19 +586,23 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b)
         }
 
         // mCanvas[point_a.x][point_a.y] = Tool::GetColorRef();
-        DrawPixel(point_a);
+        DrawPixel(point_a, draw_color);
     }
 }
 
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
+{
+    Fill(x_coord, y_coord, clicked_color, Color::FromImVec4(mTool->GetColor()));
+}
+
+void Layer::Fill(int x_coord, int y_coord, Color clicked_color,
+                 Color fill_color)
 {
     if (x_coord < 0 || x_coord >= mCanvasDims.x || y_coord < 0 ||
         y_coord >= mCanvasDims.y)
     {
         return;
     }
-
-    auto fill_color = mTool->GetColor();
 
     std::queue<std::pair<int, int>> pixel_queue;
     pixel_queue.emplace(y_coord, x_coord);
@@ -532,7 +616,47 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
 
         if (pixel == clicked_color && pixel != fill_color)
         {
-            DrawPixel({col, row}, Color::FromImVec4(fill_color));
+            DrawPixel({col, row}, fill_color);
+
+            if (col + 1 < mCanvasDims.x) { pixel_queue.emplace(row, col + 1); }
+
+            if (col - 1 >= 0) { pixel_queue.emplace(row, col - 1); }
+
+            if (row + 1 < mCanvasDims.y) { pixel_queue.emplace(row + 1, col); }
+
+            if (row - 1 >= 0) { pixel_queue.emplace(row - 1, col); }
+        }
+
+        pixel_queue.pop();
+    }
+}
+
+void Layer::FillUntil(Color until_color, int x_coord, int y_coord,
+                      Color fill_color)
+{
+    if (x_coord < 0 || x_coord >= mCanvasDims.x || y_coord < 0 ||
+        y_coord >= mCanvasDims.y)
+    {
+        return;
+    }
+
+    std::queue<std::pair<int, int>> pixel_queue;
+    pixel_queue.emplace(y_coord, x_coord);
+
+    std::vector<bool> visited(
+        static_cast<std::size_t>(mCanvasDims.x * mCanvasDims.y), false);
+
+    while (!pixel_queue.empty())
+    {
+        auto& top = pixel_queue.front();
+        const int row = top.first;
+        const int col = top.second;
+        Color pixel = GetPixel({col, row});
+
+        if (pixel != until_color && !visited[(row * mCanvasDims.x) + col])
+        {
+            DrawPixelClampCoords({col, row}, fill_color);
+            visited[(row * mCanvasDims.x) + col] = true;
 
             if (col + 1 < mCanvasDims.x) { pixel_queue.emplace(row, col + 1); }
 

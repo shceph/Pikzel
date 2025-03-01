@@ -14,7 +14,7 @@ class PreviewLayer
 
     void UpdateCircleSize(int size);
     void Clear();
-    void EmplaceVertices(std::vector<Vertex>& vertices);
+    void EmplaceVertices(std::vector<Vertex>& vertices) const;
     void Update(); // This one should run every frame
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
 

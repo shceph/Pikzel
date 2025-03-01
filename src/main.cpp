@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstddef>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
@@ -6,6 +7,7 @@
 #include "gla/frame_buffer.hpp"
 #include "gla/group.hpp"
 #include "gla/renderer.hpp"
+#include "gla/timer.hpp"
 #include "gla/vertex_array.hpp"
 #include "gla/vertex_buffer.hpp"
 #include <GL/glew.h>
@@ -179,6 +181,14 @@ void UpdatePreviewVboIfNeeded(Pikzel::PreviewLayer& preview_layer,
     }
 }
 
+auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool
+{
+    constexpr float kAllowedDiff = 0.01F;
+
+    return (std::abs(vec_a.x - vec_b.x) <= kAllowedDiff &&
+            std::abs(vec_a.y - vec_b.y) <= kAllowedDiff);
+}
+
 void MainLoop(GLFWwindow* window)
 {
     auto tool = std::make_shared<Pikzel::Tool>();
@@ -257,9 +267,16 @@ void MainLoop(GLFWwindow* window)
     std::optional<Pikzel::PreviewLayer> preview_layer;
     std::optional<Pikzel::VertexBufferControl> vbo_control;
     std::future<void> vbo_update_future;
+    ImVec2 draw_window_dims;
+    float prev_fps = 0.0F;
+    Gla::Timer out_of_loop_timer;
 
     while (glfwWindowShouldClose(window) == 0)
     {
+#ifndef NDEBUG
+        Gla::Timer timer;
+#endif
+
         Pikzel::UI::NewFrame();
 
         if (project->IsOpened())
@@ -307,11 +324,15 @@ void MainLoop(GLFWwindow* window)
             shader.Bind();
             shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
-            ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
             imgui_window_fb.Bind();
-            imgui_window_fb.Rescale(
-                {.width = static_cast<int>(draw_window_dims.x),
-                 .height = static_cast<int>(draw_window_dims.y)});
+
+            if (!ImVec2Equal(draw_window_dims, ui_state.GetDrawWinDimensions()))
+            {
+                ImVec2 draw_window_dims = ui_state.GetDrawWinDimensions();
+                imgui_window_fb.Rescale(
+                    {.width = static_cast<int>(draw_window_dims.x),
+                     .height = static_cast<int>(draw_window_dims.y)});
+            }
 
             Gla::Renderer::Clear();
             glClearColor(0.8, 0.8, 0.8, 1.0);
@@ -335,11 +356,13 @@ void MainLoop(GLFWwindow* window)
             layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
             vbo_update_future = std::async(
                 std::launch::async,
-                [&vbo_control]()
+                [&vbo_control, &prev_fps]()
                 {
+                    Gla::Timer timer;
                     vbo_control->Update(Pikzel::Layer::ShouldUpdateWholeVBO(),
                                         Pikzel::Layer::GetDirtyPixels());
                     Pikzel::Layer::ResetDirtyPixelData();
+                    prev_fps = 1 / timer.GetTime();
                 });
 
             UpdatePreviewVboIfNeeded(preview_layer.value(), preview_vertices,
@@ -375,11 +398,23 @@ void MainLoop(GLFWwindow* window)
         glfwSwapBuffers(window);
 
         ui_state.SetShouldDoToolToTrue();
+
+#ifndef NDEBUG
+        float fps = 1.0F / timer.GetTime();
+        if (out_of_loop_timer.GetTime() > 0.2)
+        {
+            std::string win_title =
+                "Pikzel - FPS: " + std::to_string(fps) +
+                " /// PREV_FPS: " + std::to_string(prev_fps);
+            glfwSetWindowTitle(window, win_title.c_str());
+            out_of_loop_timer.Reset();
+        }
+#endif
     }
 }
 } // namespace
 
-auto main() -> int
+auto main(int argc, const char* argv[]) -> int
 {
     if (glfwInit() == GLFW_FALSE) { return 1; }
 
@@ -394,7 +429,11 @@ auto main() -> int
     }
 
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1);
+
+    // NOLINTNEXTLINE
+    if (argc > 1 && argv[1] == std::string{"no_vsync"}) { glfwSwapInterval(0); }
+    else { glfwSwapInterval(1); }
+
     glfwMaximizeWindow(window);
 
     Pikzel::Events::SetWindowPtr(window);
