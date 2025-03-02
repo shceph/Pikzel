@@ -1,6 +1,7 @@
 #pragma once
 
 #include "layer.hpp"
+#include "layer_control.hpp"
 #include "project.hpp"
 
 #include <span>

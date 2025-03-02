@@ -40,7 +40,7 @@ UI::UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
     /* ImGui::StyleColorsClassic(); */
     /* ImGui::StyleColorsLight(); */
     ImGui_ImplGlfw_InitForOpenGL(sWindow, true);
-    ImGui_ImplOpenGL3_Init();
+    ImGui_ImplOpenGL3_Init("#version 330");
 
     GetSelectedItemOutlineColor() =
         ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab);

@@ -24,6 +24,7 @@
 #include "application.hpp"
 #include "events.hpp"
 #include "layer.hpp"
+#include "layer_control.hpp"
 #include "preview_layer.hpp"
 #include "project.hpp"
 #include "vertex_buffer_control.hpp"

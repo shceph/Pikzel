@@ -1,6 +1,7 @@
 #include "project.hpp"
 #include "camera.hpp"
 #include "layer.hpp"
+#include "layer_control.hpp"
 #include "tool.hpp"
 
 #include <stb/stb_image.h>
@@ -36,6 +37,7 @@ void Project::New(Vec2Int canvas_dims)
     mProjectOpened = true;
 
     Layer::ResetConstructCounter();
+    Layer::SetUpdateWholeVBOToTrue();
     mTool->SetDataToDefault();
     mLayers->SetCanvasDims(canvas_dims);
     mLayers->InitHistory(mCamera, mTool);
