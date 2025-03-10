@@ -85,7 +85,7 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
 Layer::Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
              Vec2Int canvas_dims, bool is_canvas_layer /*= true*/,
              bool draw_visible_pixels_only /*= false*/) noexcept
-    : mCanvas(canvas_dims.y, std::vector<Color>(canvas_dims.x)),
+    : mCanvas{static_cast<std::size_t>(canvas_dims.x * canvas_dims.y)},
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)},
@@ -129,13 +129,15 @@ void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
     {
         for (int j = 0; j < mCanvasDims.x; j++)
         {
-            if (mDrawVisiblePixelsOnly && mCanvas[i][j].a == 0) { continue; }
+            auto pixel_color = GetPixel({j, i});
+
+            if (mDrawVisiblePixelsOnly && pixel_color.a == 0) { continue; }
 
             uint8_t alpha_val = 0;
-            if (use_color_alpha) { alpha_val = mCanvas[i][j].a; }
+            if (use_color_alpha) { alpha_val = pixel_color.a; }
             else { alpha_val = mOpacity; }
 
-            Color color_used = mCanvas[i][j];
+            Color color_used = pixel_color;
 
             if (color_used.a != 0) { color_used.a = alpha_val; }
 
@@ -313,7 +315,7 @@ void Layer::DrawPixel(Vec2Int coords)
 void Layer::DrawPixel(Vec2Int coords, Color color)
 {
     std::unique_lock<std::mutex> lock{sMutex};
-    mCanvas[coords.y][coords.x] = color;
+    mCanvas[(coords.y * mCanvasDims.x) + coords.x] = color;
     lock.unlock();
 
     if (mIsCanvasLayer) { GetDirtyPixels().push_back(coords); }

@@ -63,8 +63,8 @@ class Tool
     ImVec4 mColor1;
     ImVec4 mColor2;
 
-    ToolType mCurrentToolType = ToolType::kBrush;
-    int mBrushRadius = 1;
-    int mSelectedColorSlot = kColorSlot1;
+    ToolType mCurrentToolType{ToolType::kBrush};
+    int mBrushRadius{1};
+    int mSelectedColorSlot{kColorSlot1};
 };
 } // namespace Pikzel

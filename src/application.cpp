@@ -713,11 +713,11 @@ void UI::RenderNewProjectPopup()
 
         ImGui::Text("Insert height: ");
         ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##height", &height, 32, 2000);
+        ImGui::SliderInt("##height", &height, 32, 2048);
 
         ImGui::Text("Insert width:  ");
         ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##width", &width, 32, 2000);
+        ImGui::SliderInt("##width", &width, 32, 2048);
 
         if (ImGui::Button("OK"))
         {

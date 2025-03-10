@@ -8,7 +8,7 @@ enum VertexBufferUsage
 {
     kStaticDraw = GL_STATIC_DRAW,
     kStreamDraw = GL_STREAM_DRAW,
-    kDynamicArray = GL_DYNAMIC_DRAW
+    kDynamicDraw = GL_DYNAMIC_DRAW
 };
 
 class VertexBuffer

@@ -193,8 +193,8 @@ auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool
 void MainLoop(GLFWwindow* window)
 {
     auto tool = std::make_shared<Pikzel::Tool>();
-    auto layers = std::make_shared<Pikzel::Layers>();
     auto camera = std::make_shared<Pikzel::Camera>();
+    auto layers = std::make_shared<Pikzel::Layers>();
     auto project = std::make_shared<Pikzel::Project>(layers, tool, camera);
     Pikzel::UI ui_state{project, tool, window};
 
@@ -244,7 +244,7 @@ void MainLoop(GLFWwindow* window)
     shader.Bind();
 
     Gla::VertexArray vao_canvas;
-    Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicArray);
+    Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicDraw);
     vao_canvas.AddBuffer(vbo_canvas, layout);
     Gla::Group group_canvas(vao_canvas, shader);
 
@@ -258,7 +258,7 @@ void MainLoop(GLFWwindow* window)
     auto bckg_vertices_count = 0UZ;
 
     Gla::VertexArray vao_preview;
-    Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicArray);
+    Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicDraw);
     vao_preview.AddBuffer(vbo_preview, layout);
     Gla::Shader shader_preview("shader/vert_shader.vert",
                                "shader/frag_shader.frag");

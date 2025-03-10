@@ -95,7 +95,7 @@ void VertexBufferControl::Update(bool should_update_all,
 
     if (dirty_pixels.empty()) { return; }
 
-	const auto& layer = mLayers->GetCurrentLayer();
+    const auto& layer = mLayers->GetCurrentLayer();
     const auto offset = mLayers->GetCurrentLayerIndex() * canvas_dims.x *
                         canvas_dims.y * kVerticesPerPixel;
 

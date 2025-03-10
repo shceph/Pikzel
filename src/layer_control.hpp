@@ -4,13 +4,12 @@
 #include "layer.hpp"
 #include "project.hpp"
 #include "tool.hpp"
+#include "tree.hpp"
 
 #include <imgui.h>
 
-#include <deque>
 #include <list>
 #include <memory>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <vector>
@@ -22,9 +21,8 @@ class Layers
   public:
     struct Capture
     {
-        explicit Capture(std::shared_ptr<Tool> tool,
-                         std::shared_ptr<Camera> camera, Vec2Int canvas_dims,
-                         std::size_t selected_layer_ind)
+        Capture(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
+                Vec2Int canvas_dims, std::size_t selected_layer_ind)
             : selected_layer_index{selected_layer_ind}
         {
             layers.emplace_back(std::move(tool), std::move(camera),
@@ -60,6 +58,8 @@ class Layers
     void Redo();
     void UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
                        std::shared_ptr<Camera> camera);
+    void InitHistory(std::shared_ptr<Camera> camera,
+                     std::shared_ptr<Tool> tool);
 
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
@@ -68,7 +68,8 @@ class Layers
     }
     [[nodiscard]] auto GetLayers() const -> const std::list<Layer>&
     {
-        return mHistory[mCurrentCapture].layers;
+        assert(mCurrentCapture.has_value());
+        return mCurrentCapture->layers;
     }
     [[nodiscard]] auto CanvasCoordsFromCursorPos() const
         -> std::optional<Vec2Int>
@@ -80,13 +81,6 @@ class Layers
         return mCurrentLayerIndex;
     }
     void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
-    void InitHistory(std::shared_ptr<Camera> camera, std::shared_ptr<Tool> tool)
-    {
-        mHistory.clear();
-        mHistory.emplace_back(std::move(tool), std::move(camera), mCanvasDims,
-                              0);
-        mCurrentCapture = 0;
-    }
     void MarkForUndo() { mShouldUndo = true; }
     void MarkForRedo() { mShouldRedo = true; }
     void MarkToAddLayer() { mShouldAddLayer = true; }
@@ -94,23 +88,23 @@ class Layers
   private:
     auto GetCapture() -> Capture&
     {
-        assert(mCurrentCapture < mHistory.size());
-        return mHistory[mCurrentCapture];
+        assert(mCurrentCapture.has_value());
+        return *mCurrentCapture;
     }
     auto GetLayers() -> std::list<Layer>& { return GetCapture().layers; }
-    /* inline auto GetHistory() -> std::deque<Capture>& { return mHistory; } */
     void MarkHistoryForUpdate() { mShouldUpdateHistory = true; }
 
     static constexpr int kMaxHistoryLenght = 30;
 
-    std::deque<Capture> mHistory;
-    std::size_t mCurrentCapture = 0;
-    std::size_t mCurrentLayerIndex = 0;
+    Tree<Capture>* mCurrentUndoTreeNode{nullptr};
+    std::optional<Tree<Capture>> mUndoTree{std::nullopt};
+    std::optional<Capture> mCurrentCapture{std::nullopt};
+    std::size_t mCurrentLayerIndex{0};
     Vec2Int mCanvasDims{0, 0};
-    bool mShouldUpdateHistory = false;
-    bool mShouldUndo = false;
-    bool mShouldRedo = false;
-    bool mShouldAddLayer = false;
+    bool mShouldUpdateHistory{false};
+    bool mShouldUndo{false};
+    bool mShouldRedo{false};
+    bool mShouldAddLayer{false};
 
     friend class Layer;
     friend class UI;

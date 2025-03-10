@@ -35,7 +35,7 @@ struct Vertex
     Color color{.r = 0, .g = 0, .b = 0, .a = 0};
 };
 
-using CanvasData = std::vector<std::vector<Color>>;
+using CanvasData = std::vector<Color>;
 
 class Layer
 {
@@ -69,7 +69,7 @@ class Layer
     [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
     {
         std::lock_guard<std::mutex> lock{sMutex};
-        return mCanvas[coords.y][coords.x];
+        return mCanvas[(coords.y * mCanvasDims.x) + coords.x];
     }
     [[nodiscard]] auto GetCanvas() const -> const CanvasData&
     {

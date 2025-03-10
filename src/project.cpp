@@ -125,7 +125,7 @@ void Project::Open(const std::string& project_file_dest)
                     return;
                 }
 
-                iter->mCanvas[i][j] = col;
+                iter->DrawPixel({j, i}, col);
             }
         }
     }
@@ -148,6 +148,7 @@ auto Project::SaveAsImage(int magnify_factor,
     {
         for (int j = 0; j < mCanvasWidth; j++)
         {
+            Color pixel_color = canvas_displayed[(i * mCanvasWidth) + j];
             for (int k = 0; k < magnify_factor; k++)
             {
                 // NOLINTNEXTLINE(readability-identifier-length)
@@ -155,20 +156,16 @@ auto Project::SaveAsImage(int magnify_factor,
                 {
                     image_data[((i * magnify_factor + k) * arr_width) +
                                (j * magnify_factor * kChannelCount) +
-                               (l * kChannelCount) + 0] =
-                        canvas_displayed[i][j].r;
+                               (l * kChannelCount) + 0] = pixel_color.r;
                     image_data[((i * magnify_factor + k) * arr_width) +
                                (j * magnify_factor * kChannelCount) +
-                               (l * kChannelCount) + 1] =
-                        canvas_displayed[i][j].g;
+                               (l * kChannelCount) + 1] = pixel_color.g;
                     image_data[((i * magnify_factor + k) * arr_width) +
                                (j * magnify_factor * kChannelCount) +
-                               (l * kChannelCount) + 2] =
-                        canvas_displayed[i][j].b;
+                               (l * kChannelCount) + 2] = pixel_color.b;
                     image_data[((i * magnify_factor + k) * arr_width) +
                                (j * magnify_factor * kChannelCount) +
-                               (l * kChannelCount) + 3] =
-                        canvas_displayed[i][j].a;
+                               (l * kChannelCount) + 3] = pixel_color.a;
                 }
             }
         }
@@ -205,15 +202,12 @@ void Project::SaveAsProject(const std::string& save_dest)
         save_file << layer.GetOpacity() << "\n";
         // save_file << layer.GetName() << "\n";
 
-        for (const auto& canvas_row : layer.GetCanvas())
+        for (Color col : layer.GetCanvas())
         {
-            for (Color elem : canvas_row)
-            {
-                save_file << elem.r << " ";
-                save_file << elem.g << " ";
-                save_file << elem.b << " ";
-                save_file << elem.a << "\n";
-            }
+            save_file << col.r << " ";
+            save_file << col.g << " ";
+            save_file << col.b << " ";
+            save_file << col.a << "\n";
         }
     }
 

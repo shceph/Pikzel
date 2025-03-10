@@ -40,7 +40,9 @@ void Layers::DoCurrentTool()
 void Layers::AddLayer(std::shared_ptr<Tool> tool,
                       std::shared_ptr<Camera> camera)
 {
-    GetLayers().emplace_back(std::move(tool), std::move(camera), mCanvasDims);
+    mCurrentCapture->layers.emplace_back(std::move(tool), std::move(camera),
+                                         mCanvasDims);
+    MarkHistoryForUpdate();
 }
 
 void Layers::MoveUp(std::size_t layer_index)
@@ -91,8 +93,8 @@ void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices,
     if (!custom_dims.has_value()) { custom_dims.emplace(GetCanvasDims()); }
     assert(custom_dims.has_value());
 
-    auto canvas_width = custom_dims.value().x;
-    auto canvas_height = custom_dims.value().y;
+    auto canvas_width = custom_dims->x;
+    auto canvas_height = custom_dims->y;
 
     for (int i = 0; i < canvas_height; i += 6)
     {
@@ -100,7 +102,7 @@ void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices,
         {
             auto x_coord = static_cast<float>(j);
             auto y_coord = static_cast<float>(i);
-            glm::vec2 dims = custom_dims.value();
+            glm::vec2 dims = *custom_dims;
 
             // upper left corner
             vertices.emplace_back(x_coord, y_coord,
@@ -149,14 +151,14 @@ auto Layers::GetDisplayedCanvas() const -> CanvasData
     auto canvas_width = GetCanvasDims().x;
     auto canvas_height = GetCanvasDims().y;
 
-    CanvasData displayed_canvas(canvas_height,
-                                std::vector<Color>(canvas_width));
+    CanvasData displayed_canvas{
+        static_cast<std::size_t>(canvas_height * canvas_width)};
 
     for (const auto& layer_traversed : std::ranges::reverse_view(GetLayers()))
     {
-        for (int i = 0; i < canvas_width; i++)
+        for (int i = 0; i < canvas_height; i++)
         {
-            for (int j = 0; j < canvas_height; j++)
+            for (int j = 0; j < canvas_width; j++)
             {
                 Color pixel = layer_traversed.GetPixel({j, i});
 
@@ -168,8 +170,8 @@ auto Layers::GetDisplayedCanvas() const -> CanvasData
                              ? pixel.a
                              : static_cast<uint8_t>(layer_traversed.mOpacity)};
 
-                displayed_canvas[i][j] =
-                    Color::BlendColor(dst_color, displayed_canvas[i][j]);
+                displayed_canvas[(i * canvas_width) + j] = Color::BlendColor(
+                    dst_color, displayed_canvas[(i * canvas_width) + j]);
             }
         }
     }
@@ -179,46 +181,54 @@ auto Layers::GetDisplayedCanvas() const -> CanvasData
 
 void Layers::PushToHistory()
 {
-    if (mCurrentCapture < mHistory.size() - 1)
-    {
-        auto delete_begin = mHistory.begin();
-        std::advance(delete_begin, mCurrentCapture + 1);
-        mHistory.erase(delete_begin, mHistory.end());
-    }
+    assert(mCurrentCapture.has_value());
+    assert(mCurrentUndoTreeNode != nullptr);
 
-    mHistory.emplace_back(GetLayers(), mCurrentLayerIndex);
-
-    if (mHistory.size() > kMaxHistoryLenght)
-    {
-        auto delete_end =
-            mHistory.begin() +
-            static_cast<std::ptrdiff_t>(mHistory.size() - kMaxHistoryLenght);
-        mHistory.erase(mHistory.begin(), delete_end);
-    }
-
-    mCurrentCapture = mHistory.size() - 1;
+    mCurrentUndoTreeNode = &mCurrentUndoTreeNode->AddChild(
+        mCurrentCapture->layers, mCurrentLayerIndex);
 }
 
 void Layers::Undo()
 {
-    if (mCurrentCapture != 0)
-    {
-        mCurrentCapture--;
-        mCurrentLayerIndex = mHistory[mCurrentCapture].selected_layer_index;
-        VertexBufferControl::SetUpdateAllToTrue();
-        Layer::SetUpdateWholeVBOToTrue();
-    }
+    assert(mCurrentCapture.has_value());
+    assert(mCurrentUndoTreeNode != nullptr);
+
+    if (mCurrentUndoTreeNode->GetParent() == nullptr) { return; }
+
+    mCurrentUndoTreeNode = mCurrentUndoTreeNode->GetParent();
+    mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
+    mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
+    VertexBufferControl::SetUpdateAllToTrue();
+    Layer::SetUpdateWholeVBOToTrue();
 }
 
 void Layers::Redo()
 {
-    if (mCurrentCapture != mHistory.size() - 1)
+    assert(mCurrentCapture.has_value());
+    assert(mCurrentUndoTreeNode != nullptr);
+
+    auto& children = mCurrentUndoTreeNode->GetChildren();
+    std::size_t child_last_used_index =
+        mCurrentUndoTreeNode->GetLastUsedNodeIndex();
+
+    if (children.size() == 0) { return; }
+
+    if (child_last_used_index < children.size() - 1)
     {
-        mCurrentCapture++;
-        mCurrentLayerIndex = mHistory[mCurrentCapture].selected_layer_index;
+        std::puts("Incorrect behaviour in Layers::Redo for now. Using the "
+                  "first child");
+        mCurrentUndoTreeNode = children.front().get();
+        mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
         VertexBufferControl::SetUpdateAllToTrue();
         Layer::SetUpdateWholeVBOToTrue();
+        return;
     }
+
+    mCurrentUndoTreeNode = children[child_last_used_index].get();
+    mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
+    mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
+    VertexBufferControl::SetUpdateAllToTrue();
+    Layer::SetUpdateWholeVBOToTrue();
 }
 
 void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
@@ -251,5 +261,13 @@ void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
     mShouldUndo = false;
     mShouldRedo = false;
     mShouldAddLayer = false;
+}
+
+void Layers::InitHistory(std::shared_ptr<Camera> camera,
+                         std::shared_ptr<Tool> tool)
+{
+    mCurrentCapture.emplace(std::move(tool), std::move(camera), mCanvasDims, 0);
+    mUndoTree.emplace(auto{mCurrentCapture.value()});
+    mCurrentUndoTreeNode = &(*mUndoTree);
 }
 } // namespace Pikzel
