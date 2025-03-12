@@ -6,7 +6,6 @@
 
 #include <imgui.h>
 
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
@@ -46,8 +45,8 @@ class Layer
         Vec2Int shape_begin_coords{0, 0};
     };
 
-    explicit Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
-                   Vec2Int canvas_dims, bool is_canvas_layer = true,
+    explicit Layer(Tool& tool, Camera& camera, Vec2Int canvas_dims,
+                   bool is_canvas_layer = true,
                    bool draw_visible_pixels_only = false) noexcept;
 
     using ShouldUpdateHistory = bool;
@@ -131,8 +130,8 @@ class Layer
     bool mDrawVisiblePixelsOnly = false;
     int mOpacity = 255;
     std::string mLayerName;
-    std::shared_ptr<Tool> mTool;
-    std::shared_ptr<Camera> mCamera;
+    std::reference_wrapper<Tool> mTool;
+    std::reference_wrapper<Camera> mCamera;
 
     inline static std::mutex sMutex;
     inline static int sConstructCounter = 1;

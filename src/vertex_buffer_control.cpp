@@ -7,11 +7,9 @@
 
 namespace Pikzel
 {
-VertexBufferControl::VertexBufferControl(std::shared_ptr<Layers> layers,
-                                         Vertex* ptr_to_buffer,
+VertexBufferControl::VertexBufferControl(Layers& layers, Vertex* ptr_to_buffer,
                                          std::size_t count)
-    : mLayers{std::move(layers)}, mBufferData{ptr_to_buffer, count},
-      mVertexCount{count}
+    : mLayers{layers}, mBufferData{ptr_to_buffer, count}, mVertexCount{count}
 {
     sUpdateAll = true;
 }
@@ -20,8 +18,8 @@ void VertexBufferControl::Map(Gla::VertexBuffer& vbo)
 {
     vbo.Bind();
 
-    auto vbo_size = GetNeededVBOSizeForLayer(mLayers->GetCanvasDims()) *
-                    mLayers->GetLayerCount();
+    auto vbo_size = GetNeededVBOSizeForLayer(mLayers.get().GetCanvasDims()) *
+                    mLayers.get().GetLayerCount();
     auto vertex_count = vbo_size / sizeof(Vertex);
 
     auto* ptr_to_buffer =
@@ -40,11 +38,11 @@ void VertexBufferControl::Unmap(Gla::VertexBuffer& vbo)
 void VertexBufferControl::Update(bool should_update_all,
                                  const std::vector<Vec2Int>& dirty_pixels)
 {
-    auto canvas_dims = mLayers->GetCanvasDims();
+    auto canvas_dims = mLayers.get().GetCanvasDims();
 
     if (should_update_all)
     {
-        const auto& capture = mLayers->GetCapture();
+        const auto& capture = mLayers.get().GetCapture();
 
         for (const auto& layer : capture.layers)
         {
@@ -95,8 +93,8 @@ void VertexBufferControl::Update(bool should_update_all,
 
     if (dirty_pixels.empty()) { return; }
 
-    const auto& layer = mLayers->GetCurrentLayer();
-    const auto offset = mLayers->GetCurrentLayerIndex() * canvas_dims.x *
+    const auto& layer = mLayers.get().GetCurrentLayer();
+    const auto offset = mLayers.get().GetCurrentLayerIndex() * canvas_dims.x *
                         canvas_dims.y * kVerticesPerPixel;
 
     for (const auto px_coords : dirty_pixels)
@@ -142,14 +140,14 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
     vbo.Bind();
     glUnmapBuffer(GL_ARRAY_BUFFER);
 
-    auto vbo_size = GetNeededVBOSizeForLayer(mLayers->GetCanvasDims()) *
-                    mLayers->GetLayerCount();
+    auto vbo_size = GetNeededVBOSizeForLayer(mLayers.get().GetCanvasDims()) *
+                    mLayers.get().GetLayerCount();
     vbo.UpdateSizeIfNeeded(vbo_size);
 
     auto vertex_count = vbo_size / sizeof(Vertex);
 
     std::vector<Vertex> vertices(vertex_count);
-    mLayers->EmplaceVertices(vertices);
+    mLayers.get().EmplaceVertices(vertices);
     assert(vertices.size() == vertex_count);
     vbo.UpdateData(vertices.data(), vbo_size);
 
@@ -162,8 +160,9 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
 
 void VertexBufferControl::UpdateSizeIfNeeded(Gla::VertexBuffer& vbo)
 {
-    if (vbo.GetSize() != GetNeededVBOSizeForLayer(mLayers->GetCanvasDims()) *
-                             mLayers->GetLayerCount())
+    if (vbo.GetSize() !=
+        GetNeededVBOSizeForLayer(mLayers.get().GetCanvasDims()) *
+            mLayers.get().GetLayerCount())
     {
         UpdateSize(vbo);
     }

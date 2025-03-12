@@ -14,10 +14,8 @@
 
 namespace Pikzel
 {
-Project::Project(std::shared_ptr<Layers> layers, std::shared_ptr<Tool> tool,
-                 std::shared_ptr<Camera> camera)
-    : mLayers{std::move(layers)}, mTool{std::move(tool)},
-      mCamera{std::move(camera)}
+Project::Project(Layers& layers, Tool& tool, Camera& camera)
+    : mLayers{layers}, mTool{tool}, mCamera{camera}
 {
 }
 
@@ -38,11 +36,11 @@ void Project::New(Vec2Int canvas_dims)
 
     Layer::ResetConstructCounter();
     Layer::SetUpdateWholeVBOToTrue();
-    mTool->SetDataToDefault();
-    mLayers->SetCanvasDims(canvas_dims);
-    mLayers->InitHistory(mCamera, mTool);
-    mCamera->SetCenter({mCanvasWidth / 2, mCanvasHeight / 2});
-    mCamera->SetCanvasDims({mCanvasWidth, mCanvasHeight});
+    mTool.get().SetDataToDefault();
+    mLayers.get().SetCanvasDims(canvas_dims);
+    mLayers.get().InitHistory(mCamera, mTool);
+    mCamera.get().SetCanvasDims({mCanvasWidth, mCanvasHeight});
+    mCamera.get().ResetCamera();
 }
 
 void Project::Open(const std::string& project_file_dest)
@@ -77,7 +75,7 @@ void Project::Open(const std::string& project_file_dest)
 
     Vec2Int canvas_dims{width, height};
     Project::New(canvas_dims);
-    auto& layers = mLayers->GetCapture().layers;
+    auto& layers = mLayers.get().GetCapture().layers;
     layers.clear();
     Layer::ResetConstructCounter();
 
@@ -142,7 +140,7 @@ auto Project::SaveAsImage(int magnify_factor,
     std::vector<uint8_t> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
-    const CanvasData& canvas_displayed = mLayers->GetDisplayedCanvas();
+    const CanvasData& canvas_displayed = mLayers.get().GetDisplayedCanvas();
 
     for (int i = 0; i < mCanvasHeight; i++)
     {
@@ -192,7 +190,7 @@ void Project::SaveAsProject(const std::string& save_dest)
         return;
     }
 
-    auto& layers = mLayers->GetCapture().layers;
+    auto& layers = mLayers.get().GetCapture().layers;
     save_file << static_cast<std::size_t>(layers.size()) << " ";
     save_file << Project::CanvasWidth() << " ";
     save_file << Project::CanvasHeight() << "\n";
@@ -216,8 +214,8 @@ void Project::SaveAsProject(const std::string& save_dest)
 
 void Project::CloseCurrentProject()
 {
-    mLayers->ResetDataToDefault();
-    mTool->SetDataToDefault();
+    mLayers.get().ResetDataToDefault();
+    mTool.get().SetDataToDefault();
     mProjectOpened = false;
 }
 } // namespace Pikzel

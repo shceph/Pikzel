@@ -19,7 +19,7 @@ class VertexBufferControl
 {
   public:
     // Should run this after creating/opening a project
-    VertexBufferControl(std::shared_ptr<Layers> layers, Vertex* ptr_to_buffer,
+    VertexBufferControl(Layers& layers, Vertex* ptr_to_buffer,
                         std::size_t count);
     void Map(Gla::VertexBuffer& vbo);
     static void Unmap(Gla::VertexBuffer& vbo);
@@ -45,7 +45,7 @@ class VertexBufferControl
     }
 
   private:
-    std::shared_ptr<Layers> mLayers;
+    std::reference_wrapper<Layers> mLayers;
     std::span<Vertex> mBufferData;
     std::size_t mVertexCount = 0;
     static inline std::vector<Vec2Int> sDirtyPixels;

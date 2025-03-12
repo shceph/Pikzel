@@ -82,14 +82,14 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
             .a = static_cast<uint8_t>(color.w * 0xff)};
 }
 
-Layer::Layer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
-             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/,
+Layer::Layer(Tool& tool, Camera& camera, Vec2Int canvas_dims,
+             bool is_canvas_layer /*= true*/,
              bool draw_visible_pixels_only /*= false*/) noexcept
     : mCanvas{static_cast<std::size_t>(canvas_dims.x * canvas_dims.y)},
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
-      mLayerName{"Layer " + std::to_string(sConstructCounter)},
-      mTool{std::move(tool)}, mCamera{std::move(camera)}
+      mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
+      mCamera{camera}
 {
     if (mIsCanvasLayer) { sConstructCounter++; }
 }
@@ -98,7 +98,7 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
 {
     if (mLocked || !mVisible) { return false; }
 
-    switch (mTool->GetToolType())
+    switch (mTool.get().GetToolType())
     {
     case ToolType::kBrush:
     case ToolType::kEraser:
@@ -200,17 +200,18 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
                                 glm::vec2(position_last_drawn)) > 1 &&
         std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay)
     {
-        int thickness =
-            mTool->GetBrushRadius() == 1 ? 1 : mTool->GetBrushRadius() * 2;
+        int thickness = mTool.get().GetBrushRadius() == 1
+                            ? 1
+                            : mTool.get().GetBrushRadius() * 2;
 
-        if (mTool->GetToolType() == ToolType::kEraser)
+        if (mTool.get().GetToolType() == ToolType::kEraser)
         {
             DrawLine(canv_coord.value(), position_last_drawn, thickness,
                      Color{.r = 0, .g = 0, .b = 0, .a = 0});
         }
         else { DrawLine(canv_coord.value(), position_last_drawn, thickness); }
     }
-    else { DrawCircle(canv_coord.value(), mTool->GetBrushRadius(), true); }
+    else { DrawCircle(canv_coord.value(), mTool.get().GetBrushRadius(), true); }
 
     time_last_drawn = std::chrono::steady_clock::now();
     position_last_drawn = canv_coord.value();
@@ -230,9 +231,9 @@ void Layer::HandleColorPicker()
 
     if (picked_color.a == 0) { return; }
 
-    mTool->GetColorRef().x = static_cast<float>(picked_color.r) / 0xff;
-    mTool->GetColorRef().y = static_cast<float>(picked_color.g) / 0xff;
-    mTool->GetColorRef().z = static_cast<float>(picked_color.b) / 0xff;
+    mTool.get().GetColorRef().x = static_cast<float>(picked_color.r) / 0xff;
+    mTool.get().GetColorRef().y = static_cast<float>(picked_color.g) / 0xff;
+    mTool.get().GetColorRef().z = static_cast<float>(picked_color.b) / 0xff;
 }
 
 auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory
@@ -309,7 +310,7 @@ auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
 
 void Layer::DrawPixel(Vec2Int coords)
 {
-    DrawPixel(coords, Color::FromImVec4(mTool->GetColor()));
+    DrawPixel(coords, Color::FromImVec4(mTool.get().GetColor()));
 }
 
 void Layer::DrawPixel(Vec2Int coords, Color color)
@@ -333,9 +334,9 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
 
     Color draw_color = delete_color;
 
-    if (mTool->GetToolType() != ToolType::kEraser)
+    if (mTool.get().GetToolType() != ToolType::kEraser)
     {
-        draw_color = mTool->GetColor();
+        draw_color = mTool.get().GetColor();
         draw_color.a = 0xff;
     }
 
@@ -491,7 +492,7 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
 void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                      std::optional<Color> color /*= std::nullopt*/)
 {
-    Color col = color.value_or(Color::FromImVec4(mTool->GetColor()));
+    Color col = color.value_or(Color::FromImVec4(mTool.get().GetColor()));
 
     if (thickness == 1)
     {
@@ -557,7 +558,8 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
 void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
                      std::optional<Color> color /*= std::nullopt*/)
 {
-    Color draw_color = color.value_or(Color::FromImVec4(mTool->GetColor()));
+    Color draw_color =
+        color.value_or(Color::FromImVec4(mTool.get().GetColor()));
 
     int diff_x = std::abs(point_a.x - point_b.x);
     int diff_y = std::abs(point_a.y - point_b.y);
@@ -587,7 +589,8 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
 
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
 {
-    Fill(x_coord, y_coord, clicked_color, Color::FromImVec4(mTool->GetColor()));
+    Fill(x_coord, y_coord, clicked_color,
+         Color::FromImVec4(mTool.get().GetColor()));
 }
 
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color,
@@ -697,7 +700,7 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
 
     Vec2Int coords = cursor_draw_win_relative /
                      (canvas_on_screen_dims / glm::vec2{mCanvasDims});
-    double zoom_val = mCamera->GetZoomValue();
+    double zoom_val = mCamera.get().GetZoomValue();
 
     if (zoom_val != 0)
     {
@@ -710,7 +713,7 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
         coords.y += (mCanvasDims.y - new_height) / 2;
     }
 
-    coords += mCamera->GetCenterAsVec2Int() - mCanvasDims / 2;
+    coords += mCamera.get().GetCenterAsVec2Int() - mCanvasDims / 2;
 
     if (coords.x < 0 || coords.x >= mCanvasDims.x || coords.y < 0 ||
         coords.y >= mCanvasDims.y)

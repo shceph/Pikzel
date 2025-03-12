@@ -4,7 +4,6 @@
 
 #include <glm/vec2.hpp>
 
-#include <memory>
 #include <string>
 
 namespace Pikzel
@@ -17,8 +16,7 @@ class Tool;
 class Project
 {
   public:
-    Project(std::shared_ptr<Layers> layers, std::shared_ptr<Tool> tool,
-            std::shared_ptr<Camera> camera);
+    Project(Layers& layers, Tool& tool, Camera& camera);
     void New(Vec2Int canvas_dims);
     void Open(const std::string& project_file_dest);
     void SaveAsProject(const std::string& save_dest);
@@ -35,9 +33,9 @@ class Project
     }
 
   private:
-    std::shared_ptr<Layers> mLayers;
-    std::shared_ptr<Tool> mTool;
-    std::shared_ptr<Camera> mCamera;
+    std::reference_wrapper<Layers> mLayers;
+    std::reference_wrapper<Tool> mTool;
+    std::reference_wrapper<Camera> mCamera;
     bool mProjectOpened = false;
     int mCanvasHeight = 0;
     int mCanvasWidth = 0;

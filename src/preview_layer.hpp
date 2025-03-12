@@ -9,8 +9,7 @@ namespace Pikzel
 class PreviewLayer
 {
   public:
-    explicit PreviewLayer(std::shared_ptr<Tool> tool,
-                          std::shared_ptr<Camera> camera, Vec2Int canvas_dims);
+    explicit PreviewLayer(Tool& tool, Camera& camera, Vec2Int canvas_dims);
 
     void UpdateCircleSize(int size);
     void Clear();
@@ -29,7 +28,7 @@ class PreviewLayer
     void SetPreviewLayerChangedToTrue() { mPreviewLayerChanged = true; }
 
   private:
-    std::shared_ptr<Tool> mTool;
+    std::reference_wrapper<Tool> mTool;
     Layer mLayer;
     glm::mat4 mTranslationMat;
     Color mToolColor{.r = 0, .g = 0, .b = 0, .a = 0};

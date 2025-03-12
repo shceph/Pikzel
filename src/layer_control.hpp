@@ -9,7 +9,6 @@
 #include <imgui.h>
 
 #include <list>
-#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -21,12 +20,11 @@ class Layers
   public:
     struct Capture
     {
-        Capture(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera,
-                Vec2Int canvas_dims, std::size_t selected_layer_ind)
+        Capture(Tool& tool, Camera& camera, Vec2Int canvas_dims,
+                std::size_t selected_layer_ind)
             : selected_layer_index{selected_layer_ind}
         {
-            layers.emplace_back(std::move(tool), std::move(camera),
-                                canvas_dims);
+            layers.emplace_back(tool, camera, canvas_dims);
         }
 
         Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
@@ -44,7 +42,7 @@ class Layers
     void DoCurrentTool();
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
-    void AddLayer(std::shared_ptr<Tool> tool, std::shared_ptr<Camera> camera);
+    void AddLayer(Tool& tool, Camera& camera);
     void EmplaceVertices(std::vector<Vertex>& vertices) const;
     void EmplaceBckgVertices(std::vector<Vertex>& vertices,
                              std::optional<Vec2Int> custom_dims) const;
@@ -56,10 +54,8 @@ class Layers
     void PushToHistory();
     void Undo();
     void Redo();
-    void UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
-                       std::shared_ptr<Camera> camera);
-    void InitHistory(std::shared_ptr<Camera> camera,
-                     std::shared_ptr<Tool> tool);
+    void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera);
+    void InitHistory(Camera& camera, Tool& tool);
 
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {

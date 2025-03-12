@@ -12,7 +12,6 @@
 #include <cmath>
 #include <list>
 #include <ranges>
-#include <utility>
 #include <vector>
 
 namespace Pikzel
@@ -37,11 +36,9 @@ void Layers::DoCurrentTool()
     if (GetCurrentLayer().DoCurrentTool()) { MarkHistoryForUpdate(); }
 }
 
-void Layers::AddLayer(std::shared_ptr<Tool> tool,
-                      std::shared_ptr<Camera> camera)
+void Layers::AddLayer(Tool& tool, Camera& camera)
 {
-    mCurrentCapture->layers.emplace_back(std::move(tool), std::move(camera),
-                                         mCanvasDims);
+    mCurrentCapture->layers.emplace_back(tool, camera, mCanvasDims);
     MarkHistoryForUpdate();
 }
 
@@ -231,8 +228,7 @@ void Layers::Redo()
     Layer::SetUpdateWholeVBOToTrue();
 }
 
-void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
-                           std::shared_ptr<Camera> camera)
+void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera)
 {
     for (auto& layer : GetLayers())
     {
@@ -253,7 +249,7 @@ void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
         Redo();
     }
 
-    if (mShouldAddLayer) { AddLayer(std::move(tool), std::move(camera)); }
+    if (mShouldAddLayer) { AddLayer(tool, camera); }
 
     if (mShouldUpdateHistory) { PushToHistory(); }
 
@@ -263,10 +259,9 @@ void Layers::UpdateAndDraw(bool should_do_tool, std::shared_ptr<Tool> tool,
     mShouldAddLayer = false;
 }
 
-void Layers::InitHistory(std::shared_ptr<Camera> camera,
-                         std::shared_ptr<Tool> tool)
+void Layers::InitHistory(Camera& camera, Tool& tool)
 {
-    mCurrentCapture.emplace(std::move(tool), std::move(camera), mCanvasDims, 0);
+    mCurrentCapture.emplace(tool, camera, mCanvasDims, 0);
     mUndoTree.emplace(auto{mCurrentCapture.value()});
     mCurrentUndoTreeNode = &(*mUndoTree);
 }

@@ -8,7 +8,6 @@
 #include <imgui.h>
 
 #include <array>
-#include <memory>
 #include <span>
 
 namespace Pikzel
@@ -16,8 +15,7 @@ namespace Pikzel
 class UI
 {
   public:
-    UI(std::shared_ptr<Project> project, std::shared_ptr<Tool> tool,
-       GLFWwindow* _window);
+    UI(Project& project, Tool& tool, GLFWwindow* _window);
     void RenderUI(Layers& layers, Camera& camera);
     void RenderNoProjectWindow();
     void RenderDrawWindow(unsigned int framebuffer_texture_id,
@@ -25,10 +23,10 @@ class UI
     void Update();
 
     void SetupToolTextures(std::span<unsigned int> tex_ids);
-    void SetupLayerToolTextures(unsigned int eye_opened_id,
-                                unsigned int eye_closed_id,
-                                unsigned int lock_locked_id,
-                                unsigned int lock_unlocked_id);
+    void SetupLayerToolTextures(ImTextureID eye_opened_id,
+                                ImTextureID eye_closed_id,
+                                ImTextureID lock_locked_id,
+                                ImTextureID lock_unlocked_id);
     static void NewFrame();
     static void RenderAndEndFrame();
 
@@ -95,28 +93,28 @@ class UI
         return mSelectedItemOutlineColor;
     }
 
-    std::shared_ptr<Tool> mTool;
-    std::shared_ptr<Project> mProject;
+    std::reference_wrapper<Tool> mTool;
+    std::reference_wrapper<Project> mProject;
     std::array<ImTextureID, static_cast<std::size_t>(ToolType::kToolCount)>
         mToolTextures{};
 
-    ImTextureID mEyeOpenedTextureID = nullptr;
-    ImTextureID mEyeClosedTextureID = nullptr;
-    ImTextureID mLockLockedTextureID = nullptr;
-    ImTextureID mLockUnlockedTextureID = nullptr;
+    ImTextureID mEyeOpenedTextureID{0};
+    ImTextureID mEyeClosedTextureID{0};
+    ImTextureID mLockLockedTextureID{0};
+    ImTextureID mLockUnlockedTextureID{0};
 
     ImVec2 mDrawWinDimensions;
     ImVec4 mSelectedItemOutlineColor;
 
-    bool mShouldDoTool = false;
-    bool mRenderSaveAsImgPopup = false;
-    bool mRenderSaveAsPrjPopup = false;
-    bool mRenderSaveErrorPopup = false;
-    bool mRenderNewProjectPopup = false;
-    bool mRenderOpenProjectPopup = false;
-    bool mDrawWindowRendered = false;
+    bool mShouldDoTool{false};
+    bool mRenderSaveAsImgPopup{false};
+    bool mRenderSaveAsPrjPopup{false};
+    bool mRenderSaveErrorPopup{false};
+    bool mRenderNewProjectPopup{false};
+    bool mRenderOpenProjectPopup{false};
+    bool mDrawWindowRendered{false};
 
-    inline static int sConstructCounter = 0;
-    inline static GLFWwindow* sWindow = nullptr;
+    inline static int sConstructCounter{0};
+    inline static GLFWwindow* sWindow{nullptr};
 };
 } // namespace Pikzel

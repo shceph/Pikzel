@@ -5,10 +5,8 @@ namespace Pikzel
 {
 constexpr Color kEraserToolPreviewColor{.r = 100, .g = 100, .b = 100, .a = 100};
 
-PreviewLayer::PreviewLayer(std::shared_ptr<Tool> tool,
-                           std::shared_ptr<Camera> camera, Vec2Int canvas_dims)
-    : mTool{std::move(tool)},
-      mLayer{mTool, std::move(camera), canvas_dims, false, true},
+PreviewLayer::PreviewLayer(Tool& tool, Camera& camera, Vec2Int canvas_dims)
+    : mTool{tool}, mLayer{mTool, camera, canvas_dims, false, true},
       mTranslationMat{0.0F}
 {
 }
@@ -37,8 +35,8 @@ void PreviewLayer::Update()
     mPreviewLayerChanged = false;
     mApplyCursorBasedTranslation = true;
 
-    auto tool_type = mTool->GetToolType();
-    auto tool_curr_color = Color::FromImVec4(mTool->GetColor());
+    auto tool_type = mTool.get().GetToolType();
+    auto tool_curr_color = Color::FromImVec4(mTool.get().GetColor());
 
     if (tool_type == ToolType::kEraser)
     {
@@ -53,9 +51,9 @@ void PreviewLayer::Update()
     }
 
     if ((tool_type == ToolType::kBrush || tool_type == ToolType::kEraser) &&
-        (IsToolTypeChanged() || mBrushSize != mTool->GetBrushRadius()))
+        (IsToolTypeChanged() || mBrushSize != mTool.get().GetBrushRadius()))
     {
-        mBrushSize = mTool->GetBrushRadius();
+        mBrushSize = mTool.get().GetBrushRadius();
         UpdateCircleSize(mBrushSize);
     }
     else if (IsToolTypeChanged()) { Clear(); }
@@ -68,11 +66,11 @@ void PreviewLayer::Update()
         mApplyCursorBasedTranslation = false;
     }
 
-    mToolType = mTool->GetToolType();
+    mToolType = mTool.get().GetToolType();
 }
 
 auto PreviewLayer::IsToolTypeChanged() const -> bool
 {
-    return mToolType != mTool->GetToolType();
+    return mToolType != mTool.get().GetToolType();
 }
 } // namespace Pikzel

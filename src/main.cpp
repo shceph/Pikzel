@@ -1,5 +1,3 @@
-#include <cmath>
-#include <cstddef>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -13,11 +11,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
-#include <future>
-#include <iostream>
-#include <string>
-#include <vector>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -28,6 +21,13 @@
 #include "preview_layer.hpp"
 #include "project.hpp"
 #include "vertex_buffer_control.hpp"
+
+#include <cmath>
+#include <cstddef>
+#include <future>
+#include <iostream>
+#include <string>
+#include <vector>
 
 using Pikzel::Vertex;
 
@@ -192,18 +192,18 @@ auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool
 
 void MainLoop(GLFWwindow* window)
 {
-    auto tool = std::make_shared<Pikzel::Tool>();
-    auto camera = std::make_shared<Pikzel::Camera>();
-    auto layers = std::make_shared<Pikzel::Layers>();
-    auto project = std::make_shared<Pikzel::Project>(layers, tool, camera);
+    Pikzel::Tool tool;
+    Pikzel::Camera camera;
+    Pikzel::Layers layers;
+    Pikzel::Project project{layers, tool, camera};
     Pikzel::UI ui_state{project, tool, window};
 
     Pikzel::Events::PushToScrollCallback(
-        [camera](double x_offset, double y_offset)
-        { camera->ScrollCallback(x_offset, y_offset); });
+        [&camera](double x_offset, double y_offset)
+        { camera.ScrollCallback(x_offset, y_offset); });
     Pikzel::Events::PushToCursorPosCallback(
-        [camera](double x_offset, double y_offset)
-        { camera->CursorPosCallback(x_offset, y_offset); });
+        [&camera](double x_offset, double y_offset)
+        { camera.CursorPosCallback(x_offset, y_offset); });
 
     Gla::FrameBuffer imgui_window_fb(
         {.width = kWindowWidth, .height = kWindowHeight});
@@ -280,28 +280,28 @@ void MainLoop(GLFWwindow* window)
 
         Pikzel::UI::NewFrame();
 
-        if (project->IsOpened())
+        if (project.IsOpened())
         {
-            ui_state.RenderUI(*layers, *camera);
+            ui_state.RenderUI(layers, camera);
             ui_state.RenderDrawWindow(imgui_window_fb.GetTextureID(), "Draw");
         }
         else
         {
             ui_state.RenderNoProjectWindow();
 
-            if (project->IsOpened())
+            if (project.IsOpened())
             {
                 std::vector<Vertex> bckg_vertices;
-                layers->EmplaceBckgVertices(bckg_vertices,
-                                            project->GetCanvasDims());
+                layers.EmplaceBckgVertices(bckg_vertices,
+                                           project.GetCanvasDims());
                 bckg_vertices_count = bckg_vertices.size();
                 auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
                 vbo_bckg.UpdateSize(bckg_buff_size);
                 vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
 
                 std::size_t vertex_count =
-                    static_cast<std::size_t>(project->CanvasWidth() *
-                                             project->CanvasHeight()) *
+                    static_cast<std::size_t>(project.CanvasWidth() *
+                                             project.CanvasHeight()) *
                     Pikzel::kVerticesPerPixel;
 
                 vbo_canvas.UpdateSize(vertex_count * sizeof(Vertex));
@@ -310,18 +310,18 @@ void MainLoop(GLFWwindow* window)
                     glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
 
                 vbo_control.emplace(layers, buff_data, vertex_count);
-                preview_layer.emplace(tool, camera, layers->GetCanvasDims());
+                preview_layer.emplace(tool, camera, layers.GetCanvasDims());
             }
         }
 
         Pikzel::UI::RenderAndEndFrame();
 
-        if (project->IsOpened() && ui_state.IsDrawWindowRendered())
+        if (project.IsOpened() && ui_state.IsDrawWindowRendered())
         {
             assert(preview_layer.has_value());
             assert(vbo_control.has_value());
 
-            auto proj_mat = GetProjMat(*camera, project->GetCanvasDims());
+            auto proj_mat = GetProjMat(camera, project.GetCanvasDims());
             shader.Bind();
             shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
@@ -341,7 +341,7 @@ void MainLoop(GLFWwindow* window)
             group_bckg.Bind();
             shader_bckg.SetUniformMat4f(
                 "u_ViewProjection",
-                GetProjMat(*camera, project->GetCanvasDims()));
+                GetProjMat(camera, project.GetCanvasDims()));
             Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
 
             if (vbo_update_future.valid()) { vbo_update_future.wait(); }
@@ -354,7 +354,7 @@ void MainLoop(GLFWwindow* window)
                                       vbo_control->GetVertexCount());
             vbo_control->Map(vbo_canvas);
 
-            layers->UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
+            layers.UpdateAndDraw(ui_state.ShouldDoTool(), tool, camera);
             vbo_update_future = std::async(
                 std::launch::async,
                 [&vbo_control, &prev_fps]()
@@ -369,12 +369,11 @@ void MainLoop(GLFWwindow* window)
             UpdatePreviewVboIfNeeded(preview_layer.value(), preview_vertices,
                                      vbo_preview);
             auto canvas_coord_behind_cursor =
-                layers->CanvasCoordsFromCursorPos();
+                layers.CanvasCoordsFromCursorPos();
             if (canvas_coord_behind_cursor.has_value())
             {
-                glm::mat4 trans_mat =
-                    GetTransMat(canvas_coord_behind_cursor.value(),
-                                layers->GetCanvasDims());
+                glm::mat4 trans_mat = GetTransMat(
+                    canvas_coord_behind_cursor.value(), layers.GetCanvasDims());
                 group_preview.Bind();
                 glm::mat4 result = proj_mat;
 
