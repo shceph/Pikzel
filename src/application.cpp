@@ -3,6 +3,7 @@
 #include "layer.hpp"
 #include "tool.hpp"
 
+#include <cstddef>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -64,11 +65,21 @@ void UI::NewFrame()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr);
 }
 
 void UI::RenderAndEndFrame()
 {
     ImGui::Render();
+    ImVec4 clear_color = ImVec4(0.8F, 0.8F, 0.8F, 1.00F);
+    int display_w = 0;
+    int display_h = 0;
+    glfwGetFramebufferSize(sWindow, &display_w, &display_h);
+    glViewport(0, 0, display_w, display_h);
+    glClearColor(clear_color.x * clear_color.w, clear_color.y * clear_color.w,
+                 clear_color.z * clear_color.w, clear_color.w);
+    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     // Update and Render additional Platform Windows
@@ -83,18 +94,15 @@ void UI::RenderAndEndFrame()
         ImGui::RenderPlatformWindowsDefault();
         glfwMakeContextCurrent(backup_current_context);
     }
-
-    ImGui::EndFrame();
 }
 
 void UI::RenderUI(Layers& layers, Camera& camera)
 {
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
-
     RenderMenuBar(layers, camera);
     RenderColorWindow();
     RenderToolWindow();
     RenderLayerWindow(layers);
+    RenderUndoTreeWindow(layers);
 
     if (mRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
     if (mRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
@@ -103,8 +111,6 @@ void UI::RenderUI(Layers& layers, Camera& camera)
 
 void UI::RenderNoProjectWindow()
 {
-    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID);
-
     ImGui::Begin("No project window");
 
     if (ImGui::Selectable("New project")) { mRenderNewProjectPopup = true; }
@@ -202,15 +208,12 @@ void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
     }
 }
 
-void UI::SetupLayerToolTextures(ImTextureID eye_opened_id,
-                                ImTextureID eye_closed_id,
-                                ImTextureID lock_locked_id,
-                                ImTextureID lock_unlocked_id)
+void UI::SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids)
 {
-    mEyeOpenedTextureID = eye_opened_id;
-    mEyeClosedTextureID = eye_closed_id;
-    mLockLockedTextureID = lock_locked_id;
-    mLockUnlockedTextureID = lock_unlocked_id;
+    mEyeOpenedTextureID = layer_tex_ids[0];
+    mEyeClosedTextureID = layer_tex_ids[1];
+    mLockLockedTextureID = layer_tex_ids[2];
+    mLockUnlockedTextureID = layer_tex_ids[3];
 }
 
 auto UI::ShouldDoTool() const -> bool
@@ -241,6 +244,7 @@ void UI::RenderMenuBar(Layers& layers, Camera& camera)
     {
         if (ImGui::MenuItem("Undo")) { layers.MarkForUndo(); }
         if (ImGui::MenuItem("Redo")) { layers.MarkForRedo(); }
+        if (ImGui::MenuItem("Undo Tree")) { mRenderUndoTreeWindow = true; }
         ImGui::EndMenu();
     }
 
@@ -454,6 +458,63 @@ void UI::RenderColorPalette(ImVec4& color)
         }
 
         ImGui::PopID();
+    }
+}
+
+void UI::RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node)
+{
+    mRenderNodesChildrenFuncData.node_count++;
+    const auto& children = node.GetChildren();
+    bool is_current_node = &layers.GetCurrentUndoTreeNode() == &node;
+    std::string node_id =
+        "Node" + std::to_string(mRenderNodesChildrenFuncData.node_count);
+    const char* node_label = is_current_node ? "Current Node" : "Node";
+
+    if (ImGui::TreeNodeEx(node_id.c_str(), ImGuiTreeNodeFlags_None, "%s",
+                          node_label))
+    {
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+        {
+            std::puts("should set node");
+            mRenderNodesChildrenFuncData.clicked_node = &node;
+        }
+
+        if (children.size() > 1)
+        {
+            for (std::size_t i = 1; i < children.size(); i++)
+            {
+                RenderNodesChildren(layers, *children[i]);
+            }
+        }
+
+        ImGui::TreePop();
+    }
+
+    if (children.size() > 1)
+    {
+        RenderNodesChildren(layers, *children.front());
+        return;
+    }
+    if (children.size() == 0) { return; }
+
+    RenderNodesChildren(layers, *children.front());
+}
+
+void UI::RenderUndoTreeWindow(Layers& layers)
+{
+    if (!mRenderUndoTreeWindow) { return; }
+
+    ImGui::Begin("Undo Tree", &mRenderUndoTreeWindow, ImGuiWindowFlags_None);
+    mShouldDoTool = false;
+
+    mRenderNodesChildrenFuncData.Reset();
+    RenderNodesChildren(layers, layers.GetUndoTree());
+
+    ImGui::End();
+
+    if (mRenderNodesChildrenFuncData.clicked_node != nullptr)
+    {
+        layers.SetCurrentNode(*mRenderNodesChildrenFuncData.clicked_node);
     }
 }
 

@@ -54,6 +54,7 @@ class Layers
     void PushToHistory();
     void Undo();
     void Redo();
+    void SetCurrentNode(Tree<Capture>& node_to_set_to);
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera);
     void InitHistory(Camera& camera, Tool& tool);
 
@@ -75,6 +76,21 @@ class Layers
     [[nodiscard]] auto GetCurrentLayerIndex() const -> std::size_t
     {
         return mCurrentLayerIndex;
+    }
+    [[nodiscard]] auto GetUndoTree() const -> const Tree<Capture>&
+    {
+        assert(mUndoTree.has_value());
+        return *mUndoTree;
+    }
+    [[nodiscard]] auto GetUndoTree() -> Tree<Capture>&
+    {
+        assert(mUndoTree.has_value());
+        return *mUndoTree;
+    }
+    [[nodiscard]] auto GetCurrentUndoTreeNode() const -> const Tree<Capture>&
+    {
+        assert(mCurrentUndoTreeNode != nullptr);
+        return *mCurrentUndoTreeNode;
     }
     void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
     void MarkForUndo() { mShouldUndo = true; }

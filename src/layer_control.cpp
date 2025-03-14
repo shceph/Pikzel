@@ -228,6 +228,16 @@ void Layers::Redo()
     Layer::SetUpdateWholeVBOToTrue();
 }
 
+// NOTE: This doesn't set last used child id
+void Layers::SetCurrentNode(Tree<Capture>& node_to_set_to)
+{
+    mCurrentUndoTreeNode = &node_to_set_to;
+    mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
+    mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
+    VertexBufferControl::SetUpdateAllToTrue();
+    Layer::SetUpdateWholeVBOToTrue();
+}
+
 void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera)
 {
     for (auto& layer : GetLayers())

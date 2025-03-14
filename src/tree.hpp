@@ -1,3 +1,5 @@
+#pragma once
+
 #include <memory>
 #include <utility>
 #include <vector>
@@ -36,7 +38,7 @@ template <typename T> class Tree
 
     auto GetParent() const -> Node* { return mParent; }
     auto GetData() const -> const T& { return *mData; }
-    auto GetChildren() const -> std::vector<std::unique_ptr<Node>>&
+    auto GetChildren() const -> const std::vector<std::unique_ptr<Node>>&
     {
         return mChildren;
     }

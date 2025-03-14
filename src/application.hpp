@@ -23,10 +23,7 @@ class UI
     void Update();
 
     void SetupToolTextures(std::span<unsigned int> tex_ids);
-    void SetupLayerToolTextures(ImTextureID eye_opened_id,
-                                ImTextureID eye_closed_id,
-                                ImTextureID lock_locked_id,
-                                ImTextureID lock_unlocked_id);
+    void SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids);
     static void NewFrame();
     static void RenderAndEndFrame();
 
@@ -60,9 +57,23 @@ class UI
     void SetShouldDoToolToTrue() { mShouldDoTool = true; }
 
   private:
+    struct RenderNodesChildrenFuncData
+    {
+        int node_count{0};
+        Tree<Layers::Capture>* clicked_node = nullptr;
+
+        void Reset()
+        {
+            node_count = 0;
+            clicked_node = nullptr;
+        }
+    };
+
     void RenderMenuBar(Layers& layers, Camera& camera);
     void RenderSaveAsImagePopup();
     void RenderSaveAsProjectPopup();
+    void RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node);
+    void RenderUndoTreeWindow(Layers& layers);
     void RenderToolWindow();
     void RenderLayerWindow(Layers& layers);
     void RenderLayerWinContextMenu(Layers& layers);
@@ -93,6 +104,8 @@ class UI
         return mSelectedItemOutlineColor;
     }
 
+    RenderNodesChildrenFuncData mRenderNodesChildrenFuncData;
+
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Project> mProject;
     std::array<ImTextureID, static_cast<std::size_t>(ToolType::kToolCount)>
@@ -112,6 +125,7 @@ class UI
     bool mRenderSaveErrorPopup{false};
     bool mRenderNewProjectPopup{false};
     bool mRenderOpenProjectPopup{false};
+    bool mRenderUndoTreeWindow{false};
     bool mDrawWindowRendered{false};
 
     inline static int sConstructCounter{0};

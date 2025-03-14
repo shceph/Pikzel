@@ -232,10 +232,12 @@ void MainLoop(GLFWwindow* window)
     Gla::Texture2D lock_locked_texture("assets/lock_locked.png");
     Gla::Texture2D lock_unlocked_texture("assets/lock_unlocked.png");
 
-    ui_state.SetupToolTextures(tool_texture_ids);
-    ui_state.SetupLayerToolTextures(
+    std::array<unsigned int, 4> layer_texture_ids = {
         eye_opened_texture.GetID(), eye_closed_texture.GetID(),
-        lock_locked_texture.GetID(), lock_unlocked_texture.GetID());
+        lock_locked_texture.GetID(), lock_unlocked_texture.GetID()};
+
+    ui_state.SetupToolTextures(tool_texture_ids);
+    ui_state.SetupLayerToolTextures(layer_texture_ids);
 
     Gla::VertexBufferLayout layout;
     layout.Push<float>(2);
@@ -370,7 +372,8 @@ void MainLoop(GLFWwindow* window)
                                      vbo_preview);
             auto canvas_coord_behind_cursor =
                 layers.CanvasCoordsFromCursorPos();
-            if (canvas_coord_behind_cursor.has_value())
+            if (canvas_coord_behind_cursor.has_value() &&
+                ui_state.ShouldDoTool())
             {
                 glm::mat4 trans_mat = GetTransMat(
                     canvas_coord_behind_cursor.value(), layers.GetCanvasDims());

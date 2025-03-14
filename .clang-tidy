@@ -19,6 +19,7 @@ Checks: >
   -hicpp-signed-bitwise,
   -readability-magic-numbers,
   -cppcoreguidelines-avoid-magic-numbers,
+  -misc-no-recursion,
 
   # Have structs with public members
 
