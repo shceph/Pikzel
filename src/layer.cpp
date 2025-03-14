@@ -693,30 +693,31 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
         return std::nullopt;
     }
 
+    glm::vec2 canvas_dims_flt{mCanvasDims};
     glm::vec2 cursor_draw_win_relative{cursor_x - canvas_upperleft.x,
                                        cursor_y - canvas_upperleft.y};
     glm::vec2 canvas_on_screen_dims{canvas_bottomtright.x - canvas_upperleft.x,
                                     canvas_bottomtright.y - canvas_upperleft.y};
 
-    Vec2Int coords = cursor_draw_win_relative /
-                     (canvas_on_screen_dims / glm::vec2{mCanvasDims});
+    glm::vec2 coords =
+        cursor_draw_win_relative / (canvas_on_screen_dims / canvas_dims_flt);
     double zoom_val = mCamera.get().GetZoomValue();
 
     if (zoom_val != 0)
     {
-        double inv_zoom = 1 - zoom_val;
-        int new_width = static_cast<int>(mCanvasDims.x * inv_zoom);
-        int new_height = static_cast<int>(mCanvasDims.y * inv_zoom);
-        coords.x = static_cast<int>(coords.x * inv_zoom);
-        coords.y = static_cast<int>(coords.y * inv_zoom);
-        coords.x += (mCanvasDims.x - new_width) / 2;
-        coords.y += (mCanvasDims.y - new_height) / 2;
+        float inv_zoom = 1.0F - static_cast<float>(zoom_val);
+        float new_width = canvas_dims_flt.x * inv_zoom;
+        float new_height = canvas_dims_flt.y * inv_zoom;
+        coords.x = coords.x * inv_zoom;
+        coords.y = coords.y * inv_zoom;
+        coords.x += (canvas_dims_flt.x - new_width) / 2;
+        coords.y += (canvas_dims_flt.y - new_height) / 2;
     }
 
     coords += mCamera.get().GetCenterAsVec2Int() - mCanvasDims / 2;
 
-    if (coords.x < 0 || coords.x >= mCanvasDims.x || coords.y < 0 ||
-        coords.y >= mCanvasDims.y)
+    if (coords.x < 0 || coords.x >= canvas_dims_flt.x || coords.y < 0 ||
+        coords.y >= canvas_dims_flt.y)
     {
         return std::nullopt;
     }
