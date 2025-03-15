@@ -35,6 +35,7 @@ class Events
     static void PushToScrollCallback(CallbackType&& callback);
     static void PushToCursorPosCallback(CallbackType&& callback);
     static auto IsKeyboardKeyPressed(KeyboardKey key) -> bool;
+    static auto IsCtrlPressed() -> bool;
     static auto IsMouseButtonPressed(MouseButtons button) -> bool;
     static auto IsMouseButtonHeld(MouseButtons button) -> bool;
     static void Update();

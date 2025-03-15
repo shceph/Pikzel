@@ -73,6 +73,12 @@ auto Events::IsMouseButtonHeld(MouseButtons button) -> bool
                kDelay;
 }
 
+auto Events::IsCtrlPressed() -> bool
+{
+    return (glfwGetKey(sWindow, GLFW_KEY_LEFT_CONTROL) != 0) ||
+           (glfwGetKey(sWindow, GLFW_KEY_CAPS_LOCK) != 0);
+}
+
 void Events::Update()
 {
     auto& last_time_clicked = GetLastTimeClickedArrayForEachButton();

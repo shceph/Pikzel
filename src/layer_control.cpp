@@ -247,13 +247,13 @@ void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera)
 
     if (should_do_tool) { DoCurrentTool(); }
 
-    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_Z) ||
+    if ((Events::IsCtrlPressed() && Events::IsKeyboardKeyPressed(GLFW_KEY_Z)) ||
         mShouldUndo)
     {
         Undo();
     }
 
-    if (Events::AreKeyboardKeysPressed(GLFW_KEY_LEFT_CONTROL, GLFW_KEY_R) ||
+    if ((Events::IsCtrlPressed() && Events::IsKeyboardKeyPressed(GLFW_KEY_R)) ||
         mShouldRedo)
     {
         Redo();

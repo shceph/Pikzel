@@ -1,5 +1,6 @@
 #pragma once
 
+#include "GLFW/glfw3.h"
 #include "camera.hpp"
 #include "layer.hpp"
 #include "project.hpp"
@@ -22,16 +23,19 @@ class Layers
     {
         Capture(Tool& tool, Camera& camera, Vec2Int canvas_dims,
                 std::size_t selected_layer_ind)
-            : selected_layer_index{selected_layer_ind}
+            : time_of_creation{static_cast<int>(glfwGetTime())},
+              selected_layer_index{selected_layer_ind}
         {
             layers.emplace_back(tool, camera, canvas_dims);
         }
 
         Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
-            : layers{layers}, selected_layer_index{selected_layer_index}
+            : time_of_creation{static_cast<int>(glfwGetTime())}, layers{layers},
+              selected_layer_index{selected_layer_index}
         {
         }
 
+        int time_of_creation;
         std::list<Layer> layers;
         std::size_t selected_layer_index;
     };

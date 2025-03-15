@@ -199,11 +199,21 @@ void MainLoop(GLFWwindow* window)
     Pikzel::UI ui_state{project, tool, window};
 
     Pikzel::Events::PushToScrollCallback(
-        [&camera](double x_offset, double y_offset)
-        { camera.ScrollCallback(x_offset, y_offset); });
+        [&camera, &ui_state](double x_offset, double y_offset)
+        {
+            if (ui_state.ShouldDoTool())
+            {
+                camera.ScrollCallback(x_offset, y_offset);
+            }
+        });
     Pikzel::Events::PushToCursorPosCallback(
-        [&camera](double x_offset, double y_offset)
-        { camera.CursorPosCallback(x_offset, y_offset); });
+        [&camera, &ui_state](double x_offset, double y_offset)
+        {
+            if (ui_state.ShouldDoTool())
+            {
+                camera.CursorPosCallback(x_offset, y_offset);
+            }
+        });
 
     Gla::FrameBuffer imgui_window_fb(
         {.width = kWindowWidth, .height = kWindowHeight});

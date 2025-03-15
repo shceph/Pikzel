@@ -466,20 +466,28 @@ void UI::RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node)
     mRenderNodesChildrenFuncData.node_count++;
     const auto& children = node.GetChildren();
     bool is_current_node = &layers.GetCurrentUndoTreeNode() == &node;
+    bool has_multiple_children = children.size() > 1;
+
     std::string node_id =
         "Node" + std::to_string(mRenderNodesChildrenFuncData.node_count);
-    const char* node_label = is_current_node ? "Current Node" : "Node";
+    const char* curr = is_current_node ? " - Current Node" : "";
 
-    if (ImGui::TreeNodeEx(node_id.c_str(), ImGuiTreeNodeFlags_None, "%s",
-                          node_label))
+    int lifetime_in_sec =
+        static_cast<int>(glfwGetTime()) - node.GetData().time_of_creation;
+    int lifetime_in_min = lifetime_in_sec / 60;
+    const char* min_ago = lifetime_in_min == 1 ? "minute ago" : "minutes ago";
+
+    ImGui::SetNextItemOpen(true, 1);
+
+    if (ImGui::TreeNodeEx(node_id.c_str(), ImGuiTreeNodeFlags_None, "%d %s%s",
+                          lifetime_in_min, min_ago, curr))
     {
         if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
         {
-            std::puts("should set node");
             mRenderNodesChildrenFuncData.clicked_node = &node;
         }
 
-        if (children.size() > 1)
+        if (has_multiple_children)
         {
             for (std::size_t i = 1; i < children.size(); i++)
             {
@@ -490,7 +498,7 @@ void UI::RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node)
         ImGui::TreePop();
     }
 
-    if (children.size() > 1)
+    if (has_multiple_children)
     {
         RenderNodesChildren(layers, *children.front());
         return;
