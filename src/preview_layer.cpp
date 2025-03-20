@@ -63,14 +63,8 @@ void PreviewLayer::Update()
     }
     else if (IsToolTypeChanged()) { Clear(); }
 
-    if (tool_type == ToolType::kRectShape)
-    {
-        Clear();
-        mLayer.HandleRectShape();
-        SetPreviewLayerChangedToTrue();
-        mApplyCursorBasedTranslation = false;
-    }
-    else if (tool_type == ToolType::kSelectionTool)
+    if (tool_type == ToolType::kRectShape ||
+        tool_type == ToolType::kSelectionTool)
     {
         mApplyCursorBasedTranslation = false;
     }
@@ -86,9 +80,11 @@ auto PreviewLayer::IsToolTypeChanged() const -> bool
 void PreviewLayer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
                             Color color)
 {
-    auto max_x = static_cast<float>(std::max(upper_left.x, bottom_right.x));
+    auto max_x =
+        static_cast<float>(std::max(upper_left.x, bottom_right.x)) + 1.0F;
     auto min_x = static_cast<float>(std::min(upper_left.x, bottom_right.x));
-    auto max_y = static_cast<float>(std::max(upper_left.y, bottom_right.y));
+    auto max_y =
+        static_cast<float>(std::max(upper_left.y, bottom_right.y)) + 1.0F;
     auto min_y = static_cast<float>(std::min(upper_left.y, bottom_right.y));
 
     mVertices.clear();

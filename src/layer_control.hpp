@@ -46,6 +46,8 @@ class Layers
     auto GetCanvasDims() const -> Vec2Int;
     auto HandleSelectionTool(PreviewLayer& preview_layer) const
         -> std::optional<std::pair<Vec2Int, Vec2Int>>;
+    auto HandleRectShape(PreviewLayer& preview_layer, Color tool_color) const
+        -> std::optional<std::pair<Vec2Int, Vec2Int>>;
     void DoCurrentTool(Tool& tool, PreviewLayer& preview_layer);
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);

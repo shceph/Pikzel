@@ -76,9 +76,61 @@ auto Layers::HandleSelectionTool(PreviewLayer& preview_layer) const
     }
 
     preview_layer.DrawRect({0, 0}, {0, 0}, {.r = 0, .g = 0, .b = 0, .a = 0});
+
+    std::pair<Vec2Int, Vec2Int> ret{shape_begin_coords, *canv_coord};
     shape_began = false;
     shape_begin_coords = {0, 0};
-    return std::pair<Vec2Int, Vec2Int>{shape_begin_coords, *canv_coord};
+    return ret;
+}
+
+auto Layers::HandleRectShape(PreviewLayer& preview_layer,
+                             Color tool_color) const
+    -> std::optional<std::pair<Vec2Int, Vec2Int>>
+{
+    auto canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return std::nullopt; }
+    bool left_button_pressed =
+        Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
+
+    static bool shape_began = false;
+    static Vec2Int shape_begin_coords{0, 0};
+
+    if (!shape_began)
+    {
+        if (left_button_pressed)
+        {
+            shape_begin_coords = *canv_coord;
+            shape_began = true;
+        }
+        return std::nullopt;
+    }
+
+    // Use left shift to force drawing a square
+    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
+    {
+        int diff_x = shape_begin_coords.x - canv_coord->x;
+        int diff_y = shape_begin_coords.y - canv_coord->y;
+
+        if (std::abs(diff_x) < std::abs(diff_y))
+        {
+            canv_coord->y = shape_begin_coords.y - diff_x;
+        }
+        else { canv_coord->x = shape_begin_coords.x - diff_y; }
+    }
+
+    if (left_button_pressed)
+    {
+        preview_layer.DrawRect(shape_begin_coords, *canv_coord, tool_color);
+
+        return std::nullopt;
+    }
+
+    preview_layer.DrawRect({0, 0}, {0, 0}, {.r = 0, .g = 0, .b = 0, .a = 0});
+
+    std::pair<Vec2Int, Vec2Int> ret{shape_begin_coords, *canv_coord};
+    shape_began = false;
+    shape_begin_coords = {0, 0};
+    return ret;
 }
 
 void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
@@ -86,11 +138,27 @@ void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
     if (tool.GetToolType() == ToolType::kSelectionTool)
     {
         auto points = HandleSelectionTool(preview_layer);
+
         if (points.has_value())
         {
             SetSelectedRect(points->first, points->second);
             preview_layer.Clear();
         }
+
+        return;
+    }
+
+    if (tool.GetToolType() == ToolType::kRectShape)
+    {
+        auto points =
+            HandleRectShape(preview_layer, Color::FromImVec4(tool.GetColor()));
+
+        if (points.has_value())
+        {
+            GetCurrentLayer().DrawRect(points->first, points->second, true);
+            preview_layer.Clear();
+        }
+
         return;
     }
 
