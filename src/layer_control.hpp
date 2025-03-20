@@ -1,12 +1,13 @@
 #pragma once
 
-#include "GLFW/glfw3.h"
 #include "camera.hpp"
 #include "layer.hpp"
+#include "preview_layer.hpp"
 #include "project.hpp"
 #include "tool.hpp"
 #include "tree.hpp"
 
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 
 #include <list>
@@ -43,7 +44,9 @@ class Layers
     auto GetCurrentLayer() -> Layer&;
     [[nodiscard]]
     auto GetCanvasDims() const -> Vec2Int;
-    void DoCurrentTool();
+    auto HandleSelectionTool(PreviewLayer& preview_layer) const
+        -> std::optional<std::pair<Vec2Int, Vec2Int>>;
+    void DoCurrentTool(Tool& tool, PreviewLayer& preview_layer);
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
     void AddLayer(Tool& tool, Camera& camera);
@@ -54,13 +57,15 @@ class Layers
     void DrawToTempLayer();
     auto AtIndex(std::size_t index) -> Layer&;
     [[nodiscard]]
-    auto GetDisplayedCanvas() const -> CanvasData;
+    auto GetDisplayedCanvas() const -> std::vector<Color>;
     void PushToHistory();
     void Undo();
     void Redo();
     void SetCurrentNode(Tree<Capture>& node_to_set_to);
-    void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera);
+    void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
+                       PreviewLayer& preview_layer);
     void InitHistory(Camera& camera, Tool& tool);
+    void SetSelectedRect(Vec2Int upper_left, Vec2Int bottom_right);
 
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
@@ -96,7 +101,13 @@ class Layers
         assert(mCurrentUndoTreeNode != nullptr);
         return *mCurrentUndoTreeNode;
     }
-    void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
+    void SetCanvasDims(Vec2Int canvas_dims)
+    {
+        mCanvasDims = canvas_dims;
+        std::size_t new_size =
+            static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y;
+        mSelected.reserve(new_size);
+    }
     void MarkForUndo() { mShouldUndo = true; }
     void MarkForRedo() { mShouldRedo = true; }
     void MarkToAddLayer() { mShouldAddLayer = true; }
@@ -115,8 +126,10 @@ class Layers
     Tree<Capture>* mCurrentUndoTreeNode{nullptr};
     std::optional<Tree<Capture>> mUndoTree{std::nullopt};
     std::optional<Capture> mCurrentCapture{std::nullopt};
+    std::vector<bool> mSelected;
     std::size_t mCurrentLayerIndex{0};
     Vec2Int mCanvasDims{0, 0};
+    bool mCheckIfPixelSelected{false};
     bool mShouldUpdateHistory{false};
     bool mShouldUndo{false};
     bool mShouldRedo{false};

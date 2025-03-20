@@ -1,6 +1,8 @@
 #include "layer_control.hpp"
 #include "events.hpp"
 #include "layer.hpp"
+#include "preview_layer.hpp"
+#include "tool.hpp"
 #include "vertex_buffer_control.hpp"
 
 #include "GLFW/glfw3.h"
@@ -31,8 +33,67 @@ auto Layers::GetCanvasDims() const -> Vec2Int
     return mCanvasDims;
 }
 
-void Layers::DoCurrentTool()
+auto Layers::HandleSelectionTool(PreviewLayer& preview_layer) const
+    -> std::optional<std::pair<Vec2Int, Vec2Int>>
 {
+    auto canv_coord = CanvasCoordsFromCursorPos();
+    if (!canv_coord.has_value()) { return std::nullopt; }
+    bool left_button_pressed =
+        Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
+
+    static bool shape_began = false;
+    static Vec2Int shape_begin_coords{0, 0};
+
+    if (!shape_began)
+    {
+        if (left_button_pressed)
+        {
+            shape_begin_coords = *canv_coord;
+            shape_began = true;
+        }
+        return std::nullopt;
+    }
+
+    // Use left shift to force drawing a square
+    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
+    {
+        int diff_x = shape_begin_coords.x - canv_coord->x;
+        int diff_y = shape_begin_coords.y - canv_coord->y;
+
+        if (std::abs(diff_x) < std::abs(diff_y))
+        {
+            canv_coord->y = shape_begin_coords.y - diff_x;
+        }
+        else { canv_coord->x = shape_begin_coords.x - diff_y; }
+    }
+
+    if (left_button_pressed)
+    {
+        preview_layer.DrawRect(shape_begin_coords, *canv_coord,
+                               {.r = 45, .g = 50, .b = 220, .a = 100});
+
+        return std::nullopt;
+    }
+
+    preview_layer.DrawRect({0, 0}, {0, 0}, {.r = 0, .g = 0, .b = 0, .a = 0});
+    shape_began = false;
+    shape_begin_coords = {0, 0};
+    return std::pair<Vec2Int, Vec2Int>{shape_begin_coords, *canv_coord};
+}
+
+void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
+{
+    if (tool.GetToolType() == ToolType::kSelectionTool)
+    {
+        auto points = HandleSelectionTool(preview_layer);
+        if (points.has_value())
+        {
+            SetSelectedRect(points->first, points->second);
+            preview_layer.Clear();
+        }
+        return;
+    }
+
     if (GetCurrentLayer().DoCurrentTool()) { MarkHistoryForUpdate(); }
 }
 
@@ -143,12 +204,12 @@ void Layers::ResetDataToDefault()
     mCurrentLayerIndex = 0;
 }
 
-auto Layers::GetDisplayedCanvas() const -> CanvasData
+auto Layers::GetDisplayedCanvas() const -> std::vector<Color>
 {
     auto canvas_width = GetCanvasDims().x;
     auto canvas_height = GetCanvasDims().y;
 
-    CanvasData displayed_canvas{
+    std::vector<Color> displayed_canvas{
         static_cast<std::size_t>(canvas_height * canvas_width)};
 
     for (const auto& layer_traversed : std::ranges::reverse_view(GetLayers()))
@@ -238,14 +299,15 @@ void Layers::SetCurrentNode(Tree<Capture>& node_to_set_to)
     Layer::SetUpdateWholeVBOToTrue();
 }
 
-void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera)
+void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
+                           PreviewLayer& preview_layer)
 {
     for (auto& layer : GetLayers())
     {
         layer.Update();
     }
 
-    if (should_do_tool) { DoCurrentTool(); }
+    if (should_do_tool) { DoCurrentTool(tool, preview_layer); }
 
     if ((Events::IsCtrlPressed() && Events::IsKeyboardKeyPressed(GLFW_KEY_Z)) ||
         mShouldUndo)
@@ -274,5 +336,23 @@ void Layers::InitHistory(Camera& camera, Tool& tool)
     mCurrentCapture.emplace(tool, camera, mCanvasDims, 0);
     mUndoTree.emplace(auto{mCurrentCapture.value()});
     mCurrentUndoTreeNode = &(*mUndoTree);
+}
+
+void Layers::SetSelectedRect(Vec2Int upper_left, Vec2Int bottom_right)
+{
+    auto min_x = std::min(upper_left.x, bottom_right.x);
+    auto max_x = std::max(upper_left.x, bottom_right.x);
+    auto min_y = std::min(upper_left.y, bottom_right.y);
+    auto max_y = std::max(upper_left.y, bottom_right.y);
+
+    for (int i = min_y; i <= max_y; i++)
+    {
+        for (int j = min_x; j <= max_x; j++)
+        {
+            mSelected[(i * GetCanvasDims().x) + j] = true;
+        }
+    }
+
+    mCheckIfPixelSelected = true;
 }
 } // namespace Pikzel

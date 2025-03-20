@@ -588,6 +588,18 @@ void UI::RenderToolWindow()
     }
     if (tool_type == ToolType::kRectShape) { EndOutline(); }
 
+    ImGui::SameLine(0.0F, 4.0F);
+
+    if (tool_type == ToolType::kSelectionTool) { BeginOutline(); }
+    if (ImGui::ImageButton(
+            "ib6",
+            mToolTextures[static_cast<std::size_t>(ToolType::kSelectionTool)],
+            {20.0F, 20.0F}))
+    {
+        mTool.get().SetToolType(ToolType::kSelectionTool);
+    }
+    if (tool_type == ToolType::kSelectionTool) { EndOutline(); }
+
     ImGui::NewLine();
 
     ImGui::PushItemWidth(200.0F);
@@ -780,11 +792,11 @@ void UI::RenderNewProjectPopup()
 
         ImGui::Text("Insert height: ");
         ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##height", &height, 32, 2048);
+        ImGui::SliderInt("##height", &height, 8, 2048);
 
         ImGui::Text("Insert width:  ");
         ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##width", &width, 32, 2048);
+        ImGui::SliderInt("##width", &width, 8, 2048);
 
         if (ImGui::Button("OK"))
         {

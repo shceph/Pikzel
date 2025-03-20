@@ -12,6 +12,7 @@ enum class ToolType : std::uint8_t
     kColorPicker,
     kBucket,
     kRectShape,
+    kSelectionTool,
     kToolCount,
 };
 

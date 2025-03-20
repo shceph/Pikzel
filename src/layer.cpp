@@ -113,6 +113,7 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
     case ToolType::kRectShape:
         return HandleRectShape();
         break;
+    case ToolType::kSelectionTool:
     case ToolType::kToolCount:
         assert(false);
     }
@@ -407,8 +408,11 @@ void Layer::Clear()
     }
 }
 
-void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
+void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/,
+                     std::optional<Color> color /*= std::nullopt*/)
 {
+    Color col = color.value_or(Color::FromImVec4(mTool.get().GetColor()));
+
     std::size_t max_x = std::max(upper_left.x, bottom_right.x);
     std::size_t min_x = std::min(upper_left.x, bottom_right.x);
     std::size_t max_y = std::max(upper_left.y, bottom_right.y);
@@ -419,7 +423,7 @@ void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/)
         for (auto j = min_x; j <= max_x; j++)
         {
             // mCanvas[i][j] = Tool::GetColor();
-            DrawPixel({j, i});
+            DrawPixel({j, i}, col);
         }
     }
 }

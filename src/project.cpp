@@ -140,7 +140,8 @@ auto Project::SaveAsImage(int magnify_factor,
     std::vector<uint8_t> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
-    const CanvasData& canvas_displayed = mLayers.get().GetDisplayedCanvas();
+    const std::vector<Color>& canvas_displayed =
+        mLayers.get().GetDisplayedCanvas();
 
     for (int i = 0; i < mCanvasHeight; i++)
     {

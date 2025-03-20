@@ -13,9 +13,6 @@
 
 namespace Pikzel
 {
-constexpr int kCanvasHeight = 32;
-constexpr int kCanvasWidth = 32;
-
 struct Color
 {
     auto operator=(const ImVec4& color) -> Color&;
@@ -33,8 +30,6 @@ struct Vertex
     float pos_x{}, pos_y{};
     Color color{.r = 0, .g = 0, .b = 0, .a = 0};
 };
-
-using CanvasData = std::vector<Color>;
 
 class Layer
 {
@@ -70,7 +65,7 @@ class Layer
         std::lock_guard<std::mutex> lock{sMutex};
         return mCanvas[(coords.y * mCanvasDims.x) + coords.x];
     }
-    [[nodiscard]] auto GetCanvas() const -> const CanvasData&
+    [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>&
     {
         return mCanvas;
     }
@@ -109,7 +104,8 @@ class Layer
     void DrawPixel(Vec2Int coords);
     void DrawPixel(Vec2Int coords, Color color);
     void DrawPixelClampCoords(Vec2Int coords, Color color);
-    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill);
+    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill,
+                  std::optional<Color> color = std::nullopt);
     void DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                        Color color);
     void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
@@ -121,21 +117,21 @@ class Layer
     void FillUntil(Color until_color, int x_coord, int y_coord,
                    Color fill_color);
 
-    CanvasData mCanvas;
+    std::vector<Color> mCanvas;
     RectShapeData mHandleRectShapeData;
     Vec2Int mCanvasDims;
     bool mIsCanvasLayer;
-    bool mVisible = true;
-    bool mLocked = false;
-    bool mDrawVisiblePixelsOnly = false;
-    int mOpacity = 255;
+    bool mVisible{true};
+    bool mLocked{false};
+    bool mDrawVisiblePixelsOnly{false};
+    int mOpacity{255};
     std::string mLayerName;
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;
 
     inline static std::mutex sMutex;
-    inline static int sConstructCounter = 1;
-    inline static bool sShouldUpdateWholeVBO = true;
+    inline static int sConstructCounter{1};
+    inline static bool sShouldUpdateWholeVBO{true};
 
     friend class UI;
     friend class Layers;
