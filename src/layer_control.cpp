@@ -141,7 +141,7 @@ void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
 
         if (points.has_value())
         {
-            SetSelectedRect(points->first, points->second);
+            mSelection.AddToSelection(points->first, points->second);
             preview_layer.Clear();
         }
 
@@ -167,7 +167,7 @@ void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
 
 void Layers::AddLayer(Tool& tool, Camera& camera)
 {
-    mCurrentCapture->layers.emplace_back(tool, camera, mCanvasDims);
+    mCurrentCapture->layers.emplace_back(tool, camera, mSelection, mCanvasDims);
     MarkHistoryForUpdate();
 }
 
@@ -401,26 +401,9 @@ void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
 
 void Layers::InitHistory(Camera& camera, Tool& tool)
 {
-    mCurrentCapture.emplace(tool, camera, mCanvasDims, 0);
+    mCurrentCapture.emplace(tool, camera, mSelection, mCanvasDims, 0);
     mUndoTree.emplace(auto{mCurrentCapture.value()});
     mCurrentUndoTreeNode = &(*mUndoTree);
-}
-
-void Layers::SetSelectedRect(Vec2Int upper_left, Vec2Int bottom_right)
-{
-    auto min_x = std::min(upper_left.x, bottom_right.x);
-    auto max_x = std::max(upper_left.x, bottom_right.x);
-    auto min_y = std::min(upper_left.y, bottom_right.y);
-    auto max_y = std::max(upper_left.y, bottom_right.y);
-
-    for (int i = min_y; i <= max_y; i++)
-    {
-        for (int j = min_x; j <= max_x; j++)
-        {
-            mSelected[(i * GetCanvasDims().x) + j] = true;
-        }
-    }
-
-    mCheckIfPixelSelected = true;
+    mSelection.Reset(mCanvasDims);
 }
 } // namespace Pikzel

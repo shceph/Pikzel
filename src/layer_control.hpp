@@ -4,6 +4,7 @@
 #include "layer.hpp"
 #include "preview_layer.hpp"
 #include "project.hpp"
+#include "selection.hpp"
 #include "tool.hpp"
 #include "tree.hpp"
 
@@ -22,12 +23,12 @@ class Layers
   public:
     struct Capture
     {
-        Capture(Tool& tool, Camera& camera, Vec2Int canvas_dims,
-                std::size_t selected_layer_ind)
+        Capture(Tool& tool, Camera& camera, Selection& selection,
+                Vec2Int canvas_dims, std::size_t selected_layer_ind)
             : time_of_creation{static_cast<int>(glfwGetTime())},
               selected_layer_index{selected_layer_ind}
         {
-            layers.emplace_back(tool, camera, canvas_dims);
+            layers.emplace_back(tool, camera, selection, canvas_dims);
         }
 
         Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
@@ -67,7 +68,6 @@ class Layers
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
                        PreviewLayer& preview_layer);
     void InitHistory(Camera& camera, Tool& tool);
-    void SetSelectedRect(Vec2Int upper_left, Vec2Int bottom_right);
 
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
@@ -103,13 +103,7 @@ class Layers
         assert(mCurrentUndoTreeNode != nullptr);
         return *mCurrentUndoTreeNode;
     }
-    void SetCanvasDims(Vec2Int canvas_dims)
-    {
-        mCanvasDims = canvas_dims;
-        std::size_t new_size =
-            static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y;
-        mSelected.reserve(new_size);
-    }
+    void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
     void MarkForUndo() { mShouldUndo = true; }
     void MarkForRedo() { mShouldRedo = true; }
     void MarkToAddLayer() { mShouldAddLayer = true; }
@@ -125,13 +119,12 @@ class Layers
 
     static constexpr int kMaxHistoryLenght = 30;
 
+    Selection mSelection;
     Tree<Capture>* mCurrentUndoTreeNode{nullptr};
     std::optional<Tree<Capture>> mUndoTree{std::nullopt};
     std::optional<Capture> mCurrentCapture{std::nullopt};
-    std::vector<bool> mSelected;
     std::size_t mCurrentLayerIndex{0};
     Vec2Int mCanvasDims{0, 0};
-    bool mCheckIfPixelSelected{false};
     bool mShouldUpdateHistory{false};
     bool mShouldUndo{false};
     bool mShouldRedo{false};

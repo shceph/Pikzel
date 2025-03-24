@@ -7,7 +7,8 @@ constexpr Color kEraserToolPreviewColor{.r = 100, .g = 100, .b = 100, .a = 100};
 
 PreviewLayer::PreviewLayer(Tool& tool, Camera& camera, Gla::VertexBuffer& vbo,
                            Vec2Int canvas_dims)
-    : mTool{tool}, mVbo{vbo}, mLayer{mTool, camera, canvas_dims, false, true},
+    : mTool{tool}, mVbo{vbo},
+      mLayer{mTool, camera, mSelection, canvas_dims, false, true},
       mTranslationMat{0.0F}
 {
 }

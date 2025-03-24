@@ -82,14 +82,14 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
             .a = static_cast<uint8_t>(color.w * 0xff)};
 }
 
-Layer::Layer(Tool& tool, Camera& camera, Vec2Int canvas_dims,
-             bool is_canvas_layer /*= true*/,
+Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
+             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/,
              bool draw_visible_pixels_only /*= false*/) noexcept
     : mCanvas{static_cast<std::size_t>(canvas_dims.x * canvas_dims.y)},
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
-      mCamera{camera}
+      mCamera{camera}, mSelection{selection}
 {
     if (mIsCanvasLayer) { sConstructCounter++; }
 }
@@ -316,6 +316,8 @@ void Layer::DrawPixel(Vec2Int coords)
 
 void Layer::DrawPixel(Vec2Int coords, Color color)
 {
+    if (!mSelection.get().IsPixelSelected(coords)) { return; }
+
     std::unique_lock<std::mutex> lock{sMutex};
     mCanvas[(coords.y * mCanvasDims.x) + coords.x] = color;
     lock.unlock();

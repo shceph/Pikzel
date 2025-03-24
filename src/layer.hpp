@@ -2,6 +2,7 @@
 
 #include "camera.hpp"
 #include "project.hpp"
+#include "selection.hpp"
 #include "tool.hpp"
 
 #include <imgui.h>
@@ -40,8 +41,8 @@ class Layer
         Vec2Int shape_begin_coords{0, 0};
     };
 
-    explicit Layer(Tool& tool, Camera& camera, Vec2Int canvas_dims,
-                   bool is_canvas_layer = true,
+    explicit Layer(Tool& tool, Camera& camera, Selection& selection,
+                   Vec2Int canvas_dims, bool is_canvas_layer = true,
                    bool draw_visible_pixels_only = false) noexcept;
 
     using ShouldUpdateHistory = bool;
@@ -128,6 +129,7 @@ class Layer
     std::string mLayerName;
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;
+    std::reference_wrapper<Selection> mSelection;
 
     inline static std::mutex sMutex;
     inline static int sConstructCounter{1};

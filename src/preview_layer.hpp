@@ -1,6 +1,7 @@
 #pragma once
 
 #include "layer.hpp"
+#include "selection.hpp"
 #include "tool.hpp"
 
 #include "gla/vertex_buffer.hpp"
@@ -49,5 +50,6 @@ class PreviewLayer
     int mBrushSize = 1;
     bool mPreviewLayerChanged = true;
     bool mApplyCursorBasedTranslation = true;
+    Selection mSelection;
 };
 } // namespace Pikzel

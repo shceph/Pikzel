@@ -133,7 +133,7 @@ void GlfwError(int err_id, const char* message)
 }
 #endif
 
-auto GetProjMat(Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
+auto GetProjMat(const Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
     -> glm::mat4
 {
     const auto width = static_cast<float>(canvas_dims.x);
@@ -150,6 +150,17 @@ auto GetProjMat(Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
                    height - (zoom_half * height) + camera_top_left.y);
 
     return proj;
+}
+
+auto GetProjMatNoZoom(glm::mat4 canvas_mat, Pikzel::Vec2Int canvas_dims)
+    -> glm::mat4
+{
+    glm::vec2 can_dims{canvas_dims};
+    glm::vec3 top_left = canvas_mat * glm::vec4{0, 0, 0, 1};
+    glm::vec3 top_left_move_dist = top_left - glm::vec3{-1, -1, 0};
+
+    return glm::translate(glm::mat4{1}, top_left_move_dist) *
+           glm::ortho(0.0F, can_dims.x, 0.0F, can_dims.y);
 }
 
 auto GetTransMat(Pikzel::Vec2Int canvas_coord_behind_cursor,
@@ -252,7 +263,7 @@ void Update(AppState& app_state)
     app_state.preview_layer->Update();
 }
 
-void Render(float& prev_fps, AppState& app_state, Gla::Shader& shader,
+void Render(AppState& app_state, Gla::Shader& shader,
             Gla::FrameBuffer& imgui_window_fb, Gla::Group& group_bckg,
             Gla::Shader& shader_bckg, Gla::Group& group_canvas,
             Gla::VertexBuffer& vbo_canvas, Gla::Group& group_preview,
@@ -283,7 +294,7 @@ void Render(float& prev_fps, AppState& app_state, Gla::Shader& shader,
     group_bckg.Bind();
     shader_bckg.SetUniformMat4f(
         "u_ViewProjection",
-        GetProjMat(app_state.camera, app_state.project.GetCanvasDims()));
+        GetProjMatNoZoom(proj_mat, app_state.project.GetCanvasDims()));
     Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
 
     if (vbo_update_future.valid()) { vbo_update_future.wait(); }
@@ -298,13 +309,12 @@ void Render(float& prev_fps, AppState& app_state, Gla::Shader& shader,
 
     vbo_update_future = std::async(
         std::launch::async,
-        [&app_state, &prev_fps]()
+        [&app_state]()
         {
             Gla::Timer timer;
             app_state.vbo_control->Update(Pikzel::Layer::ShouldUpdateWholeVBO(),
                                           Pikzel::Layer::GetDirtyPixels());
             Pikzel::Layer::ResetDirtyPixelData();
-            prev_fps = 1 / timer.GetTime();
         });
 
     auto canvas_coord_behind_cursor =
@@ -416,7 +426,6 @@ void MainLoop(GLFWwindow* window)
     Gla::Group group_preview(vao_preview, shader_preview);
     std::vector<Vertex> preview_vertices;
 
-    float prev_fps = 0.0F;
     Gla::Timer out_of_loop_timer;
 
     while (glfwWindowShouldClose(window) == 0)
@@ -435,9 +444,9 @@ void MainLoop(GLFWwindow* window)
             assert(app_state.vbo_control.has_value());
 
             Update(app_state);
-            Render(prev_fps, app_state, shader, imgui_window_fb, group_bckg,
-                   shader_bckg, group_canvas, vbo_canvas, group_preview,
-                   shader_preview, bckg_vertices_count);
+            Render(app_state, shader, imgui_window_fb, group_bckg, shader_bckg,
+                   group_canvas, vbo_canvas, group_preview, shader_preview,
+                   bckg_vertices_count);
         }
 
         glfwSwapBuffers(window);
@@ -446,9 +455,7 @@ void MainLoop(GLFWwindow* window)
         float fps = 1.0F / timer.GetTime();
         if (out_of_loop_timer.GetTime() > 0.2)
         {
-            std::string win_title =
-                "Pikzel - FPS: " + std::to_string(fps) +
-                " /// PREV_FPS: " + std::to_string(prev_fps);
+            std::string win_title = "Pikzel - FPS: " + std::to_string(fps);
             glfwSetWindowTitle(window, win_title.c_str());
             out_of_loop_timer.Reset();
         }

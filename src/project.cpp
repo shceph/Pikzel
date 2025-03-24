@@ -81,7 +81,8 @@ void Project::Open(const std::string& project_file_dest)
 
     for (auto lay = 0UZ; lay < layer_count; lay++)
     {
-        layers.emplace_back(mTool, mCamera, canvas_dims);
+        layers.emplace_back(mTool, mCamera, mLayers.get().mSelection,
+                            canvas_dims);
         auto iter = layers.begin();
         std::advance(iter, lay);
 
