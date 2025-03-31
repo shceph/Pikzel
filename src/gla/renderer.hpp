@@ -4,9 +4,10 @@
 
 namespace Gla
 {
-enum DrawMode
+enum class DrawMode : std::uint8_t
 {
     kTriangles = GL_TRIANGLES,
+    kTriangleStrip = GL_TRIANGLE_STRIP,
     kLines = GL_LINES,
     kPoints = GL_POINTS
 };

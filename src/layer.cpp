@@ -121,8 +121,8 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
     return false;
 }
 
-void Layer::EmplaceVertices(std::vector<Vertex>& vertices,
-                            bool use_color_alpha /*= false*/) const
+void Layer::GenerateVertices(std::vector<Vertex>& vertices,
+                             bool use_color_alpha /*= false*/) const
 {
     if (!mVisible || mOpacity == 0) { return; }
 

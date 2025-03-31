@@ -18,7 +18,7 @@ class PreviewLayer
 
     void UpdateCircleSize(int size);
     void Clear();
-    void EmplaceVertices(std::vector<Vertex>& vertices) const;
+    void GenerateVertices(std::vector<Vertex>& vertices) const;
     void Update(); // This one should run every frame
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, Color color);

@@ -19,6 +19,12 @@ class Group
     {
     }
 
+    Group(const VertexArray& vao, const VertexBuffer& vbo, const Shader& shader)
+        : mVertexArray{&vao}, mVertexBuffer{&vbo}, mShader{&shader},
+          mTexture{nullptr}
+    {
+    }
+
     void Bind() const
     {
         assert(mVertexArray != nullptr && mShader != nullptr);
@@ -37,8 +43,27 @@ class Group
         if (mTexture != nullptr) { mTexture->Unbind(); }
     }
 
+    auto GetVao() -> const VertexArray&
+    {
+        assert(mVertexArray != nullptr);
+        return *mVertexArray;
+    }
+
+    auto GetVbo() -> const VertexBuffer&
+    {
+        assert(mVertexBuffer != nullptr);
+        return *mVertexBuffer;
+    }
+
+    auto GetShader() -> const Shader&
+    {
+        assert(mShader != nullptr);
+        return *mShader;
+    }
+
   private:
     const VertexArray* mVertexArray;
+    const VertexBuffer* mVertexBuffer = nullptr;
     const Shader* mShader;
     const Texture* mTexture;
 };

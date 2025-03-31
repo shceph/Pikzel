@@ -53,9 +53,7 @@ class Layers
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
     void AddLayer(Tool& tool, Camera& camera);
-    void EmplaceVertices(std::vector<Vertex>& vertices) const;
-    void EmplaceBckgVertices(std::vector<Vertex>& vertices,
-                             std::optional<Vec2Int> custom_dims) const;
+    void GenerateVertices(std::vector<Vertex>& vertices) const;
     void ResetDataToDefault();
     void DrawToTempLayer();
     auto AtIndex(std::size_t index) -> Layer&;

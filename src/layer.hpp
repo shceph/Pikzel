@@ -47,8 +47,8 @@ class Layer
 
     using ShouldUpdateHistory = bool;
     auto DoCurrentTool() -> ShouldUpdateHistory;
-    void EmplaceVertices(std::vector<Vertex>& vertices,
-                         bool use_color_alpha = false) const;
+    void GenerateVertices(std::vector<Vertex>& vertices,
+                          bool use_color_alpha = false) const;
     void Update();
 
     void SwitchVisibilityState() { mVisible = !mVisible; }

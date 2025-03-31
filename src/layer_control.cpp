@@ -10,7 +10,6 @@
 #include <glm/geometric.hpp>
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <list>
 #include <ranges>
@@ -199,60 +198,13 @@ void Layers::MoveDown(std::size_t layer_index)
     else if (mCurrentLayerIndex == layer_index + 1) { mCurrentLayerIndex--; }
 }
 
-void Layers::EmplaceVertices(std::vector<Vertex>& vertices) const
+void Layers::GenerateVertices(std::vector<Vertex>& vertices) const
 {
     vertices.clear();
 
     for (const auto& layer : GetLayers())
     {
-        layer.EmplaceVertices(vertices);
-    }
-}
-
-void Layers::EmplaceBckgVertices(std::vector<Vertex>& vertices,
-                                 std::optional<Vec2Int> custom_dims) const
-{
-    constexpr std::array<Color, 2> kBgColors = {
-        Color{.r = 131, .g = 131, .b = 131, .a = 255},
-        Color{.r = 201, .g = 201, .b = 201, .a = 255}};
-
-    if (!custom_dims.has_value()) { custom_dims.emplace(GetCanvasDims()); }
-    assert(custom_dims.has_value());
-
-    auto canvas_width = custom_dims->x;
-    auto canvas_height = custom_dims->y;
-
-    for (int i = 0; i < canvas_height; i += 6)
-    {
-        for (int j = 0; j < canvas_width; j += 6)
-        {
-            auto x_coord = static_cast<float>(j);
-            auto y_coord = static_cast<float>(i);
-            glm::vec2 dims = *custom_dims;
-
-            // upper left corner
-            vertices.emplace_back(x_coord, y_coord,
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // upper right corner
-            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
-                                  y_coord, kBgColors.at(((i + j) / 6) % 2));
-            // bottom left corner
-            vertices.emplace_back(x_coord,
-                                  std::clamp(y_coord + 6, 0.0F, dims.y),
-                                  kBgColors.at(((i + j) / 6) % 2));
-            /* second triangle */
-            // upper right corner
-            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
-                                  y_coord, kBgColors.at(((i + j) / 6) % 2));
-            // bottom right corner
-            vertices.emplace_back(std::clamp(x_coord + 6, 0.0F, dims.x),
-                                  std::clamp(y_coord + 6, 0.0F, dims.y),
-                                  kBgColors.at(((i + j) / 6) % 2));
-            // bottom left corner
-            vertices.emplace_back(x_coord,
-                                  std::clamp(y_coord + 6, 0.0F, dims.y),
-                                  kBgColors.at(((i + j) / 6) % 2));
-        }
+        layer.GenerateVertices(vertices);
     }
 }
 

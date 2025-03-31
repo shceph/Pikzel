@@ -6,12 +6,12 @@ void Renderer::DrawElements(DrawMode draw_mode, unsigned int indices_count,
                             const void* indices /*= nullptr*/,
                             GLenum type /*= GL_UNSIGNED_INT*/)
 {
-    GLCall(glDrawElements(draw_mode, indices_count, type, indices));
+    GLCall(glDrawElements((GLenum)draw_mode, indices_count, type, indices));
 }
 
 void Renderer::DrawArrays(DrawMode draw_mode, std::size_t vertices_count)
 {
-    GLCall(glDrawArrays(draw_mode, 0, vertices_count));
+    GLCall(glDrawArrays((GLenum)draw_mode, 0, vertices_count));
 }
 
 void Renderer::Clear()

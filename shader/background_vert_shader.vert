@@ -1,14 +1,14 @@
 #version 330 core
 
-layout (location = 0) in vec2 a_Position;
-layout (location = 1) in vec4 a_Color;
+layout(location = 0) in vec2 a_Pos;
 
-out vec4 v_Color;
+out vec2 v_UV;
 
-uniform mat4 u_ViewProjection;
+uniform vec2 u_TopLeftInUV;
 
 void main()
 {
-	gl_Position = u_ViewProjection * vec4(a_Position, 0.0f, 1.0f);
-	v_Color = a_Color;
+    gl_Position = vec4(a_Pos, 0.0, 1.0);
+    v_UV = (vec2(a_Pos) + vec2(1.0)) / vec2(2.0);
+    v_UV -= u_TopLeftInUV;
 }

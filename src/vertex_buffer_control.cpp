@@ -147,7 +147,7 @@ void VertexBufferControl::UpdateSize(Gla::VertexBuffer& vbo)
     auto vertex_count = vbo_size / sizeof(Vertex);
 
     std::vector<Vertex> vertices(vertex_count);
-    mLayers.get().EmplaceVertices(vertices);
+    mLayers.get().GenerateVertices(vertices);
     assert(vertices.size() == vertex_count);
     vbo.UpdateData(vertices.data(), vbo_size);
 

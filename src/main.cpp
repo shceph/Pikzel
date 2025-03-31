@@ -24,7 +24,7 @@
 
 #include <cmath>
 #include <future>
-#include <iostream>
+#include <print>
 #include <string>
 #include <vector>
 
@@ -128,8 +128,7 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
 
 void GlfwError(int err_id, const char* message)
 {
-    std::cerr << "Error id: " << err_id << "\nError message: " << message
-              << '\n';
+    std::println(std::cerr, "Error id: {}\nError message: {}", err_id, message);
 }
 #endif
 
@@ -150,17 +149,6 @@ auto GetProjMat(const Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
                    height - (zoom_half * height) + camera_top_left.y);
 
     return proj;
-}
-
-auto GetProjMatNoZoom(glm::mat4 canvas_mat, Pikzel::Vec2Int canvas_dims)
-    -> glm::mat4
-{
-    glm::vec2 can_dims{canvas_dims};
-    glm::vec3 top_left = canvas_mat * glm::vec4{0, 0, 0, 1};
-    glm::vec3 top_left_move_dist = top_left - glm::vec3{-1, -1, 0};
-
-    return glm::translate(glm::mat4{1}, top_left_move_dist) *
-           glm::ortho(0.0F, can_dims.x, 0.0F, can_dims.y);
 }
 
 auto GetTransMat(Pikzel::Vec2Int canvas_coord_behind_cursor,
@@ -201,11 +189,32 @@ struct AppState
     std::optional<Pikzel::VertexBufferControl> vbo_control;
 };
 
-void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
-                      Gla::VertexBuffer& vbo_bckg,
-                      Gla::VertexBuffer& vbo_canvas,
-                      std::size_t& bckg_vertices_count,
-                      Gla::VertexBuffer& vbo_preview)
+void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
+                   glm::mat4 canvas_mat, Pikzel::Vec2Int canvas_dims)
+{
+    glm::vec2 top_left = canvas_mat * glm::vec4{0, 0, 0, 1};
+    glm::vec2 bottom_right = canvas_mat * glm::vec4{canvas_dims, 0, 1};
+
+    std::array<float, 8> bckg_vertices = {
+        top_left.x,     top_left.y,
+
+        bottom_right.x, top_left.y,
+
+        top_left.x,     bottom_right.y,
+
+        bottom_right.x, bottom_right.y,
+    };
+
+    vbo_bckg.UpdateData(bckg_vertices.data(), 8 * sizeof(float));
+
+    glm::vec2 top_left_in_uv = (top_left + glm::vec2{1}) / glm::vec2{2};
+    shader_bckg.SetUniform2f("u_TopLeftInUV", top_left_in_uv.x,
+                             top_left_in_uv.y);
+}
+
+void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
+                      Gla::FrameBuffer& imgui_window_fb,
+                      Gla::VertexBuffer& vbo_preview, Gla::Shader& shader_bckg)
 {
     Pikzel::Events::Update();
     app_state.ui_state.SetShouldDoToolToTrue();
@@ -224,14 +233,6 @@ void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
 
         if (app_state.project.IsOpened())
         {
-            std::vector<Vertex> bckg_vertices;
-            app_state.layers.EmplaceBckgVertices(
-                bckg_vertices, app_state.project.GetCanvasDims());
-            bckg_vertices_count = bckg_vertices.size();
-            auto bckg_buff_size = bckg_vertices.size() * sizeof(Vertex);
-            vbo_bckg.UpdateSize(bckg_buff_size);
-            vbo_bckg.UpdateData(bckg_vertices.data(), bckg_buff_size);
-
             std::size_t vertex_count =
                 static_cast<std::size_t>(app_state.project.CanvasWidth() *
                                          app_state.project.CanvasHeight()) *
@@ -247,6 +248,13 @@ void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
             app_state.preview_layer.emplace(app_state.tool, app_state.camera,
                                             vbo_preview,
                                             app_state.layers.GetCanvasDims());
+
+            float height_over_width =
+                static_cast<float>(app_state.project.CanvasHeight()) /
+                static_cast<float>(app_state.project.CanvasWidth());
+            shader_bckg.Bind();
+            shader_bckg.SetUniform1f("u_CanvasHeightOverWidth",
+                                     height_over_width);
         }
     }
 
@@ -267,7 +275,7 @@ void Render(AppState& app_state, Gla::Shader& shader,
             Gla::FrameBuffer& imgui_window_fb, Gla::Group& group_bckg,
             Gla::Shader& shader_bckg, Gla::Group& group_canvas,
             Gla::VertexBuffer& vbo_canvas, Gla::Group& group_preview,
-            Gla::Shader& shader_preview, std::size_t& bckg_vertices_count)
+            Gla::Shader& shader_preview, Gla::VertexBuffer& vbo_bckg)
 {
     static ImVec2 draw_window_dims;
     static std::future<void> vbo_update_future;
@@ -292,10 +300,9 @@ void Render(AppState& app_state, Gla::Shader& shader,
     glClearColor(0.8, 0.8, 0.8, 1.0);
 
     group_bckg.Bind();
-    shader_bckg.SetUniformMat4f(
-        "u_ViewProjection",
-        GetProjMatNoZoom(proj_mat, app_state.project.GetCanvasDims()));
-    Gla::Renderer::DrawArrays(Gla::kTriangles, bckg_vertices_count);
+    UpdateVboBckg(vbo_bckg, shader_bckg, proj_mat,
+                  app_state.project.GetCanvasDims());
+    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangleStrip, 4);
 
     if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
@@ -303,7 +310,7 @@ void Render(AppState& app_state, Gla::Shader& shader,
     app_state.vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
 
     Pikzel::VertexBufferControl::Unmap(vbo_canvas);
-    Gla::Renderer::DrawArrays(Gla::kTriangles,
+    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles,
                               app_state.vbo_control->GetVertexCount());
     app_state.vbo_control->Map(vbo_canvas);
 
@@ -334,7 +341,7 @@ void Render(AppState& app_state, Gla::Shader& shader,
 
         shader_preview.SetUniformMat4f("u_ViewProjection", result);
         Gla::Renderer::DrawArrays(
-            Gla::kTriangles,
+            Gla::DrawMode::kTriangles,
             app_state.preview_layer->GetCountOfVerticesRendered());
     }
 
@@ -409,14 +416,28 @@ void MainLoop(GLFWwindow* window)
     vao_canvas.AddBuffer(vbo_canvas, layout);
     Gla::Group group_canvas(vao_canvas, shader);
 
+    std::array<float, 8> bckg_vertices = {
+        -1.0F, 1.0F,
+
+        1.0F,  1.0F,
+
+        -1.0F, -1.0F,
+
+        1.0F,  -1.0F,
+    };
+
+    Gla::VertexBufferLayout bckg_layout;
+    bckg_layout.Push<float>(2);
+
     Gla::VertexArray vao_bckg;
-    Gla::VertexBuffer vbo_bckg(nullptr, 0, Gla::kStaticDraw);
-    vao_bckg.AddBuffer(vbo_bckg, layout);
+    Gla::VertexBuffer vbo_bckg(bckg_vertices.data(),
+                               bckg_vertices.size() * sizeof bckg_vertices[0],
+                               Gla::kDynamicDraw);
+    vao_bckg.AddBuffer(vbo_bckg, bckg_layout);
     Gla::Shader shader_bckg("shader/background_vert_shader.vert",
                             "shader/background_frag_shader.frag");
     shader_bckg.Bind();
     Gla::Group group_bckg(vao_bckg, shader_bckg);
-    auto bckg_vertices_count = 0UZ;
 
     Gla::VertexArray vao_preview;
     Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicDraw);
@@ -434,8 +455,8 @@ void MainLoop(GLFWwindow* window)
         Gla::Timer timer;
 #endif
 
-        HandleInputAndUI(app_state, imgui_window_fb, vbo_bckg, vbo_canvas,
-                         bckg_vertices_count, vbo_preview);
+        HandleInputAndUI(app_state, vbo_canvas, imgui_window_fb, vbo_preview,
+                         shader_bckg);
 
         if (app_state.project.IsOpened() &&
             app_state.ui_state.IsDrawWindowRendered())
@@ -446,7 +467,7 @@ void MainLoop(GLFWwindow* window)
             Update(app_state);
             Render(app_state, shader, imgui_window_fb, group_bckg, shader_bckg,
                    group_canvas, vbo_canvas, group_preview, shader_preview,
-                   bckg_vertices_count);
+                   vbo_bckg);
         }
 
         glfwSwapBuffers(window);
@@ -473,7 +494,7 @@ auto main(int argc, const char* argv[]) -> int
 
     if (window == nullptr)
     {
-        std::cout << "Failed to create window\n";
+        std::println("Failed to create window");
         glfwTerminate();
         return 1;
     }
@@ -492,18 +513,20 @@ auto main(int argc, const char* argv[]) -> int
 
 #ifndef NDEBUG
     glfwSetErrorCallback(&GlfwError);
-    std::cout << "C++ standard: " << __cplusplus << '\n';
+    std::println("C++ standard: {}", __cplusplus);
 #endif
 
     if (glewInit() != GLEW_OK)
     {
-        std::cout << "Glew init error\n";
-        std::cout << glewGetErrorString(glewInit()) << '\n';
+        std::println(
+            "Glew init error: {}",
+            std::bit_cast<const char*>(glewGetErrorString(glewInit())));
         return 1;
     }
 
 #ifndef NDEBUG
-    std::cout << "OpenGL version: " << glGetString(GL_VERSION) << '\n';
+    std::println("OpenGL version: {}",
+                 std::bit_cast<const char*>(glGetString(GL_VERSION)));
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     glDebugMessageCallback(GlDebugOutput, nullptr);

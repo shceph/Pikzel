@@ -29,9 +29,9 @@ void PreviewLayer::Clear()
     SetPreviewLayerChangedToTrue();
 }
 
-void PreviewLayer::EmplaceVertices(std::vector<Vertex>& vertices) const
+void PreviewLayer::GenerateVertices(std::vector<Vertex>& vertices) const
 {
-    mLayer.EmplaceVertices(vertices, true);
+    mLayer.GenerateVertices(vertices, true);
 }
 
 void PreviewLayer::Update()
@@ -113,7 +113,7 @@ void PreviewLayer::UpdateVboIfNeeded()
         curr_tool != ToolType::kSelectionTool)
     {
         mVertices.clear();
-        EmplaceVertices(mVertices);
+        GenerateVertices(mVertices);
         mVbo.get().UpdateSizeIfNeeded(mVertices.size() * sizeof(Vertex));
     }
 

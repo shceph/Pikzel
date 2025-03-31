@@ -26,17 +26,13 @@ project(pikzel)
 
 add_executable(${PROJECT_NAME} ${PIKZEL_SOURCES} ${GLA_SOURCES})
 
-add_custom_command(
-	TARGET ${PROJECT_NAME}
-	POST_BUILD
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/assets
-	${CMAKE_BINARY_DIR}/$<CONFIGURATION>/assets
-	COMMAND ${CMAKE_COMMAND} -E copy_directory
-	${CMAKE_SOURCE_DIR}/shader
-	${CMAKE_BINARY_DIR}/$<CONFIGURATION>/shader
-	COMMENT "Copying assets and shaders to build directory"
+add_custom_target(copy_assets_and_shaders
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/$<CONFIGURATION>/assets
+    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/shader ${CMAKE_BINARY_DIR}/$<CONFIGURATION>/shader
+    COMMENT "Copying assets and shaders to build directory"
 )
+
+add_dependencies(${PROJECT_NAME} copy_assets_and_shaders)
 
 add_subdirectory(vendor/glfw)
 add_subdirectory(vendor/glew)
