@@ -20,6 +20,7 @@ Checks: >
   -readability-magic-numbers,
   -cppcoreguidelines-avoid-magic-numbers,
   -misc-no-recursion,
+  -readability-identifier-length,
 
   # Have structs with public members
 

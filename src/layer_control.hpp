@@ -8,6 +8,8 @@
 #include "tool.hpp"
 #include "tree.hpp"
 
+#include "gla/texture.hpp"
+
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
@@ -42,7 +44,8 @@ class Layers
         std::size_t selected_layer_index;
     };
 
-    auto GetCurrentLayer() -> Layer&;
+    [[nodiscard]] auto GetCurrentLayer() -> Layer&;
+    [[nodiscard]] auto GetCurrentLayer() const -> const Layer&;
     [[nodiscard]]
     auto GetCanvasDims() const -> Vec2Int;
     auto HandleSelectionTool(PreviewLayer& preview_layer) const
@@ -100,6 +103,14 @@ class Layers
     {
         assert(mCurrentUndoTreeNode != nullptr);
         return *mCurrentUndoTreeNode;
+    }
+    [[nodiscard]] auto GetCurrentLayerTexture() const -> const Gla::Texture2D&
+    {
+        return GetCurrentLayer().GetTexture();
+    }
+    auto GetCurrentLayerTexture() -> Gla::Texture2D&
+    {
+        return GetCurrentLayer().GetTexture();
     }
     void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
     void MarkForUndo() { mShouldUndo = true; }

@@ -31,7 +31,7 @@ void PreviewLayer::Clear()
 
 void PreviewLayer::GenerateVertices(std::vector<Vertex>& vertices) const
 {
-    mLayer.GenerateVertices(vertices, true);
+    mLayer.GenerateVertices(vertices, true, false);
 }
 
 void PreviewLayer::Update()
@@ -90,13 +90,10 @@ void PreviewLayer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
 
     mVertices.clear();
 
+    mVertices.emplace_back(min_x, max_y, color);
     mVertices.emplace_back(min_x, min_y, color);
-    mVertices.emplace_back(max_x, min_y, color);
-    mVertices.emplace_back(min_x, max_y, color);
-
-    mVertices.emplace_back(max_x, min_y, color);
-    mVertices.emplace_back(min_x, max_y, color);
     mVertices.emplace_back(max_x, max_y, color);
+    mVertices.emplace_back(max_x, min_y, color);
 
     SetPreviewLayerChangedToTrue();
 }

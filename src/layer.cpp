@@ -2,6 +2,7 @@
 
 #include "application.hpp"
 #include "events.hpp"
+#include "gla/texture.hpp"
 #include "project.hpp"
 #include "tool.hpp"
 
@@ -89,7 +90,8 @@ Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
-      mCamera{camera}, mSelection{selection}
+      mCamera{camera}, mSelection{selection},
+      mTex{canvas_dims, {0.0F, 0.0F, 0.0F, 0.0F}, Gla::kNearest}
 {
     if (mIsCanvasLayer) { sConstructCounter++; }
 }
@@ -122,9 +124,17 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
 }
 
 void Layer::GenerateVertices(std::vector<Vertex>& vertices,
-                             bool use_color_alpha /*= false*/) const
+                             bool use_color_alpha /*= false*/,
+                             bool generate_for_triangle_strip /*= true*/,
+                             std::size_t layer_index /*= 0*/) const
 {
     if (!mVisible || mOpacity == 0) { return; }
+
+    if (generate_for_triangle_strip && layer_index == 0)
+    {
+        vertices.emplace_back(0, 0, GetPixel({0, 0}));
+        vertices.emplace_back(0, 1, GetPixel({0, 0}));
+    }
 
     for (int i = 0; i < mCanvasDims.y; i++)
     {
@@ -142,26 +152,29 @@ void Layer::GenerateVertices(std::vector<Vertex>& vertices,
 
             if (color_used.a != 0) { color_used.a = alpha_val; }
 
-            // first triangle
-            // upper left corner
-            vertices.emplace_back(static_cast<float>(j), static_cast<float>(i),
-                                  color_used);
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i), color_used);
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 1, color_used);
-            // second triangle
-            // upper right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i), color_used);
-            // bottom right corner
-            vertices.emplace_back(static_cast<float>(j) + 1,
-                                  static_cast<float>(i) + 1, color_used);
-            // bottom left corner
-            vertices.emplace_back(static_cast<float>(j),
-                                  static_cast<float>(i) + 1, color_used);
+            auto x = static_cast<float>(j);
+            auto y = static_cast<float>(i);
+
+            if (generate_for_triangle_strip)
+            {
+                vertices.emplace_back(x + 1, y, color_used);
+                vertices.emplace_back(x + 1, y + 1, color_used);
+            }
+            else
+            {
+                // upper left corner
+                vertices.emplace_back(x, y, color_used);
+                // upper right corner
+                vertices.emplace_back(x + 1, y, color_used);
+                // bottom left corner
+                vertices.emplace_back(x, y + 1, color_used);
+                // upper right corner
+                vertices.emplace_back(x + 1, y, color_used);
+                // bottom left corner
+                vertices.emplace_back(x, y + 1, color_used);
+                // bottom right corner
+                vertices.emplace_back(x + 1, y + 1, color_used);
+            }
         }
     }
 }
@@ -318,9 +331,22 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
 {
     if (!mSelection.get().IsPixelSelected(coords)) { return; }
 
-    std::unique_lock<std::mutex> lock{sMutex};
-    mCanvas[(coords.y * mCanvasDims.x) + coords.x] = color;
-    lock.unlock();
+    if (!mIsCanvasLayer)
+    {
+        std::unique_lock<std::mutex> lock{sMutex};
+        mCanvas[(coords.y * mCanvasDims.x) + coords.x] = color;
+        lock.unlock();
+    }
+
+    if (mIsCanvasLayer)
+    {
+        sPboBuff[(coords.y * mCanvasDims.x) + coords.x] = {
+            .r = color.r,
+            .g = color.g,
+            .b = color.b,
+            .a = color.a,
+        };
+    }
 
     if (mIsCanvasLayer) { GetDirtyPixels().push_back(coords); }
 }

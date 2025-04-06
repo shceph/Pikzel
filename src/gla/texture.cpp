@@ -3,6 +3,7 @@
 #include "../stb/stb_image.h"
 
 #include <array>
+#include <cassert>
 
 namespace Gla
 {
@@ -16,8 +17,8 @@ TextureCubeMap::TextureCubeMap(const std::string& path)
     unsigned char* buffer =
         stbi_load(path.c_str(), &width, &height, &channels, 4);
 
-    GLCall(glGenTextures(1, &mRendererID));
-    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mRendererID));
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mTextureID));
 
     GLCall(
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -61,8 +62,8 @@ TextureCubeMap::TextureCubeMap(std::array<std::string, 6> paths)
                                   &height.at(i), &channels.at(i), 4);
     }
 
-    GLCall(glGenTextures(1, &mRendererID));
-    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mRendererID));
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mTextureID));
 
     GLCall(
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR));
@@ -91,13 +92,13 @@ TextureCubeMap::TextureCubeMap(std::array<std::string, 6> paths)
 
 TextureCubeMap::~TextureCubeMap()
 {
-    GLCall(glDeleteTextures(1, &mRendererID));
+    GLCall(glDeleteTextures(1, &mTextureID));
 }
 
 void TextureCubeMap::Bind(unsigned int slot /*= 0*/) const
 {
     GLCall(glActiveTexture(GL_TEXTURE0 + slot));
-    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mRendererID));
+    GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, mTextureID));
 }
 
 void TextureCubeMap::Unbind() const
@@ -115,6 +116,7 @@ Texture2D::Texture2D(const std::string& path,
     stbi_set_flip_vertically_on_load(static_cast<int>(
         flip_vertically)); // Flips because opengl loads images from bottom left
     mLocalBuffer = stbi_load(path.c_str(), &mWidth, &mHeight, &mBPP, 4);
+    assert(mLocalBuffer != nullptr);
 
 #ifdef GLA_DEBUG
     if (mLocalBuffer == nullptr)
@@ -123,8 +125,8 @@ Texture2D::Texture2D(const std::string& path,
     }
 #endif // GLA_DEBUG
 
-    GLCall(glGenTextures(1, &mRendererID));
-    GLCall(glBindTexture(GL_TEXTURE_2D, mRendererID));
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_2D, mTextureID));
 
     GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
                            texture_min_filter));
@@ -139,19 +141,54 @@ Texture2D::Texture2D(const std::string& path,
     if (mLocalBuffer != nullptr) { stbi_image_free(mLocalBuffer); }
 }
 
+Texture2D::Texture2D(glm::ivec2 dims, std::array<float, 4> fill_color,
+                     GLMinMagFilter texture_min_filter)
+    : mLocalBuffer{nullptr}, mWidth{dims.x}, mHeight{dims.y}, mBPP{0}
+{
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_2D, mTextureID));
+
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                           texture_min_filter));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA,
+                        GL_UNSIGNED_BYTE, nullptr));
+    GLCall(
+        glClearTexImage(mTextureID, 0, GL_RGBA, GL_FLOAT, fill_color.data()));
+
+    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+}
+
 Texture2D::~Texture2D()
 {
-    GLCall(glDeleteTextures(1, &mRendererID));
+    GLCall(glDeleteTextures(1, &mTextureID));
 }
 
 void Texture2D::Bind(unsigned int slot /*= 0*/) const
 {
     GLCall(glActiveTexture(GL_TEXTURE0 + slot));
-    GLCall(glBindTexture(GL_TEXTURE_2D, mRendererID));
+    GLCall(glBindTexture(GL_TEXTURE_2D, mTextureID));
 }
 
 void Texture2D::Unbind() const
 {
     GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+}
+
+void Texture2D::UpdatePixel(glm::ivec2 pos, std::array<GLubyte, 4> color)
+{
+    GLCall(glTexSubImage2D(GL_TEXTURE_2D, 0, pos.x, pos.y, 1, 1, GL_RGBA,
+                           GL_UNSIGNED_BYTE, color.data()));
+}
+
+void Texture2D::UpdateWholeTexture(glm::ivec2 dims, const void* data)
+{
+    mWidth = dims.x;
+    mHeight = dims.y;
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA,
+                        GL_UNSIGNED_BYTE, data));
 }
 } // namespace Gla

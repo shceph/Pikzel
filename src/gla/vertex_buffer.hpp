@@ -30,7 +30,7 @@ class VertexBuffer
     void Bind() const;
     static void Unbind();
 
-    [[nodiscard]] inline auto GetSize() const -> std::size_t { return mSize; }
+    [[nodiscard]] auto GetSize() const -> std::size_t { return mSize; }
 
   private:
     unsigned int mRendererID;

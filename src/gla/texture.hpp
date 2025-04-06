@@ -2,6 +2,10 @@
 
 #include "gla_base.hpp"
 
+#include <glm/glm.hpp>
+
+#include <array>
+
 namespace Gla
 {
 enum GLMinMagFilter
@@ -23,13 +27,10 @@ class Texture
     virtual void Bind(unsigned int /*slot*/ = 0) const {};
     virtual void Unbind() const {};
 
-    [[nodiscard]] inline auto GetID() const -> unsigned int
-    {
-        return mRendererID;
-    }
+    [[nodiscard]] auto GetID() const -> unsigned int { return mTextureID; }
 
   protected:
-    unsigned int mRendererID{0};
+    unsigned int mTextureID{0};
 };
 
 class TextureCubeMap : public Texture
@@ -57,13 +58,17 @@ class Texture2D : public Texture
     explicit Texture2D(const std::string& path,
                        GLMinMagFilter texture_min_filter = kLinear,
                        bool flip_vertically = false);
+    explicit Texture2D(glm::ivec2 dims, std::array<float, 4> fill_color,
+                       GLMinMagFilter texture_min_filter = kLinear);
     ~Texture2D() override;
 
     void Bind(unsigned int slot = 0) const override;
     void Unbind() const override;
+    static void UpdatePixel(glm::ivec2 pos, std::array<GLubyte, 4> color);
+    void UpdateWholeTexture(glm::ivec2 dims, const void* data);
 
-    [[nodiscard]] inline auto GetWidth() const -> int { return mWidth; }
-    [[nodiscard]] inline auto GetHeight() const -> int { return mHeight; }
+    [[nodiscard]] auto GetWidth() const -> int { return mWidth; }
+    [[nodiscard]] auto GetHeight() const -> int { return mHeight; }
 
   private:
     std::string mFilePath;

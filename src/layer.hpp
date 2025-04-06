@@ -1,9 +1,12 @@
 #pragma once
 
 #include "camera.hpp"
+#include "gla/pixel_buffer.hpp"
 #include "project.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
+
+#include "gla/texture.hpp"
 
 #include <imgui.h>
 
@@ -25,6 +28,8 @@ struct Color
 
     uint8_t r = 0, g = 0, b = 0, a = 0;
 };
+
+static constexpr Color kColorTransparent{.r = 0, .g = 0, .b = 0, .a = 0};
 
 struct Vertex
 {
@@ -48,7 +53,9 @@ class Layer
     using ShouldUpdateHistory = bool;
     auto DoCurrentTool() -> ShouldUpdateHistory;
     void GenerateVertices(std::vector<Vertex>& vertices,
-                          bool use_color_alpha = false) const;
+                          bool use_color_alpha = false,
+                          bool generate_for_triangle_strip = true,
+                          std::size_t layer_index = 0) const;
     void Update();
 
     void SwitchVisibilityState() { mVisible = !mVisible; }
@@ -63,8 +70,14 @@ class Layer
     }
     [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
     {
-        std::lock_guard<std::mutex> lock{sMutex};
-        return mCanvas[(coords.y * mCanvasDims.x) + coords.x];
+        if (!mIsCanvasLayer)
+        {
+            std::lock_guard<std::mutex> lock{sMutex};
+            return mCanvas[(coords.y * mCanvasDims.x) + coords.x];
+        }
+
+        auto col = sPboBuff[(coords.y * mCanvasDims.x) + coords.x];
+        return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
     [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>&
     {
@@ -75,6 +88,11 @@ class Layer
     {
         return !mIsCanvasLayer;
     }
+    [[nodiscard]] auto GetTexture() const -> const Gla::Texture2D&
+    {
+        return mTex;
+    }
+    [[nodiscard]] auto GetTexture() -> Gla::Texture2D& { return mTex; }
 
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
@@ -91,6 +109,8 @@ class Layer
     }
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
+
+    static void SetPboBuff(std::span<Gla::Color> buff) { sPboBuff = buff; }
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color.
     void DrawCircle(Vec2Int center, int radius, bool fill,
@@ -130,6 +150,9 @@ class Layer
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;
     std::reference_wrapper<Selection> mSelection;
+    Gla::Texture2D mTex;
+
+    inline static std::span<Gla::Color> sPboBuff;
 
     inline static std::mutex sMutex;
     inline static int sConstructCounter{1};

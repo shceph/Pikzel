@@ -27,6 +27,15 @@ auto Layers::GetCurrentLayer() -> Layer&
     return *iter;
 }
 
+auto Layers::GetCurrentLayer() const -> const Layer&
+{
+    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
+
+    auto iter = GetLayers().begin();
+    std::advance(iter, mCurrentLayerIndex);
+    return *iter;
+}
+
 auto Layers::GetCanvasDims() const -> Vec2Int
 {
     return mCanvasDims;
@@ -201,10 +210,12 @@ void Layers::MoveDown(std::size_t layer_index)
 void Layers::GenerateVertices(std::vector<Vertex>& vertices) const
 {
     vertices.clear();
+    std::size_t i = 0;
 
     for (const auto& layer : GetLayers())
     {
-        layer.GenerateVertices(vertices);
+        layer.GenerateVertices(vertices, false, true, i);
+        i++;
     }
 }
 

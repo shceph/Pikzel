@@ -4,6 +4,7 @@
 #include "layer_control.hpp"
 #include "project.hpp"
 
+#include <cstddef>
 #include <span>
 
 namespace Gla
@@ -13,7 +14,7 @@ class VertexBuffer;
 
 namespace Pikzel
 {
-constexpr int kVerticesPerPixel = 6;
+constexpr int kVerticesPerPixel = 2;
 
 class VertexBufferControl
 {
@@ -37,11 +38,13 @@ class VertexBufferControl
     {
         return mVertexCount;
     }
-    [[nodiscard]] static auto GetNeededVBOSizeForLayer(Vec2Int dims)
-        -> std::size_t
+    [[nodiscard]] static auto
+    GetNeededVBOSizeForLayer(Vec2Int dims) -> std::size_t
     {
-        return static_cast<std::size_t>(dims.x * dims.y) * kVerticesPerPixel *
+        return (static_cast<std::size_t>(dims.x * dims.y) * kVerticesPerPixel) *
                sizeof(Vertex);
+        /* return static_cast<std::size_t>((dims.x + 2) * dims.y) * */
+        /*        kVerticesPerPixel * sizeof(Vertex); */
     }
 
   private:
