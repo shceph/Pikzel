@@ -42,7 +42,7 @@ void PixelBuffer::Unbind()
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 }
 
-auto PixelBuffer::Map() const -> std::span<Color>
+auto PixelBuffer::Map() const -> PboMappedBuffSpan
 {
     auto* ptr =
         static_cast<Color*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE));
@@ -50,7 +50,7 @@ auto PixelBuffer::Map() const -> std::span<Color>
     return {ptr, mSize / sizeof(Color)};
 }
 
-auto PixelBuffer::BindAndMap() const -> std::span<Color>
+auto PixelBuffer::BindAndMap() const -> PboMappedBuffSpan
 {
     Bind();
     return Map();

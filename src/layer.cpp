@@ -84,13 +84,14 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
 }
 
 Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
-             Vec2Int canvas_dims, bool is_canvas_layer /*= true*/,
+             Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
+             bool is_canvas_layer /*= true*/,
              bool draw_visible_pixels_only /*= false*/) noexcept
     : mCanvas{static_cast<std::size_t>(canvas_dims.x * canvas_dims.y)},
       mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
-      mCamera{camera}, mSelection{selection},
+      mCamera{camera}, mSelection{selection}, mPboBuff{pbo_buff},
       mTex{canvas_dims, {0.0F, 0.0F, 0.0F, 0.0F}, Gla::kNearest}
 {
     if (mIsCanvasLayer) { sConstructCounter++; }
@@ -121,62 +122,6 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
     }
 
     return false;
-}
-
-void Layer::GenerateVertices(std::vector<Vertex>& vertices,
-                             bool use_color_alpha /*= false*/,
-                             bool generate_for_triangle_strip /*= true*/,
-                             std::size_t layer_index /*= 0*/) const
-{
-    if (!mVisible || mOpacity == 0) { return; }
-
-    if (generate_for_triangle_strip && layer_index == 0)
-    {
-        vertices.emplace_back(0, 0, GetPixel({0, 0}));
-        vertices.emplace_back(0, 1, GetPixel({0, 0}));
-    }
-
-    for (int i = 0; i < mCanvasDims.y; i++)
-    {
-        for (int j = 0; j < mCanvasDims.x; j++)
-        {
-            auto pixel_color = GetPixel({j, i});
-
-            if (mDrawVisiblePixelsOnly && pixel_color.a == 0) { continue; }
-
-            uint8_t alpha_val = 0;
-            if (use_color_alpha) { alpha_val = pixel_color.a; }
-            else { alpha_val = mOpacity; }
-
-            Color color_used = pixel_color;
-
-            if (color_used.a != 0) { color_used.a = alpha_val; }
-
-            auto x = static_cast<float>(j);
-            auto y = static_cast<float>(i);
-
-            if (generate_for_triangle_strip)
-            {
-                vertices.emplace_back(x + 1, y, color_used);
-                vertices.emplace_back(x + 1, y + 1, color_used);
-            }
-            else
-            {
-                // upper left corner
-                vertices.emplace_back(x, y, color_used);
-                // upper right corner
-                vertices.emplace_back(x + 1, y, color_used);
-                // bottom left corner
-                vertices.emplace_back(x, y + 1, color_used);
-                // upper right corner
-                vertices.emplace_back(x + 1, y, color_used);
-                // bottom left corner
-                vertices.emplace_back(x, y + 1, color_used);
-                // bottom right corner
-                vertices.emplace_back(x + 1, y + 1, color_used);
-            }
-        }
-    }
 }
 
 void Layer::Update()
@@ -331,24 +276,12 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
 {
     if (!mSelection.get().IsPixelSelected(coords)) { return; }
 
-    if (!mIsCanvasLayer)
-    {
-        std::unique_lock<std::mutex> lock{sMutex};
-        mCanvas[(coords.y * mCanvasDims.x) + coords.x] = color;
-        lock.unlock();
-    }
-
-    if (mIsCanvasLayer)
-    {
-        sPboBuff[(coords.y * mCanvasDims.x) + coords.x] = {
-            .r = color.r,
-            .g = color.g,
-            .b = color.b,
-            .a = color.a,
-        };
-    }
-
-    if (mIsCanvasLayer) { GetDirtyPixels().push_back(coords); }
+    mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x] = {
+        .r = color.r,
+        .g = color.g,
+        .b = color.b,
+        .a = color.a,
+    };
 }
 
 void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)
@@ -760,13 +693,5 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
 auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
 {
     return glm::clamp(val_to_clamp, {0, 0}, mCanvasDims - 1);
-}
-
-// Should call this func before VertexBufferControl::Update, since it needs
-// dirty pixels
-void Layer::ResetDirtyPixelData()
-{
-    sShouldUpdateWholeVBO = false;
-    GetDirtyPixels().clear();
 }
 } // namespace Pikzel

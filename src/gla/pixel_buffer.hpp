@@ -13,6 +13,8 @@ struct Color
     GLubyte r = 0, g = 0, b = 0, a = 0;
 };
 
+using PboMappedBuffSpan = std::span<Color>;
+
 class PixelBuffer
 {
   public:
@@ -20,8 +22,8 @@ class PixelBuffer
     PixelBuffer(glm::ivec2 dims, Color fill_color);
     void Bind() const;
     static void Unbind();
-    [[nodiscard]] auto Map() const -> std::span<Color>;
-    [[nodiscard]] auto BindAndMap() const -> std::span<Color>;
+    [[nodiscard]] auto Map() const -> PboMappedBuffSpan;
+    [[nodiscard]] auto BindAndMap() const -> PboMappedBuffSpan;
     static void Unmap();
     void BindAndUnmap() const;
     void Resize(glm::ivec2 dims, Color fill_color);

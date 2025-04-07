@@ -21,15 +21,11 @@
 #include "layer_control.hpp"
 #include "preview_layer.hpp"
 #include "project.hpp"
-#include "vertex_buffer_control.hpp"
 
 #include <cmath>
 #include <future>
 #include <print>
 #include <string>
-#include <vector>
-
-using Pikzel::Vertex;
 
 namespace
 {
@@ -174,10 +170,9 @@ auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool
 
 struct AppState
 {
-    explicit AppState(GLFWwindow* window)
-        : camera{}, layers{}, project{layers, tool, camera},
-          ui_state{project, tool, window}, preview_layer{std::nullopt},
-          vbo_control{std::nullopt}
+    explicit AppState(GLFWwindow* window, Gla::PboMappedBuffSpan& pbo_buff)
+        : camera{}, layers{pbo_buff}, project{layers, tool, camera},
+          ui_state{project, tool, window}, preview_layer{std::nullopt}
     {
     }
 
@@ -187,7 +182,6 @@ struct AppState
     Pikzel::Project project;
     Pikzel::UI ui_state;
     std::optional<Pikzel::PreviewLayer> preview_layer;
-    std::optional<Pikzel::VertexBufferControl> vbo_control;
 };
 
 void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
@@ -213,11 +207,11 @@ void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
                              top_left_in_uv.y);
 }
 
-void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
-                      Gla::FrameBuffer& imgui_window_fb,
-                      Gla::VertexBuffer& vbo_preview, Gla::Shader& shader_bckg,
-                      Gla::VertexBuffer& vbo_grey, Gla::PixelBuffer& pbo,
-                      std::span<Gla::Color>& pbo_buff)
+void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
+                      Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_canvas,
+                      Gla::PixelBuffer& pbo, Gla::PixelBuffer& pbo_prev_layer,
+                      Gla::PboMappedBuffSpan& pbo_buff,
+                      Gla::PboMappedBuffSpan& preview_layer_pbo_buff)
 {
     Pikzel::Events::Update();
     app_state.ui_state.SetShouldDoToolToTrue();
@@ -236,20 +230,8 @@ void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
 
         if (app_state.project.IsOpened())
         {
-            std::size_t vertex_count =
-                static_cast<std::size_t>(app_state.project.CanvasWidth() *
-                                         app_state.project.CanvasHeight()) *
-                Pikzel::kVerticesPerPixel;
-
-            vbo_canvas.UpdateSize(vertex_count * sizeof(Vertex));
-
-            auto* buff_data = static_cast<Vertex*>(
-                glMapBuffer(GL_ARRAY_BUFFER, GL_WRITE_ONLY));
-
-            app_state.vbo_control.emplace(app_state.layers, buff_data,
-                                          vertex_count);
             app_state.preview_layer.emplace(app_state.tool, app_state.camera,
-                                            vbo_preview,
+                                            preview_layer_pbo_buff,
                                             app_state.layers.GetCanvasDims());
 
             float height_over_width =
@@ -264,7 +246,7 @@ void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
             auto can_height =
                 static_cast<float>(app_state.project.CanvasHeight());
 
-            std::array<float, 24> grey_vertices = {
+            std::array<float, 24> vbo_canvas_vertices = {
                 0.0F,      0.0F,       0.0F, 0.0F,
 
                 can_width, 0.0F,       1.0F, 0.0F,
@@ -278,13 +260,18 @@ void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
                 can_width, can_height, 1.0F, 1.0F,
             };
 
-            vbo_grey.Bind();
-            vbo_grey.UpdateData(grey_vertices.data(),
-                                grey_vertices.size() * sizeof(float));
+            vbo_canvas.Bind();
+            vbo_canvas.UpdateData(vbo_canvas_vertices.data(),
+                                  vbo_canvas_vertices.size() * sizeof(float));
             Gla::VertexBuffer::Unbind();
 
             pbo.BindAndResize(app_state.project.GetCanvasDims(), Gla::Color{});
             pbo_buff = pbo.Map();
+            Gla::PixelBuffer::Unbind();
+
+            pbo_prev_layer.BindAndResize(app_state.project.GetCanvasDims(),
+                                         Gla::Color{});
+            preview_layer_pbo_buff = pbo_prev_layer.Map();
             Gla::PixelBuffer::Unbind();
         }
     }
@@ -295,7 +282,6 @@ void HandleInputAndUI(AppState& app_state, Gla::VertexBuffer& vbo_canvas,
 void Update(AppState& app_state)
 {
 
-    Pikzel::Layer::ResetDirtyPixelData();
     app_state.layers.UpdateAndDraw(app_state.ui_state.ShouldDoTool(),
                                    app_state.tool, app_state.camera,
                                    *app_state.preview_layer);
@@ -303,18 +289,15 @@ void Update(AppState& app_state)
     app_state.preview_layer->Update();
 }
 
-void Render(AppState& app_state, Gla::Shader& shader,
-            Gla::FrameBuffer& imgui_window_fb, Gla::Group& group_bckg,
-            Gla::Shader& shader_bckg, Gla::Group& group_preview,
-            Gla::Shader& shader_preview, Gla::VertexBuffer& vbo_bckg)
+void Render(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
+            Gla::Group& group_bckg, Gla::Shader& shader_bckg,
+            Gla::VertexBuffer& vbo_bckg)
 {
     static ImVec2 draw_window_dims;
     static std::future<void> vbo_update_future;
 
     auto proj_mat =
         GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
-    shader.Bind();
-    shader.SetUniformMat4f("u_ViewProjection", proj_mat);
 
     imgui_window_fb.Bind();
 
@@ -337,53 +320,14 @@ void Render(AppState& app_state, Gla::Shader& shader,
 
     if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
-    /*
-    group_canvas.Bind();
-    app_state.vbo_control.value().UpdateSizeIfNeeded(vbo_canvas);
-
-    Pikzel::VertexBufferControl::Unmap(vbo_canvas);
-    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangleStrip,
-                              app_state.vbo_control->GetVertexCount());
-    app_state.vbo_control->Map(vbo_canvas);
-
-    vbo_update_future = std::async(
-        std::launch::async,
-        [&app_state]()
-        {
-            Gla::Timer timer;
-            app_state.vbo_control->Update(Pikzel::Layer::ShouldUpdateWholeVBO(),
-                                          Pikzel::Layer::GetDirtyPixels());
-            Pikzel::Layer::ResetDirtyPixelData();
-        });
-    */
-
-    auto canvas_coord_behind_cursor =
-        app_state.layers.CanvasCoordsFromCursorPos();
-    if (canvas_coord_behind_cursor.has_value() &&
-        app_state.ui_state.ShouldDoTool())
-    {
-        glm::mat4 trans_mat = GetTransMat(canvas_coord_behind_cursor.value(),
-                                          app_state.layers.GetCanvasDims());
-        group_preview.Bind();
-        glm::mat4 result = proj_mat;
-
-        if (app_state.preview_layer->ShouldApplyCursorBasedTranslation())
-        {
-            result *= trans_mat;
-        }
-
-        shader_preview.SetUniformMat4f("u_ViewProjection", result);
-        Gla::Renderer::DrawArrays(
-            Gla::DrawMode::kTriangles,
-            app_state.preview_layer->GetCountOfVerticesRendered());
-    }
-
     Gla::FrameBuffer::BindToDefaultFB();
 }
 
 void MainLoop(GLFWwindow* window)
 {
-    AppState app_state{window};
+    Gla::PboMappedBuffSpan pbo_buff;
+    Gla::PboMappedBuffSpan preview_layer_pbo_buff;
+    AppState app_state{window, pbo_buff};
 
     Pikzel::Events::PushToScrollCallback(
         [&app_state](double x_offset, double y_offset)
@@ -404,7 +348,6 @@ void MainLoop(GLFWwindow* window)
 
     Gla::FrameBuffer imgui_window_fb(
         {.width = kWindowWidth, .height = kWindowHeight});
-    Gla::FrameBuffer::BindToDefaultFB();
 
     Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
                                       Gla::GLMinMagFilter::kNearest, true);
@@ -438,40 +381,18 @@ void MainLoop(GLFWwindow* window)
     app_state.ui_state.SetupToolTextures(tool_texture_ids);
     app_state.ui_state.SetupLayerToolTextures(layer_texture_ids);
 
-    Gla::Texture2D grey_texture({32, 32}, {0.5F, 0.5F, 0.5F, 0.5F},
-                                Gla::kNearest);
-    Gla::VertexArray vao_grey;
-    std::array<float, 24> grey_vertices = {
-        0.0F,  0.0F,  0.0F, 0.0F,
-
-        32.0F, 0.0F,  1.0F, 0.0F,
-
-        0.0F,  32.0F, 0.0F, 1.0F,
-
-        32.0F, 0.0F,  1.0F, 0.0F,
-
-        0.0F,  32.0F, 0.0F, 1.0F,
-
-        32.0F, 32.0F, 1.0F, 1.0F,
-    };
-    Gla::VertexBufferLayout grey_layout;
-    grey_layout.Push<float>(2);
-    grey_layout.Push<float>(2);
-    Gla::VertexBuffer vbo_grey(grey_vertices.data(), 24 * sizeof(float));
-    vao_grey.AddBuffer(vbo_grey, grey_layout);
-    Gla::Shader grey_shader("shader/layer_tex_shader.vert",
-                            "shader/layer_tex_shader.frag");
-
-    Gla::VertexBufferLayout layout;
-    layout.Push<float>(2);
-    layout.Push<uint8_t>(4, GL_TRUE);
-    Gla::Shader shader("shader/vert_shader.vert", "shader/frag_shader.frag");
-    shader.Bind();
-
+    Gla::Texture2D texture_canvas({32, 32}, {0.5F, 0.5F, 0.5F, 0.5F},
+                                  Gla::kNearest);
+    Gla::Texture2D preview_layer_tex({32, 32}, {0.5F, 0.5F, 0.5F, 0.5F},
+                                     Gla::kNearest);
     Gla::VertexArray vao_canvas;
-    Gla::VertexBuffer vbo_canvas(nullptr, 0, Gla::kDynamicDraw);
-    vao_canvas.AddBuffer(vbo_canvas, layout);
-    Gla::Group group_canvas(vao_canvas, shader);
+    Gla::VertexBufferLayout layout_canvas;
+    layout_canvas.Push<float>(2);
+    layout_canvas.Push<float>(2);
+    Gla::VertexBuffer vbo_canvas(nullptr, 24 * sizeof(float));
+    vao_canvas.AddBuffer(vbo_canvas, layout_canvas);
+    Gla::Shader shader_canvas("shader/layer_tex_shader.vert",
+                              "shader/layer_tex_shader.frag");
 
     std::array<float, 8> bckg_vertices = {
         -1.0F, 1.0F,
@@ -496,17 +417,9 @@ void MainLoop(GLFWwindow* window)
     shader_bckg.Bind();
     Gla::Group group_bckg(vao_bckg, shader_bckg);
 
-    Gla::VertexArray vao_preview;
-    Gla::VertexBuffer vbo_preview(nullptr, 0, Gla::kDynamicDraw);
-    vao_preview.AddBuffer(vbo_preview, layout);
-    Gla::Shader shader_preview("shader/vert_shader.vert",
-                               "shader/frag_shader.frag");
-    Gla::Group group_preview(vao_preview, shader_preview);
-    std::vector<Vertex> preview_vertices;
-
     Gla::PixelBuffer pbo(glm::ivec2{32}, {.r = 0, .g = 0, .b = 0, .a = 0});
-    std::span<Gla::Color> pbo_buff;
-    Pikzel::Layer::SetPboBuff(pbo_buff);
+    Gla::PixelBuffer pbo_prev_layer(glm::ivec2{32},
+                                    {.r = 0, .g = 0, .b = 0, .a = 0});
     Gla::PixelBuffer::Unbind();
 
     Gla::Timer out_of_loop_timer;
@@ -517,28 +430,28 @@ void MainLoop(GLFWwindow* window)
         Gla::Timer timer;
 #endif
 
-        HandleInputAndUI(app_state, vbo_canvas, imgui_window_fb, vbo_preview,
-                         shader_bckg, vbo_grey, pbo, pbo_buff);
+        HandleInputAndUI(app_state, imgui_window_fb, shader_bckg, vbo_canvas,
+                         pbo, pbo_prev_layer, pbo_buff, preview_layer_pbo_buff);
 
         if (app_state.project.IsOpened() &&
             app_state.ui_state.IsDrawWindowRendered())
         {
             assert(app_state.preview_layer.has_value());
-            assert(app_state.vbo_control.has_value());
 
             Update(app_state);
 
-            Render(app_state, shader, imgui_window_fb, group_bckg, shader_bckg,
-                   group_preview, shader_preview, vbo_bckg);
+            Render(app_state, imgui_window_fb, group_bckg, shader_bckg,
+                   vbo_bckg);
 
             imgui_window_fb.Bind();
-            vao_grey.Bind();
-            grey_shader.Bind();
+            vao_canvas.Bind();
+            shader_canvas.Bind();
             auto proj_mat =
                 GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
-            grey_shader.SetUniformMat4f("u_ViewProjection", proj_mat);
-            grey_shader.SetUniform1i("u_Texture", 0);
-            /* grey_texture.Bind(); */
+            shader_canvas.SetUniformMat4f("u_ViewProjection", proj_mat);
+            shader_canvas.SetUniform1i("u_Texture", 0);
+
+            // NORMAL LAYER RENDERING
             auto& lay_tex = app_state.layers.GetCurrentLayerTexture();
             pbo.Bind();
             lay_tex.Bind();
@@ -550,10 +463,48 @@ void MainLoop(GLFWwindow* window)
             glDrawArrays(GL_TRIANGLES, 0, 6);
 
             pbo_buff = pbo.Map();
-            Pikzel::Layer::SetPboBuff(pbo_buff);
 
             Gla::PixelBuffer::Unbind();
             lay_tex.Unbind();
+
+            // PREVIEW LAYER RENDERING
+            preview_layer_tex.Bind();
+
+            if (app_state.preview_layer->IsPreviewLayerChanged())
+            {
+                pbo_prev_layer.Bind();
+
+                Gla::PixelBuffer::Unmap();
+                preview_layer_tex.UpdateWholeTexture(
+                    app_state.project.GetCanvasDims(), nullptr);
+                preview_layer_pbo_buff = pbo_prev_layer.Map();
+
+                Gla::PixelBuffer::Unbind();
+            }
+
+            auto canvas_coord_behind_cursor =
+                app_state.layers.CanvasCoordsFromCursorPos();
+            if (canvas_coord_behind_cursor.has_value() &&
+                app_state.ui_state.ShouldDoTool())
+            {
+                glm::mat4 trans_mat =
+                    GetTransMat(canvas_coord_behind_cursor.value(),
+                                app_state.layers.GetCanvasDims());
+                glm::mat4 result = proj_mat;
+
+                if (app_state.preview_layer
+                        ->ShouldApplyCursorBasedTranslation())
+                {
+                    result *= trans_mat;
+                }
+
+                shader_canvas.SetUniformMat4f("u_ViewProjection", result);
+
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+            }
+
+            preview_layer_tex.Unbind();
+
             Gla::FrameBuffer::BindToDefaultFB();
         }
 

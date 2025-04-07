@@ -32,6 +32,8 @@ FrameBuffer::FrameBuffer(Dims dims)
         throw std::logic_error("Couldn't create FrameBuffer");
 #endif
     }
+
+    GLCall(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 }
 
 FrameBuffer::~FrameBuffer()

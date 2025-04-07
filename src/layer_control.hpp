@@ -26,11 +26,12 @@ class Layers
     struct Capture
     {
         Capture(Tool& tool, Camera& camera, Selection& selection,
-                Vec2Int canvas_dims, std::size_t selected_layer_ind)
+                Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
+                std::size_t selected_layer_ind)
             : time_of_creation{static_cast<int>(glfwGetTime())},
               selected_layer_index{selected_layer_ind}
         {
-            layers.emplace_back(tool, camera, selection, canvas_dims);
+            layers.emplace_back(tool, camera, selection, pbo_buff, canvas_dims);
         }
 
         Capture(std::list<Layer>& layers, std::size_t selected_layer_index)
@@ -44,6 +45,8 @@ class Layers
         std::size_t selected_layer_index;
     };
 
+    explicit Layers(Gla::PboMappedBuffSpan& pbo_buff);
+
     [[nodiscard]] auto GetCurrentLayer() -> Layer&;
     [[nodiscard]] auto GetCurrentLayer() const -> const Layer&;
     [[nodiscard]]
@@ -56,7 +59,6 @@ class Layers
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
     void AddLayer(Tool& tool, Camera& camera);
-    void GenerateVertices(std::vector<Vertex>& vertices) const;
     void ResetDataToDefault();
     void DrawToTempLayer();
     auto AtIndex(std::size_t index) -> Layer&;
@@ -132,6 +134,7 @@ class Layers
     Tree<Capture>* mCurrentUndoTreeNode{nullptr};
     std::optional<Tree<Capture>> mUndoTree{std::nullopt};
     std::optional<Capture> mCurrentCapture{std::nullopt};
+    std::reference_wrapper<Gla::PboMappedBuffSpan> mPboBuff;
     std::size_t mCurrentLayerIndex{0};
     Vec2Int mCanvasDims{0, 0};
     bool mShouldUpdateHistory{false};

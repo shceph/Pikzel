@@ -35,7 +35,6 @@ void Project::New(Vec2Int canvas_dims)
     mProjectOpened = true;
 
     Layer::ResetConstructCounter();
-    Layer::SetUpdateWholeVBOToTrue();
     mTool.get().SetDataToDefault();
     mLayers.get().SetCanvasDims(canvas_dims);
     mLayers.get().InitHistory(mCamera, mTool);
@@ -82,7 +81,7 @@ void Project::Open(const std::string& project_file_dest)
     for (auto lay = 0UZ; lay < layer_count; lay++)
     {
         layers.emplace_back(mTool, mCamera, mLayers.get().mSelection,
-                            canvas_dims);
+                            mLayers.get().mPboBuff, canvas_dims);
         auto iter = layers.begin();
         std::advance(iter, lay);
 

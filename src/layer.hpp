@@ -10,8 +10,6 @@
 
 #include <imgui.h>
 
-#include <mutex>
-#include <optional>
 #include <string>
 #include <vector>
 
@@ -47,15 +45,12 @@ class Layer
     };
 
     explicit Layer(Tool& tool, Camera& camera, Selection& selection,
-                   Vec2Int canvas_dims, bool is_canvas_layer = true,
+                   Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
+                   bool is_canvas_layer = true,
                    bool draw_visible_pixels_only = false) noexcept;
 
     using ShouldUpdateHistory = bool;
     auto DoCurrentTool() -> ShouldUpdateHistory;
-    void GenerateVertices(std::vector<Vertex>& vertices,
-                          bool use_color_alpha = false,
-                          bool generate_for_triangle_strip = true,
-                          std::size_t layer_index = 0) const;
     void Update();
 
     void SwitchVisibilityState() { mVisible = !mVisible; }
@@ -70,13 +65,7 @@ class Layer
     }
     [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
     {
-        if (!mIsCanvasLayer)
-        {
-            std::lock_guard<std::mutex> lock{sMutex};
-            return mCanvas[(coords.y * mCanvasDims.x) + coords.x];
-        }
-
-        auto col = sPboBuff[(coords.y * mCanvasDims.x) + coords.x];
+        auto col = mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
     [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>&
@@ -99,18 +88,9 @@ class Layer
     [[nodiscard]]
     auto CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>;
     auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
-    static void ResetDirtyPixelData();
-    static void SetUpdateWholeVBOToTrue() { sShouldUpdateWholeVBO = true; }
-    static auto ShouldUpdateWholeVBO() -> bool { return sShouldUpdateWholeVBO; }
-    static auto GetDirtyPixels() -> std::vector<Vec2Int>&
-    {
-        static std::vector<Vec2Int> dirty_pixels;
-        return dirty_pixels;
-    }
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
 
-    static void SetPboBuff(std::span<Gla::Color> buff) { sPboBuff = buff; }
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color.
     void DrawCircle(Vec2Int center, int radius, bool fill,
@@ -150,13 +130,10 @@ class Layer
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;
     std::reference_wrapper<Selection> mSelection;
+    std::reference_wrapper<Gla::PboMappedBuffSpan> mPboBuff;
     Gla::Texture2D mTex;
 
-    inline static std::span<Gla::Color> sPboBuff;
-
-    inline static std::mutex sMutex;
     inline static int sConstructCounter{1};
-    inline static bool sShouldUpdateWholeVBO{true};
 
     friend class UI;
     friend class Layers;

@@ -3,7 +3,6 @@
 #include "layer.hpp"
 #include "preview_layer.hpp"
 #include "tool.hpp"
-#include "vertex_buffer_control.hpp"
 
 #include "GLFW/glfw3.h"
 #include <cstddef>
@@ -17,6 +16,9 @@
 
 namespace Pikzel
 {
+Layers::Layers(Gla::PboMappedBuffSpan& pbo_buff) : mPboBuff{pbo_buff}
+{
+}
 
 auto Layers::GetCurrentLayer() -> Layer&
 {
@@ -175,7 +177,8 @@ void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
 
 void Layers::AddLayer(Tool& tool, Camera& camera)
 {
-    mCurrentCapture->layers.emplace_back(tool, camera, mSelection, mCanvasDims);
+    mCurrentCapture->layers.emplace_back(tool, camera, mSelection, mPboBuff,
+                                         mCanvasDims);
     MarkHistoryForUpdate();
 }
 
@@ -205,18 +208,6 @@ void Layers::MoveDown(std::size_t layer_index)
 
     if (mCurrentLayerIndex == layer_index) { mCurrentLayerIndex++; }
     else if (mCurrentLayerIndex == layer_index + 1) { mCurrentLayerIndex--; }
-}
-
-void Layers::GenerateVertices(std::vector<Vertex>& vertices) const
-{
-    vertices.clear();
-    std::size_t i = 0;
-
-    for (const auto& layer : GetLayers())
-    {
-        layer.GenerateVertices(vertices, false, true, i);
-        i++;
-    }
 }
 
 auto Layers::AtIndex(std::size_t index) -> Layer&
@@ -287,8 +278,6 @@ void Layers::Undo()
     mCurrentUndoTreeNode = mCurrentUndoTreeNode->GetParent();
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
-    VertexBufferControl::SetUpdateAllToTrue();
-    Layer::SetUpdateWholeVBOToTrue();
 }
 
 void Layers::Redo()
@@ -308,16 +297,12 @@ void Layers::Redo()
                   "first child");
         mCurrentUndoTreeNode = children.front().get();
         mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
-        VertexBufferControl::SetUpdateAllToTrue();
-        Layer::SetUpdateWholeVBOToTrue();
         return;
     }
 
     mCurrentUndoTreeNode = children[child_last_used_index].get();
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
-    VertexBufferControl::SetUpdateAllToTrue();
-    Layer::SetUpdateWholeVBOToTrue();
 }
 
 // NOTE: This doesn't set last used child id
@@ -326,8 +311,6 @@ void Layers::SetCurrentNode(Tree<Capture>& node_to_set_to)
     mCurrentUndoTreeNode = &node_to_set_to;
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
-    VertexBufferControl::SetUpdateAllToTrue();
-    Layer::SetUpdateWholeVBOToTrue();
 }
 
 void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
@@ -364,7 +347,7 @@ void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
 
 void Layers::InitHistory(Camera& camera, Tool& tool)
 {
-    mCurrentCapture.emplace(tool, camera, mSelection, mCanvasDims, 0);
+    mCurrentCapture.emplace(tool, camera, mSelection, mPboBuff, mCanvasDims, 0);
     mUndoTree.emplace(auto{mCurrentCapture.value()});
     mCurrentUndoTreeNode = &(*mUndoTree);
     mSelection.Reset(mCanvasDims);

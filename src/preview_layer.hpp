@@ -4,8 +4,6 @@
 #include "selection.hpp"
 #include "tool.hpp"
 
-#include "gla/vertex_buffer.hpp"
-
 #include <glm/glm.hpp>
 
 namespace Pikzel
@@ -13,12 +11,12 @@ namespace Pikzel
 class PreviewLayer
 {
   public:
-    explicit PreviewLayer(Tool& tool, Camera& camera, Gla::VertexBuffer& vbo,
+    explicit PreviewLayer(Tool& tool, Camera& camera,
+                          Gla::PboMappedBuffSpan& pbo_buff,
                           Vec2Int canvas_dims);
 
     void UpdateCircleSize(int size);
     void Clear();
-    void GenerateVertices(std::vector<Vertex>& vertices) const;
     void Update(); // This one should run every frame
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, Color color);
@@ -31,18 +29,10 @@ class PreviewLayer
     {
         return mApplyCursorBasedTranslation;
     }
-    [[nodiscard]] auto GetCountOfVerticesRendered() const -> std::size_t
-    {
-        return mVertices.size();
-    }
     void SetPreviewLayerChangedToTrue() { mPreviewLayerChanged = true; }
 
   private:
-    void UpdateVboIfNeeded();
-
     std::reference_wrapper<Tool> mTool;
-    std::reference_wrapper<Gla::VertexBuffer> mVbo;
-    std::vector<Vertex> mVertices;
     Layer mLayer;
     glm::mat4 mTranslationMat;
     Color mToolColor{.r = 0, .g = 0, .b = 0, .a = 0};
