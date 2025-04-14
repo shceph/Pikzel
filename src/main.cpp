@@ -209,8 +209,8 @@ void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
 
 void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
                       Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_canvas,
-                      Gla::PixelBuffer& pbo, Gla::PixelBuffer& pbo_prev_layer,
-                      Gla::PboMappedBuffSpan& pbo_buff,
+                      Gla::PixelBuffer& pbo, Gla::PboMappedBuffSpan& pbo_buff,
+                      Gla::PixelBuffer& pbo_prev_layer,
                       Gla::PboMappedBuffSpan& preview_layer_pbo_buff)
 {
     Pikzel::Events::Update();
@@ -281,6 +281,10 @@ void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
 
 void Update(AppState& app_state)
 {
+    if (app_state.layers.HaveChosenDifferentLayerThisFrame())
+    {
+        app_state.layers.WriteCurrentLayerTextureDataToPbo();
+    }
 
     app_state.layers.UpdateAndDraw(app_state.ui_state.ShouldDoTool(),
                                    app_state.tool, app_state.camera,
@@ -321,6 +325,101 @@ void Render(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
     if (vbo_update_future.valid()) { vbo_update_future.wait(); }
 
     Gla::FrameBuffer::BindToDefaultFB();
+}
+
+void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
+                         Gla::Shader& shader_canvas, Gla::PixelBuffer& pbo,
+                         Gla::PboMappedBuffSpan& pbo_buff)
+{
+    vao_canvas.Bind();
+    shader_canvas.Bind();
+    auto proj_mat =
+        GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
+    shader_canvas.SetUniformMat4f("u_ViewProjection", proj_mat);
+    shader_canvas.SetUniform1i("u_Texture", 0);
+
+    // NORMAL LAYER RENDERING
+    for (const auto& layer : app_state.layers.GetLayers())
+    {
+        if (!layer.IsVisible()) { continue; }
+
+        shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
+
+        if (&layer != &app_state.layers.GetCurrentLayer())
+        {
+            layer.GetTexture().Bind();
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+            layer.GetTexture().Unbind();
+            continue;
+        }
+
+        auto& lay_tex = app_state.layers.GetCurrentLayerTexture();
+        pbo.Bind();
+        lay_tex.Bind();
+
+        Gla::PixelBuffer::Unmap();
+
+        lay_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(), nullptr);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+        pbo_buff = pbo.Map();
+
+        Gla::PixelBuffer::Unbind();
+        lay_tex.Unbind();
+    }
+
+    Gla::Shader::Unbind();
+    Gla::VertexArray::Unbind();
+}
+
+void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
+                        Gla::Shader& shader_canvas,
+                        Gla::Texture2D& preview_layer_tex,
+                        Gla::PixelBuffer& pbo_prev_layer,
+                        Gla::PboMappedBuffSpan& preview_layer_pbo_buff)
+{
+    vao_canvas.Bind();
+    shader_canvas.Bind();
+    preview_layer_tex.Bind();
+
+    if (app_state.preview_layer->IsPreviewLayerChanged())
+    {
+        pbo_prev_layer.Bind();
+
+        Gla::PixelBuffer::Unmap();
+        preview_layer_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(),
+                                             nullptr);
+        preview_layer_pbo_buff = pbo_prev_layer.Map();
+
+        Gla::PixelBuffer::Unbind();
+    }
+
+    auto canvas_coord_behind_cursor =
+        app_state.layers.CanvasCoordsFromCursorPos();
+    if (canvas_coord_behind_cursor.has_value() &&
+        app_state.ui_state.ShouldDoTool())
+    {
+        glm::mat4 trans_mat = GetTransMat(canvas_coord_behind_cursor.value(),
+                                          app_state.layers.GetCanvasDims());
+        auto proj_mat =
+            GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
+        glm::mat4 result = proj_mat;
+
+        if (app_state.preview_layer->ShouldApplyCursorBasedTranslation())
+        {
+            result *= trans_mat;
+        }
+
+        shader_canvas.SetUniformMat4f("u_ViewProjection", result);
+        shader_canvas.SetUniform1i("u_Texture", 0);
+
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+    }
+
+    preview_layer_tex.Unbind();
+    Gla::Shader::Unbind();
+    Gla::VertexArray::Unbind();
 }
 
 void MainLoop(GLFWwindow* window)
@@ -412,8 +511,8 @@ void MainLoop(GLFWwindow* window)
                                bckg_vertices.size() * sizeof bckg_vertices[0],
                                Gla::kDynamicDraw);
     vao_bckg.AddBuffer(vbo_bckg, bckg_layout);
-    Gla::Shader shader_bckg("shader/background_vert_shader.vert",
-                            "shader/background_frag_shader.frag");
+    Gla::Shader shader_bckg("shader/background_shader.vert",
+                            "shader/background_shader.frag");
     shader_bckg.Bind();
     Gla::Group group_bckg(vao_bckg, shader_bckg);
 
@@ -431,7 +530,7 @@ void MainLoop(GLFWwindow* window)
 #endif
 
         HandleInputAndUI(app_state, imgui_window_fb, shader_bckg, vbo_canvas,
-                         pbo, pbo_prev_layer, pbo_buff, preview_layer_pbo_buff);
+                         pbo, pbo_buff, pbo_prev_layer, preview_layer_pbo_buff);
 
         if (app_state.project.IsOpened() &&
             app_state.ui_state.IsDrawWindowRendered())
@@ -444,67 +543,11 @@ void MainLoop(GLFWwindow* window)
                    vbo_bckg);
 
             imgui_window_fb.Bind();
-            vao_canvas.Bind();
-            shader_canvas.Bind();
-            auto proj_mat =
-                GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
-            shader_canvas.SetUniformMat4f("u_ViewProjection", proj_mat);
-            shader_canvas.SetUniform1i("u_Texture", 0);
-
-            // NORMAL LAYER RENDERING
-            auto& lay_tex = app_state.layers.GetCurrentLayerTexture();
-            pbo.Bind();
-            lay_tex.Bind();
-
-            Gla::PixelBuffer::Unmap();
-            lay_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(),
-                                       nullptr);
-
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-
-            pbo_buff = pbo.Map();
-
-            Gla::PixelBuffer::Unbind();
-            lay_tex.Unbind();
-
-            // PREVIEW LAYER RENDERING
-            preview_layer_tex.Bind();
-
-            if (app_state.preview_layer->IsPreviewLayerChanged())
-            {
-                pbo_prev_layer.Bind();
-
-                Gla::PixelBuffer::Unmap();
-                preview_layer_tex.UpdateWholeTexture(
-                    app_state.project.GetCanvasDims(), nullptr);
-                preview_layer_pbo_buff = pbo_prev_layer.Map();
-
-                Gla::PixelBuffer::Unbind();
-            }
-
-            auto canvas_coord_behind_cursor =
-                app_state.layers.CanvasCoordsFromCursorPos();
-            if (canvas_coord_behind_cursor.has_value() &&
-                app_state.ui_state.ShouldDoTool())
-            {
-                glm::mat4 trans_mat =
-                    GetTransMat(canvas_coord_behind_cursor.value(),
-                                app_state.layers.GetCanvasDims());
-                glm::mat4 result = proj_mat;
-
-                if (app_state.preview_layer
-                        ->ShouldApplyCursorBasedTranslation())
-                {
-                    result *= trans_mat;
-                }
-
-                shader_canvas.SetUniformMat4f("u_ViewProjection", result);
-
-                glDrawArrays(GL_TRIANGLES, 0, 6);
-            }
-
-            preview_layer_tex.Unbind();
-
+            RenderLayerTextures(app_state, vao_canvas, shader_canvas, pbo,
+                                pbo_buff);
+            RenderPreviewLayer(app_state, vao_canvas, shader_canvas,
+                               preview_layer_tex, pbo_prev_layer,
+                               preview_layer_pbo_buff);
             Gla::FrameBuffer::BindToDefaultFB();
         }
 

@@ -11,7 +11,6 @@
 #include <imgui.h>
 
 #include <string>
-#include <vector>
 
 namespace Pikzel
 {
@@ -23,6 +22,7 @@ struct Color
 
     static auto BlendColor(Color color1, Color color2) -> Color;
     static auto FromImVec4(ImVec4 color) -> Color;
+    static auto FromGlaColor(Gla::Color color) -> Color;
 
     uint8_t r = 0, g = 0, b = 0, a = 0;
 };
@@ -68,10 +68,10 @@ class Layer
         auto col = mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
-    [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>&
-    {
-        return mCanvas;
-    }
+    /* [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>& */
+    /* { */
+    /*     return mCanvas; */
+    /* } */
     [[nodiscard]] auto GetCanvasDims() const -> Vec2Int { return mCanvasDims; }
     [[nodiscard]] auto IsPreviewLayer() const -> bool
     {
@@ -118,7 +118,6 @@ class Layer
     void FillUntil(Color until_color, int x_coord, int y_coord,
                    Color fill_color);
 
-    std::vector<Color> mCanvas;
     RectShapeData mHandleRectShapeData;
     Vec2Int mCanvasDims;
     bool mIsCanvasLayer;

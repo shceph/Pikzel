@@ -196,12 +196,19 @@ void Project::SaveAsProject(const std::string& save_dest)
     save_file << Project::CanvasWidth() << " ";
     save_file << Project::CanvasHeight() << "\n";
 
+    std::vector<Gla::Color> texture_data{
+        static_cast<std::size_t>(mCanvasHeight * mCanvasWidth)};
+
     for (auto& layer : layers)
     {
         save_file << layer.GetOpacity() << "\n";
         // save_file << layer.GetName() << "\n";
+        layer.GetTexture().Bind();
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                      texture_data.data());
+        layer.GetTexture().Unbind();
 
-        for (Color col : layer.GetCanvas())
+        for (Gla::Color col : texture_data)
         {
             save_file << col.r << " ";
             save_file << col.g << " ";

@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
+#include <print>
 #include <ranges>
 #include <vector>
 
@@ -343,6 +344,7 @@ void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
     mShouldUndo = false;
     mShouldRedo = false;
     mShouldAddLayer = false;
+    mCurrentLayerIndexTemp = mCurrentLayerIndex;
 }
 
 void Layers::InitHistory(Camera& camera, Tool& tool)
@@ -351,5 +353,13 @@ void Layers::InitHistory(Camera& camera, Tool& tool)
     mUndoTree.emplace(auto{mCurrentCapture.value()});
     mCurrentUndoTreeNode = &(*mUndoTree);
     mSelection.Reset(mCanvasDims);
+}
+
+void Layers::WriteCurrentLayerTextureDataToPbo()
+{
+    GetCurrentLayer().GetTexture().Bind();
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,
+                  mPboBuff.get().data());
+    GetCurrentLayer().GetTexture().Unbind();
 }
 } // namespace Pikzel

@@ -32,8 +32,6 @@ UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
     imgui_io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     imgui_io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     imgui_io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-    /* imgui_io.Fonts->AddFontFromFileTTF("assets/ProggyTiny.ttf", 10.0F); */
-    /* imgui_io.Fonts->AddFontDefault(); */
 
     ImGui::StyleColorsDark();
     /* ImGui::StyleColorsClassic(); */
@@ -359,7 +357,7 @@ void UI::RenderColorWindow()
 
     ImGui::ColorPicker4("Current color",
                         std::bit_cast<float*>(&mTool.get().GetColorRef()),
-                        ImGuiColorEditFlags_NoAlpha);
+                        ImGuiColorEditFlags_None);
 
     ImGui::NewLine();
 

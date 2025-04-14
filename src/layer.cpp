@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <print>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -75,7 +76,7 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
     return Color::FromImVec4({out_r, out_g, out_b, out_alpha});
 }
 
-auto Color::FromImVec4(const ImVec4 color) -> Color
+auto Color::FromImVec4(ImVec4 color) -> Color
 {
     return {.r = static_cast<uint8_t>(color.x * 0xff),
             .g = static_cast<uint8_t>(color.y * 0xff),
@@ -83,12 +84,16 @@ auto Color::FromImVec4(const ImVec4 color) -> Color
             .a = static_cast<uint8_t>(color.w * 0xff)};
 }
 
+auto Color::FromGlaColor(Gla::Color color) -> Color
+{
+    return {.r = color.r, .g = color.g, .b = color.b, .a = color.a};
+}
+
 Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
              Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
              bool is_canvas_layer /*= true*/,
              bool draw_visible_pixels_only /*= false*/) noexcept
-    : mCanvas{static_cast<std::size_t>(canvas_dims.x * canvas_dims.y)},
-      mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
+    : mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
       mCamera{camera}, mSelection{selection}, mPboBuff{pbo_buff},
@@ -299,7 +304,6 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
     if (mTool.get().GetToolType() != ToolType::kEraser)
     {
         draw_color = mTool.get().GetColor();
-        draw_color.a = 0xff;
     }
 
     if (radius == 1)
@@ -351,8 +355,6 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         if (y2_ceil < 0) { y2_ceil = 0; }
         else if (y2_ceil >= mCanvasDims.y) { y2_ceil = mCanvasDims.y - 1; }
 
-        /* mCanvas[y1_floor][x_coord] = draw_color; */
-        /* mCanvas[y2_ceil][x_coord] = draw_color; */
         DrawPixel({x_coord, y1_floor}, draw_color);
         DrawPixel({x_coord, y2_ceil}, draw_color);
     }

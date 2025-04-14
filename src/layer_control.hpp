@@ -71,6 +71,7 @@ class Layers
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
                        PreviewLayer& preview_layer);
     void InitHistory(Camera& camera, Tool& tool);
+    void WriteCurrentLayerTextureDataToPbo();
 
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
@@ -78,6 +79,11 @@ class Layers
         return GetLayers().size();
     }
     [[nodiscard]] auto GetLayers() const -> const std::list<Layer>&
+    {
+        assert(mCurrentCapture.has_value());
+        return mCurrentCapture->layers;
+    }
+    [[nodiscard]] auto GetLayers() -> std::list<Layer>&
     {
         assert(mCurrentCapture.has_value());
         return mCurrentCapture->layers;
@@ -114,6 +120,10 @@ class Layers
     {
         return GetCurrentLayer().GetTexture();
     }
+    [[nodiscard]] auto HaveChosenDifferentLayerThisFrame() const -> bool
+    {
+        return mCurrentLayerIndex != mCurrentLayerIndexTemp;
+    }
     void SetCanvasDims(Vec2Int canvas_dims) { mCanvasDims = canvas_dims; }
     void MarkForUndo() { mShouldUndo = true; }
     void MarkForRedo() { mShouldRedo = true; }
@@ -125,7 +135,6 @@ class Layers
         assert(mCurrentCapture.has_value());
         return *mCurrentCapture;
     }
-    auto GetLayers() -> std::list<Layer>& { return GetCapture().layers; }
     void MarkHistoryForUpdate() { mShouldUpdateHistory = true; }
 
     static constexpr int kMaxHistoryLenght = 30;
@@ -136,6 +145,7 @@ class Layers
     std::optional<Capture> mCurrentCapture{std::nullopt};
     std::reference_wrapper<Gla::PboMappedBuffSpan> mPboBuff;
     std::size_t mCurrentLayerIndex{0};
+    std::size_t mCurrentLayerIndexTemp{0};
     Vec2Int mCanvasDims{0, 0};
     bool mShouldUpdateHistory{false};
     bool mShouldUndo{false};

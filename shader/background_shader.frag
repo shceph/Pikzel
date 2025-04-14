@@ -13,7 +13,7 @@ uniform float u_CanvasHeightOverWidth;
 
 void main()
 {
-    float pattern_size = 10.0;
+    float pattern_size = 55.0;
     vec2 uv_scaled = vec2(0);
     uv_scaled.x = v_UV.x * pattern_size;
     uv_scaled.y = v_UV.y * pattern_size * u_CanvasHeightOverWidth;
