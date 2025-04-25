@@ -208,10 +208,14 @@ void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
 
 void UI::SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids)
 {
-    mEyeOpenedTextureID = layer_tex_ids[0];
-    mEyeClosedTextureID = layer_tex_ids[1];
-    mLockLockedTextureID = layer_tex_ids[2];
-    mLockUnlockedTextureID = layer_tex_ids[3];
+    mEyeOpenedTextureID =
+        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[0]));
+    mEyeClosedTextureID =
+        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[1]));
+    mLockLockedTextureID =
+        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[2]));
+    mLockUnlockedTextureID =
+        std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[3]));
 }
 
 auto UI::ShouldDoTool() const -> bool

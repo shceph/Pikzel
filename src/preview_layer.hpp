@@ -20,6 +20,7 @@ class PreviewLayer
     void Update(); // This one should run every frame
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, Color color);
+    void DrawPixel(Vec2Int coords, Color color);
 
     [[nodiscard]] auto IsPreviewLayerChanged() const -> bool
     {

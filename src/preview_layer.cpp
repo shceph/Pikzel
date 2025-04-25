@@ -77,4 +77,10 @@ void PreviewLayer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
     mLayer.DrawRect(upper_left, bottom_right, true, color);
     SetPreviewLayerChangedToTrue();
 }
+
+void PreviewLayer::DrawPixel(Vec2Int coords, Color color)
+{
+    mLayer.DrawPixel(coords, color);
+    SetPreviewLayerChangedToTrue();
+}
 } // namespace Pikzel

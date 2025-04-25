@@ -80,13 +80,12 @@ auto Layers::HandleSelectionTool(PreviewLayer& preview_layer) const
 
     if (left_button_pressed)
     {
+        preview_layer.Clear();
         preview_layer.DrawRect(shape_begin_coords, *canv_coord,
-                               {.r = 45, .g = 50, .b = 220, .a = 100});
+                               kColorSelectionPreview);
 
         return std::nullopt;
     }
-
-    preview_layer.DrawRect({0, 0}, {0, 0}, {.r = 0, .g = 0, .b = 0, .a = 0});
 
     std::pair<Vec2Int, Vec2Int> ret{shape_begin_coords, *canv_coord};
     shape_began = false;
@@ -131,12 +130,11 @@ auto Layers::HandleRectShape(PreviewLayer& preview_layer,
 
     if (left_button_pressed)
     {
+        preview_layer.Clear();
         preview_layer.DrawRect(shape_begin_coords, *canv_coord, tool_color);
 
         return std::nullopt;
     }
-
-    preview_layer.DrawRect({0, 0}, {0, 0}, {.r = 0, .g = 0, .b = 0, .a = 0});
 
     std::pair<Vec2Int, Vec2Int> ret{shape_begin_coords, *canv_coord};
     shape_began = false;

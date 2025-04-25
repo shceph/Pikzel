@@ -10,6 +10,7 @@
 
 #include <imgui.h>
 
+#include <optional>
 #include <string>
 
 namespace Pikzel
@@ -28,6 +29,8 @@ struct Color
 };
 
 static constexpr Color kColorTransparent{.r = 0, .g = 0, .b = 0, .a = 0};
+static constexpr Color kColorSelectionPreview{
+    .r = 45, .g = 50, .b = 220, .a = 100};
 
 struct Vertex
 {

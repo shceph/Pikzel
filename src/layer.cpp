@@ -13,6 +13,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <numbers>
 #include <print>
 #include <queue>
 #include <utility>
@@ -250,23 +251,9 @@ auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
         }
     }
 
-    if (left_button_pressed)
-    {
-        if (IsPreviewLayer())
-        {
-            DrawRect(mHandleRectShapeData.shape_begin_coords,
-                     canv_coord.value(), true);
-        }
+    if (left_button_pressed) { return false; }
 
-        return false;
-    }
-
-    if (mIsCanvasLayer)
-    {
-        DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(),
-                 true);
-    }
-    else { Clear(); }
+    DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(), true);
 
     mHandleRectShapeData.shape_began = false;
     return true;
@@ -395,8 +382,8 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                           Color color)
 {
     Vec2Int diff = point_a - point_b;
-    auto angle = std::atan2(diff.y, diff.x) + M_PI_2;
-    auto angle_plus_180 = angle + M_PI;
+    auto angle = std::atan2(diff.y, diff.x) + (std::numbers::pi / 2);
+    auto angle_plus_180 = angle + std::numbers::pi;
 
     Vec2Int point_a1;
     point_a1.x = static_cast<int>(std::cos(angle) *

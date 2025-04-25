@@ -117,10 +117,15 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
         break;
     }
 
+    static int error_count = 0;
+
     // Output the debug message along with file and line information
     std::cerr << "OpenGL Debug Message:" << "\n  Source: " << source_str
               << "\n  Type: " << type_str << "\n  Severity: " << severity_str
-              << "\n  ID: " << errorId << "\n  Message: " << message << '\n';
+              << "\n  ID: " << errorId << "\n  Message: " << message << '\n'
+              << "Errors printed count: " << error_count << '\n';
+
+    error_count++;
 }
 
 void GlfwError(int err_id, const char* message)
@@ -207,6 +212,21 @@ void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
                              top_left_in_uv.y);
 }
 
+void DrawSelectionPreview(const Pikzel::Selection& selection,
+                          Pikzel::PreviewLayer& preview_layer, int canvas_width)
+{
+    const auto& selected_pixels = selection.GetSelectedPixels();
+
+    for (std::size_t i = 0; i < selected_pixels.size(); i++)
+    {
+        if (selected_pixels[i])
+        {
+            preview_layer.DrawPixel({i % canvas_width, i / canvas_width},
+                                    Pikzel::kColorSelectionPreview);
+        }
+    }
+}
+
 void HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
                       Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_canvas,
                       Gla::PixelBuffer& pbo, Gla::PboMappedBuffSpan& pbo_buff,
@@ -286,11 +306,16 @@ void Update(AppState& app_state)
         app_state.layers.WriteCurrentLayerTextureDataToPbo();
     }
 
+    app_state.preview_layer->Update();
     app_state.layers.UpdateAndDraw(app_state.ui_state.ShouldDoTool(),
                                    app_state.tool, app_state.camera,
                                    *app_state.preview_layer);
+    /*
+    DrawSelectionPreview(app_state.layers.GetSelection(),
+                         *app_state.preview_layer,
+                         app_state.project.CanvasWidth());
+                         */
     app_state.ui_state.Update();
-    app_state.preview_layer->Update();
 }
 
 void Render(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,

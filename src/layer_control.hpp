@@ -73,6 +73,10 @@ class Layers
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
 
+    [[nodiscard]] auto GetSelection() const -> const Selection&
+    {
+        return mSelection;
+    }
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
         assert(!GetLayers().empty());

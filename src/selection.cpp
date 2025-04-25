@@ -27,6 +27,11 @@ auto Selection::IsPixelSelected(glm::ivec2 px_coords) -> bool
     return mSelected[(px_coords.y * mCanvasDims.x) + px_coords.x];
 }
 
+auto Selection::ShouldCheckForSelection() const -> bool
+{
+    return mCheckForSelection;
+}
+
 void Selection::Reset(glm::ivec2 canvas_dims)
 {
     std::size_t new_size =
@@ -34,5 +39,10 @@ void Selection::Reset(glm::ivec2 canvas_dims)
     mSelected.resize(new_size, false);
     mCanvasDims = canvas_dims;
     mCheckForSelection = false;
+}
+
+auto Selection::GetSelectedPixels() const -> const std::vector<bool>&
+{
+    return mSelected;
 }
 } // namespace Pikzel
