@@ -55,7 +55,8 @@ class Layers
         -> std::optional<std::pair<Vec2Int, Vec2Int>>;
     auto HandleRectShape(PreviewLayer& preview_layer, Color tool_color) const
         -> std::optional<std::pair<Vec2Int, Vec2Int>>;
-    void DoCurrentTool(Tool& tool, PreviewLayer& preview_layer);
+    void DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
+                       PreviewLayer& preview_layer_for_selection);
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
     void AddLayer(Tool& tool, Camera& camera);
@@ -69,7 +70,8 @@ class Layers
     void Redo();
     void SetCurrentNode(Tree<Capture>& node_to_set_to);
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
-                       PreviewLayer& preview_layer);
+                       PreviewLayer& preview_layer,
+                       PreviewLayer& preview_layer_for_selection);
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
 
@@ -77,6 +79,8 @@ class Layers
     {
         return mSelection;
     }
+
+    [[nodiscard]] auto GetSelection() -> Selection& { return mSelection; }
     [[nodiscard]] auto GetLayerCount() const -> std::size_t
     {
         assert(!GetLayers().empty());

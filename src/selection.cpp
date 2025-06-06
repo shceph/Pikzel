@@ -1,5 +1,7 @@
 #include "selection.hpp"
 
+#include <algorithm>
+
 namespace Pikzel
 {
 void Selection::AddToSelection(glm::ivec2 upper_left, glm::ivec2 bottom_right)
@@ -18,6 +20,12 @@ void Selection::AddToSelection(glm::ivec2 upper_left, glm::ivec2 bottom_right)
     }
 
     mCheckForSelection = true;
+}
+
+void Selection::Clear()
+{
+    std::ranges::fill(mSelected, false);
+    mCheckForSelection = false;
 }
 
 auto Selection::IsPixelSelected(glm::ivec2 px_coords) -> bool

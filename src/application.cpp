@@ -94,9 +94,10 @@ void UI::RenderAndEndFrame()
     }
 }
 
-void UI::RenderUI(Layers& layers, Camera& camera)
+void UI::RenderUI(Layers& layers, Camera& camera, Selection& selection,
+                  PreviewLayer& preview_layer_for_selection)
 {
-    RenderMenuBar(layers, camera);
+    RenderMenuBar(layers, camera, selection, preview_layer_for_selection);
     RenderColorWindow();
     RenderToolWindow();
     RenderLayerWindow(layers);
@@ -223,7 +224,8 @@ auto UI::ShouldDoTool() const -> bool
     return mShouldDoTool;
 }
 
-void UI::RenderMenuBar(Layers& layers, Camera& camera)
+void UI::RenderMenuBar(Layers& layers, Camera& camera, Selection& selection,
+                       PreviewLayer& preview_layer_for_selection)
 {
     ImGui::BeginMainMenuBar();
 
@@ -258,6 +260,16 @@ void UI::RenderMenuBar(Layers& layers, Camera& camera)
         if (ImGui::MenuItem("Reset Camera")) { camera.ResetCamera(); }
         if (ImGui::MenuItem("Reset Center")) { camera.ResetCenter(); }
         if (ImGui::MenuItem("Reset Zoom")) { camera.ResetZoom(); }
+        ImGui::EndMenu();
+    }
+
+    if (ImGui::BeginMenu("Selection"))
+    {
+        if (ImGui::MenuItem("Clear"))
+        {
+            selection.Clear();
+            preview_layer_for_selection.Clear();
+        }
         ImGui::EndMenu();
     }
 

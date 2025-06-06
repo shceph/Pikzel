@@ -16,7 +16,8 @@ class UI
 {
   public:
     UI(Project& project, Tool& tool, GLFWwindow* _window);
-    void RenderUI(Layers& layers, Camera& camera);
+    void RenderUI(Layers& layers, Camera& camera, Selection& selection,
+                  PreviewLayer& preview_layer_for_selection);
     void RenderNoProjectWindow();
     void RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name);
@@ -69,7 +70,8 @@ class UI
         }
     };
 
-    void RenderMenuBar(Layers& layers, Camera& camera);
+    void RenderMenuBar(Layers& layers, Camera& camera, Selection& selection,
+                       PreviewLayer& preview_layer_for_selection);
     void RenderSaveAsImagePopup();
     void RenderSaveAsProjectPopup();
     void RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node);

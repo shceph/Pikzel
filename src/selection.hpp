@@ -9,6 +9,7 @@ class Selection
 {
   public:
     void AddToSelection(glm::ivec2 upper_left, glm::ivec2 bottom_right);
+    void Clear();
     auto IsPixelSelected(glm::ivec2 px_coords) -> bool;
     [[nodiscard]] auto ShouldCheckForSelection() const -> bool;
     void Reset(glm::ivec2 canvas_dims);

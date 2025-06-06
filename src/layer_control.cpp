@@ -142,7 +142,8 @@ auto Layers::HandleRectShape(PreviewLayer& preview_layer,
     return ret;
 }
 
-void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
+void Layers::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
+                           PreviewLayer& preview_layer_for_selection)
 {
     if (tool.GetToolType() == ToolType::kSelectionTool)
     {
@@ -152,6 +153,8 @@ void Layers::DoCurrentTool(Tool& tool, PreviewLayer& preview_layer)
         {
             mSelection.AddToSelection(points->first, points->second);
             preview_layer.Clear();
+            preview_layer_for_selection.DrawRect(points->first, points->second,
+                                                 kColorSelectionPreview);
         }
 
         return;
@@ -313,14 +316,18 @@ void Layers::SetCurrentNode(Tree<Capture>& node_to_set_to)
 }
 
 void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
-                           PreviewLayer& preview_layer)
+                           PreviewLayer& preview_layer,
+                           PreviewLayer& preview_layer_for_selection)
 {
     for (auto& layer : GetLayers())
     {
         layer.Update();
     }
 
-    if (should_do_tool) { DoCurrentTool(tool, preview_layer); }
+    if (should_do_tool)
+    {
+        DoCurrentTool(preview_layer, tool, preview_layer_for_selection);
+    }
 
     if ((Events::IsCtrlPressed() && Events::IsKeyboardKeyPressed(GLFW_KEY_Z)) ||
         mShouldUndo)
