@@ -70,3 +70,28 @@ if(MSVC)
 else()
     target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
+
+list(REMOVE_ITEM PIKZEL_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+
+add_executable(save_as_image_test tests/save_as_image_test.cpp
+	${PIKZEL_SOURCES} ${GLA_SOURCES})
+
+target_include_directories(save_as_image_test
+    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glew/include
+    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glfw/include
+    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glm
+    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/stb/stb
+    PUBLIC ${CMAKE_BINARY_DIR}/vendor/stb/include
+    PUBLIC ${CMAKE_BINARY_DIR}/vendor/imgui/include
+)
+
+target_link_libraries(save_as_image_test
+    PRIVATE libglew_static
+    PRIVATE glfw
+    PRIVATE image
+    PRIVATE image-write
+    PRIVATE image-resize
+    PRIVATE perlin
+    PRIVATE glm::glm-header-only
+    PRIVATE imgui
+)

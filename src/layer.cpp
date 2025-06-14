@@ -282,20 +282,22 @@ void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)
 }
 
 void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
-                       Color delete_color /*= {0, 0, 0, 0}*/)
+                       Color delete_color /*= {0, 0, 0, 0}*/,
+                       std::optional<Color> draw_color /*= std::nullopt*/)
 {
     if (radius < 1) { return; }
 
-    Color draw_color = delete_color;
+    Color draw_col = delete_color;
 
     if (mTool.get().GetToolType() != ToolType::kEraser)
     {
-        draw_color = mTool.get().GetColor();
+        draw_col =
+            draw_color.value_or(Color::FromImVec4(mTool.get().GetColor()));
     }
 
     if (radius == 1)
     {
-        DrawPixel(center, draw_color);
+        DrawPixel(center, draw_col);
         return;
     }
 
@@ -311,7 +313,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
                         std::clamp(xcrd + center.x, 0, mCanvasDims.x - 1);
                     int real_y =
                         std::clamp(ycrd + center.y, 0, mCanvasDims.y - 1);
-                    DrawPixel({real_x, real_y}, draw_color);
+                    DrawPixel({real_x, real_y}, draw_col);
                 }
             }
         }
@@ -342,8 +344,8 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         if (y2_ceil < 0) { y2_ceil = 0; }
         else if (y2_ceil >= mCanvasDims.y) { y2_ceil = mCanvasDims.y - 1; }
 
-        DrawPixel({x_coord, y1_floor}, draw_color);
-        DrawPixel({x_coord, y2_ceil}, draw_color);
+        DrawPixel({x_coord, y1_floor}, draw_col);
+        DrawPixel({x_coord, y2_ceil}, draw_col);
     }
 }
 

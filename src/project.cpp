@@ -150,7 +150,6 @@ auto Project::SaveAsImage(int magnify_factor,
             Color pixel_color = canvas_displayed[(i * mCanvasWidth) + j];
             for (int k = 0; k < magnify_factor; k++)
             {
-                // NOLINTNEXTLINE(readability-identifier-length)
                 for (int l = 0; l < magnify_factor; l++)
                 {
                     image_data[((i * magnify_factor + k) * arr_width) +

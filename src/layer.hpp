@@ -97,7 +97,8 @@ class Layer
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color.
     void DrawCircle(Vec2Int center, int radius, bool fill,
-                    Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0});
+                    Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0},
+                    std::optional<Color> draw_color = std::nullopt);
     void Clear();
 
   private:
