@@ -23,7 +23,6 @@ UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
 {
     sWindow = _window;
 
-    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 

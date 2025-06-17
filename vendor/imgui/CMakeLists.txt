@@ -20,13 +20,10 @@ file(GLOB IMGUI_HEADERS
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/include)
 
 foreach(file ${IMGUI_HEADERS})
-    # get_filename_component(filename ${file} NAME)
     file(COPY ${file} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/include)
 endforeach()
 
 add_library(${PROJECT_NAME} ${IMGUI_SOURCES})
-
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw)
 
 target_include_directories(${PROJECT_NAME}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/vendor/glfw/include

@@ -1,9 +1,6 @@
 [submodule "vendor/glfw"]
 	path = vendor/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "vendor/glew"]
-	path = vendor/glew
-	url = https://github.com/Perlmint/glew-cmake.git
 [submodule "vendor/stb"]
 	path = vendor/stb
 	url = https://github.com/gracicot/stb-cmake.git
@@ -14,3 +11,6 @@
 	path = vendor/imgui/imgui
 	url = https://github.com/ocornut/imgui.git
 	branch = docking
+[submodule "vendor/glad"]
+	path = vendor/glad
+	url = https://github.com/Dav1dde/glad.git

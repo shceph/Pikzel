@@ -2,6 +2,9 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
 
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+
 #include "gla/frame_buffer.hpp"
 #include "gla/group.hpp"
 #include "gla/pixel_buffer.hpp"
@@ -9,8 +12,6 @@
 #include "gla/timer.hpp"
 #include "gla/vertex_array.hpp"
 #include "gla/vertex_buffer.hpp"
-#include <GL/glew.h>
-#include <GLFW/glfw3.h>
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -130,7 +131,8 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
 
 void GlfwError(int err_id, const char* message)
 {
-    std::println(std::cerr, "Error id: {}\nError message: {}", err_id, message);
+    std::println(std::cerr, "Glfw error id: {}\nError message: {}", err_id,
+                 message);
 }
 #endif
 
@@ -641,6 +643,7 @@ auto main(int argc, const char* argv[]) -> int
 {
     if (glfwInit() == GLFW_FALSE) { return 1; }
 
+    glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
     GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Pikzel",
                                           nullptr, nullptr);
 
@@ -668,12 +671,12 @@ auto main(int argc, const char* argv[]) -> int
     std::println("C++ standard: {}", __cplusplus);
 #endif
 
-    if (glewInit() != GLEW_OK)
+    int version = gladLoadGL(glfwGetProcAddress);
+
+    if (version == 0)
     {
-        std::println(
-            "Glew init error: {}",
-            std::bit_cast<const char*>(glewGetErrorString(glewInit())));
-        return 1;
+        std::println("gladLoadGL: Failed to load GL.");
+        return 0;
     }
 
 #ifndef NDEBUG

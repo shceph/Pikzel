@@ -30,7 +30,7 @@ AllowShortIfStatementsOnASingleLine: true
 AllowShortBlocksOnASingleLine: Always
 
 ReflowComments: true
-SortIncludes: true
+SortIncludes: false
 
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false

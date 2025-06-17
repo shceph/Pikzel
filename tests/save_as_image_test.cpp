@@ -27,14 +27,12 @@ auto main(int argc, char* argv[]) -> int
         return 1;
     }
 
-    glfwMakeContextCurrent(window);
+    int version = gladLoadGL(glfwGetProcAddress);
 
-    if (glewInit() != GLEW_OK)
+    if (version == 0)
     {
-        std::println(
-            "Glew init error: {}",
-            std::bit_cast<const char*>(glewGetErrorString(glewInit())));
-        return 1;
+        std::println("gladLoadGL: Failed to load GL.");
+        return 0;
     }
 
     if (argc < 2)

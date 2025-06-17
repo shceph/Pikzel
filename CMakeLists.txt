@@ -4,24 +4,17 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR})
-set(glew-cmake_BUILD_SHARED FALSE)
-set(ONLY_LIBS ON) # for glew
 
 file(GLOB PIKZEL_SOURCES ${CMAKE_SOURCE_DIR}/src/*.cpp)
 file(GLOB GLA_SOURCES ${CMAKE_SOURCE_DIR}/src/gla/*.cpp)
+list(REMOVE_ITEM PIKZEL_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/$<CONFIGURATION>")
 
-# Compiler can't find this file when building stb's image-resize,
-# so I'm copying it to the dir of the source file that makes the problem
-file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/vendor/stb/stb)
-file(COPY ${CMAKE_SOURCE_DIR}/vendor/stb/stb/stb_image_resize2.h
-     DESTINATION ${CMAKE_BINARY_DIR}/vendor/stb/stb)
-
 project(pikzel)
 
-add_executable(${PROJECT_NAME} ${PIKZEL_SOURCES} ${GLA_SOURCES})
+add_executable(${PROJECT_NAME} ${CMAKE_SOURCE_DIR}/src/main.cpp)
 
 add_custom_target(copy_assets_and_shaders
     COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/$<CONFIGURATION>/assets
@@ -32,30 +25,37 @@ add_custom_target(copy_assets_and_shaders
 add_dependencies(${PROJECT_NAME} copy_assets_and_shaders)
 
 add_subdirectory(vendor/glfw)
-add_subdirectory(vendor/glew)
+add_subdirectory(vendor/glad/cmake)
 add_subdirectory(vendor/stb)
 add_subdirectory(vendor/glm)
 add_subdirectory(vendor/imgui)
 
-target_include_directories(${PROJECT_NAME}
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glew/include
+glad_add_library(glad_gl_core_33 STATIC API gl:core=3.3)
+
+add_library(pikzel_core STATIC ${PIKZEL_SOURCES} ${GLA_SOURCES})
+
+target_include_directories(pikzel_core
     PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glfw/include
+    PUBLIC ${CMAKE_BINARY_DIR}/gladsources/glad_gl_core_33/include
     PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glm
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/stb/stb
+    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/stb
     PUBLIC ${CMAKE_BINARY_DIR}/vendor/stb/include
     PUBLIC ${CMAKE_BINARY_DIR}/vendor/imgui/include
 )
 
-target_link_libraries(${PROJECT_NAME}
-    PRIVATE libglew_static
-    PRIVATE glfw
-    PRIVATE image
-    PRIVATE image-write
-    PRIVATE image-resize
-    PRIVATE perlin
-    PRIVATE glm::glm-header-only
-    PRIVATE imgui
+set(PIKZEL_LIBS
+    pikzel_core
+    glfw
+    glad_gl_core_33
+    image
+    image-write
+    image-resize
+    perlin
+    glm::glm-header-only
+    imgui
 )
+
+target_link_libraries(${PROJECT_NAME} PRIVATE ${PIKZEL_LIBS})
 
 if(WIN32)
     target_link_libraries(${PROJECT_NAME} PRIVATE opengl32)
@@ -66,32 +66,13 @@ else()
 endif()
 
 if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    target_compile_options(pikzel_core PRIVATE /W4)
+    target_compile_options(pikzel PRIVATE /W4)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(pikzel_core PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(pikzel PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
-list(REMOVE_ITEM PIKZEL_SOURCES "${CMAKE_SOURCE_DIR}/src/main.cpp")
+add_executable(save_as_image_test ${CMAKE_SOURCE_DIR}/tests/save_as_image_test.cpp)
 
-add_executable(save_as_image_test tests/save_as_image_test.cpp
-	${PIKZEL_SOURCES} ${GLA_SOURCES})
-
-target_include_directories(save_as_image_test
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glew/include
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glfw/include
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/glm
-    PUBLIC ${CMAKE_SOURCE_DIR}/vendor/stb/stb
-    PUBLIC ${CMAKE_BINARY_DIR}/vendor/stb/include
-    PUBLIC ${CMAKE_BINARY_DIR}/vendor/imgui/include
-)
-
-target_link_libraries(save_as_image_test
-    PRIVATE libglew_static
-    PRIVATE glfw
-    PRIVATE image
-    PRIVATE image-write
-    PRIVATE image-resize
-    PRIVATE perlin
-    PRIVATE glm::glm-header-only
-    PRIVATE imgui
-)
+target_link_libraries(save_as_image_test PRIVATE ${PIKZEL_LIBS})
