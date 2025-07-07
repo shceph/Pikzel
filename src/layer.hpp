@@ -59,6 +59,7 @@ class Layer
     void SwitchVisibilityState() { mVisible = !mVisible; }
     void SwitchLockState() { mLocked = !mLocked; }
 
+    [[nodiscard]] auto IsEdited() const -> bool { return mIsEdited; }
     [[nodiscard]] auto IsVisible() const -> bool { return mVisible; }
     [[nodiscard]] auto IsLocked() const -> bool { return mLocked; }
     [[nodiscard]] auto GetOpacity() const -> int { return mOpacity; }
@@ -71,10 +72,6 @@ class Layer
         auto col = mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
-    /* [[nodiscard]] auto GetCanvas() const -> const std::vector<Color>& */
-    /* { */
-    /*     return mCanvas; */
-    /* } */
     [[nodiscard]] auto GetCanvasDims() const -> Vec2Int { return mCanvasDims; }
     [[nodiscard]] auto IsPreviewLayer() const -> bool
     {
@@ -95,7 +92,7 @@ class Layer
     static void ResetConstructCounter() { sConstructCounter = 1; }
 
     // Custom delete color can be set, I'm using this for the preview layer
-    // where I want the brush to have a specific color.
+    // where I want the brush to have a specific color when I'm using eraser.
     void DrawCircle(Vec2Int center, int radius, bool fill,
                     Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0},
                     std::optional<Color> draw_color = std::nullopt);
@@ -125,6 +122,7 @@ class Layer
     RectShapeData mHandleRectShapeData;
     Vec2Int mCanvasDims;
     bool mIsCanvasLayer;
+    bool mIsEdited{false};
     bool mVisible{true};
     bool mLocked{false};
     bool mDrawVisiblePixelsOnly{false};
@@ -139,7 +137,7 @@ class Layer
     inline static int sConstructCounter{1};
 
     friend class UI;
-    friend class Layers;
+    friend class LayerControl;
     friend class PreviewLayer;
     friend void Project::Open(const std::string&);
 };

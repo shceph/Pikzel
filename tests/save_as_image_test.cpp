@@ -52,7 +52,7 @@ auto main(int argc, char* argv[]) -> int
         Gla::Color{.r = 0, .g = 0, .b = 0, .a = 0}};
     Gla::PboMappedBuffSpan span{simulated_pbo_data};
 
-    Pikzel::Layers layers{span};
+    Pikzel::LayerControl layers{span};
     Pikzel::Tool tool;
     Pikzel::Camera camera;
     Pikzel::Project project{layers, tool, camera};

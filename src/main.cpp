@@ -24,7 +24,6 @@
 #include "project.hpp"
 
 #include <cmath>
-#include <future>
 #include <print>
 #include <string>
 
@@ -39,7 +38,6 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
                               GLenum severity, GLsizei /*length*/,
                               const GLchar* message, const void* /*userParam*/)
 {
-    // Convert GLenum source, type, severity to strings for better readability
     std::string source_str = "[Unknown]";
     switch (source)
     {
@@ -120,7 +118,6 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
 
     static int error_count = 0;
 
-    // Output the debug message along with file and line information
     std::cerr << "OpenGL Debug Message:" << "\n  Source: " << source_str
               << "\n  Type: " << type_str << "\n  Severity: " << severity_str
               << "\n  ID: " << errorId << "\n  Message: " << message << '\n'
@@ -186,7 +183,7 @@ struct AppState
 
     Pikzel::Tool tool;
     Pikzel::Camera camera;
-    Pikzel::Layers layers;
+    Pikzel::LayerControl layers;
     Pikzel::Project project;
     Pikzel::UI ui_state;
     std::optional<Pikzel::PreviewLayer> preview_layer;
@@ -323,7 +320,6 @@ void Render(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
             Gla::VertexBuffer& vbo_bckg)
 {
     static ImVec2 draw_window_dims;
-    static std::future<void> vbo_update_future;
 
     auto proj_mat =
         GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
@@ -347,8 +343,6 @@ void Render(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
                   app_state.project.GetCanvasDims());
     Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangleStrip, 4);
 
-    if (vbo_update_future.valid()) { vbo_update_future.wait(); }
-
     Gla::FrameBuffer::BindToDefaultFB();
 }
 
@@ -363,14 +357,13 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
     shader_canvas.SetUniformMat4f("u_ViewProjection", proj_mat);
     shader_canvas.SetUniform1i("u_Texture", 0);
 
-    // NORMAL LAYER RENDERING
     for (const auto& layer : app_state.layers.GetLayers())
     {
         if (!layer.IsVisible()) { continue; }
 
         shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
 
-        if (&layer != &app_state.layers.GetCurrentLayer())
+        if (&layer != &app_state.layers.GetCurrentLayer() || !layer.IsEdited())
         {
             layer.GetTexture().Bind();
             glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -382,7 +375,7 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
         pbo.Bind();
         lay_tex.Bind();
 
-        Gla::PixelBuffer::Unmap();
+        pbo.Unmap();
 
         lay_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(), nullptr);
 
@@ -412,7 +405,7 @@ void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
     {
         pbo_prev_layer.Bind();
 
-        Gla::PixelBuffer::Unmap();
+        pbo_prev_layer.Unmap();
         preview_layer_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(),
                                              nullptr);
         preview_layer_pbo_buff = pbo_prev_layer.Map();
@@ -461,7 +454,7 @@ void RenderPreviewLayerForSelection(
     {
         pbo_prev_layer_for_selection.Bind();
 
-        Gla::PixelBuffer::Unmap();
+        pbo_prev_layer_for_selection.Unmap();
         preview_layer_for_selection_tex.UpdateWholeTexture(
             app_state.project.GetCanvasDims(), nullptr);
         preview_layer_for_selection_pbo_buff =
@@ -489,6 +482,14 @@ void MainLoop(GLFWwindow* window)
     Gla::PboMappedBuffSpan pbo_buff;
     Gla::PboMappedBuffSpan preview_layer_pbo_buff;
     Gla::PboMappedBuffSpan preview_layer_for_selection_pbo_buff;
+
+    Gla::PixelBuffer pbo(glm::ivec2{32}, {.r = 0, .g = 0, .b = 0, .a = 0});
+    Gla::PixelBuffer pbo_prev_layer(glm::ivec2{32},
+                                    {.r = 0, .g = 0, .b = 0, .a = 0});
+    Gla::PixelBuffer pbo_prev_layer_for_selection(
+        glm::ivec2{32}, {.r = 0, .g = 0, .b = 0, .a = 0});
+    Gla::PixelBuffer::Unbind();
+
     AppState app_state{window, pbo_buff};
 
     Pikzel::Events::PushToScrollCallback(
@@ -581,13 +582,6 @@ void MainLoop(GLFWwindow* window)
     shader_bckg.Bind();
     Gla::Group group_bckg(vao_bckg, shader_bckg);
 
-    Gla::PixelBuffer pbo(glm::ivec2{32}, {.r = 0, .g = 0, .b = 0, .a = 0});
-    Gla::PixelBuffer pbo_prev_layer(glm::ivec2{32},
-                                    {.r = 0, .g = 0, .b = 0, .a = 0});
-    Gla::PixelBuffer pbo_prev_layer_for_selection(
-        glm::ivec2{32}, {.r = 0, .g = 0, .b = 0, .a = 0});
-    Gla::PixelBuffer::Unbind();
-
     Gla::Timer out_of_loop_timer;
 
     while (glfwWindowShouldClose(window) == 0)
@@ -656,8 +650,8 @@ auto main(int argc, const char* argv[]) -> int
 
     glfwMakeContextCurrent(window);
 
-    // NOLINTNEXTLINE
-    if (argc > 1 && argv[1] == std::string{"no_vsync"}) { glfwSwapInterval(0); }
+    std::span args{argv, static_cast<std::size_t>(argc)};
+    if (argc > 1 && args[1] == std::string{"no_vsync"}) { glfwSwapInterval(0); }
     else { glfwSwapInterval(1); }
 
     glfwMaximizeWindow(window);

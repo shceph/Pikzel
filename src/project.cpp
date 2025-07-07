@@ -14,7 +14,7 @@
 
 namespace Pikzel
 {
-Project::Project(Layers& layers, Tool& tool, Camera& camera)
+Project::Project(LayerControl& layers, Tool& tool, Camera& camera)
     : mLayers{layers}, mTool{tool}, mCamera{camera}
 {
 }

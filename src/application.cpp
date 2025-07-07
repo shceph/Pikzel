@@ -93,7 +93,7 @@ void UI::RenderAndEndFrame()
     }
 }
 
-void UI::RenderUI(Layers& layers, Camera& camera, Selection& selection,
+void UI::RenderUI(LayerControl& layers, Camera& camera, Selection& selection,
                   PreviewLayer& preview_layer_for_selection)
 {
     RenderMenuBar(layers, camera, selection, preview_layer_for_selection);
@@ -223,7 +223,8 @@ auto UI::ShouldDoTool() const -> bool
     return mShouldDoTool;
 }
 
-void UI::RenderMenuBar(Layers& layers, Camera& camera, Selection& selection,
+void UI::RenderMenuBar(LayerControl& layers, Camera& camera,
+                       Selection& selection,
                        PreviewLayer& preview_layer_for_selection)
 {
     ImGui::BeginMainMenuBar();
@@ -239,6 +240,10 @@ void UI::RenderMenuBar(Layers& layers, Camera& camera, Selection& selection,
         if (ImGui::MenuItem("Save as project"))
         {
             mRenderSaveAsPrjPopup = true;
+        }
+        if (ImGui::MenuItem("Exit"))
+        {
+            glfwSetWindowShouldClose(sWindow, GLFW_TRUE);
         }
         ImGui::EndMenu();
     }
@@ -474,7 +479,8 @@ void UI::RenderColorPalette(ImVec4& color)
     }
 }
 
-void UI::RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node)
+void UI::RenderNodesChildren(LayerControl& layers,
+                             Tree<LayerControl::Capture>& node)
 {
     mRenderNodesChildrenFuncData.node_count++;
     const auto& children = node.GetChildren();
@@ -521,7 +527,7 @@ void UI::RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node)
     RenderNodesChildren(layers, *children.front());
 }
 
-void UI::RenderUndoTreeWindow(Layers& layers)
+void UI::RenderUndoTreeWindow(LayerControl& layers)
 {
     if (!mRenderUndoTreeWindow) { return; }
 
@@ -625,7 +631,7 @@ void UI::RenderToolWindow()
     ImGui::End();
 }
 
-void UI::RenderLayerWindow(Layers& layers)
+void UI::RenderLayerWindow(LayerControl& layers)
 {
     ImGui::Begin("Layers");
 
@@ -710,7 +716,7 @@ void UI::RenderLayerWindow(Layers& layers)
 
 // Don't forget to call this function before ImGui::End() as this function uses
 // ImGui::IsWindowHovered()
-void UI::RenderLayerWinContextMenu(Layers& layers)
+void UI::RenderLayerWinContextMenu(LayerControl& layers)
 {
     // Code bellow renders popups for changing a layer's name
     static bool open_the_change_lay_name_popup = false;

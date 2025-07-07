@@ -20,7 +20,7 @@
 
 namespace Pikzel
 {
-class Layers
+class LayerControl
 {
   public:
     struct Capture
@@ -45,7 +45,7 @@ class Layers
         std::size_t selected_layer_index;
     };
 
-    explicit Layers(Gla::PboMappedBuffSpan& pbo_buff);
+    explicit LayerControl(Gla::PboMappedBuffSpan& pbo_buff);
 
     [[nodiscard]] auto GetCurrentLayer() -> Layer&;
     [[nodiscard]] auto GetCurrentLayer() const -> const Layer&;

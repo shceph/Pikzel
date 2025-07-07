@@ -11,26 +11,17 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
-#include <print>
 #include <ranges>
 #include <vector>
 
 namespace Pikzel
 {
-Layers::Layers(Gla::PboMappedBuffSpan& pbo_buff) : mPboBuff{pbo_buff}
+LayerControl::LayerControl(Gla::PboMappedBuffSpan& pbo_buff)
+    : mPboBuff{pbo_buff}
 {
 }
 
-auto Layers::GetCurrentLayer() -> Layer&
-{
-    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
-
-    auto iter = GetLayers().begin();
-    std::advance(iter, mCurrentLayerIndex);
-    return *iter;
-}
-
-auto Layers::GetCurrentLayer() const -> const Layer&
+auto LayerControl::GetCurrentLayer() -> Layer&
 {
     assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
 
@@ -39,12 +30,21 @@ auto Layers::GetCurrentLayer() const -> const Layer&
     return *iter;
 }
 
-auto Layers::GetCanvasDims() const -> Vec2Int
+auto LayerControl::GetCurrentLayer() const -> const Layer&
+{
+    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
+
+    auto iter = GetLayers().begin();
+    std::advance(iter, mCurrentLayerIndex);
+    return *iter;
+}
+
+auto LayerControl::GetCanvasDims() const -> Vec2Int
 {
     return mCanvasDims;
 }
 
-auto Layers::HandleSelectionTool(PreviewLayer& preview_layer) const
+auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer) const
     -> std::optional<std::pair<Vec2Int, Vec2Int>>
 {
     auto canv_coord = CanvasCoordsFromCursorPos();
@@ -93,8 +93,8 @@ auto Layers::HandleSelectionTool(PreviewLayer& preview_layer) const
     return ret;
 }
 
-auto Layers::HandleRectShape(PreviewLayer& preview_layer,
-                             Color tool_color) const
+auto LayerControl::HandleRectShape(PreviewLayer& preview_layer,
+                                   Color tool_color) const
     -> std::optional<std::pair<Vec2Int, Vec2Int>>
 {
     auto canv_coord = CanvasCoordsFromCursorPos();
@@ -142,8 +142,8 @@ auto Layers::HandleRectShape(PreviewLayer& preview_layer,
     return ret;
 }
 
-void Layers::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
-                           PreviewLayer& preview_layer_for_selection)
+void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
+                                 PreviewLayer& preview_layer_for_selection)
 {
     if (tool.GetToolType() == ToolType::kSelectionTool)
     {
@@ -177,14 +177,14 @@ void Layers::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
     if (GetCurrentLayer().DoCurrentTool()) { MarkHistoryForUpdate(); }
 }
 
-void Layers::AddLayer(Tool& tool, Camera& camera)
+void LayerControl::AddLayer(Tool& tool, Camera& camera)
 {
     mCurrentCapture->layers.emplace_back(tool, camera, mSelection, mPboBuff,
                                          mCanvasDims);
     MarkHistoryForUpdate();
 }
 
-void Layers::MoveUp(std::size_t layer_index)
+void LayerControl::MoveUp(std::size_t layer_index)
 {
     if (layer_index == 0) { return; }
 
@@ -198,7 +198,7 @@ void Layers::MoveUp(std::size_t layer_index)
     else if (mCurrentLayerIndex == layer_index - 1) { mCurrentLayerIndex++; }
 }
 
-void Layers::MoveDown(std::size_t layer_index)
+void LayerControl::MoveDown(std::size_t layer_index)
 {
     if (layer_index >= GetLayers().size() - 1) { return; }
 
@@ -212,7 +212,7 @@ void Layers::MoveDown(std::size_t layer_index)
     else if (mCurrentLayerIndex == layer_index + 1) { mCurrentLayerIndex--; }
 }
 
-auto Layers::AtIndex(std::size_t index) -> Layer&
+auto LayerControl::AtIndex(std::size_t index) -> Layer&
 {
     assert(index >= 0 && index < GetLayers().size());
 
@@ -222,13 +222,13 @@ auto Layers::AtIndex(std::size_t index) -> Layer&
     return *iter;
 }
 
-void Layers::ResetDataToDefault()
+void LayerControl::ResetDataToDefault()
 {
     GetLayers().clear();
     mCurrentLayerIndex = 0;
 }
 
-auto Layers::GetDisplayedCanvas() const -> std::vector<Color>
+auto LayerControl::GetDisplayedCanvas() const -> std::vector<Color>
 {
     auto canvas_width = GetCanvasDims().x;
     auto canvas_height = GetCanvasDims().y;
@@ -261,7 +261,7 @@ auto Layers::GetDisplayedCanvas() const -> std::vector<Color>
     return displayed_canvas;
 }
 
-void Layers::PushToHistory()
+void LayerControl::PushToHistory()
 {
     assert(mCurrentCapture.has_value());
     assert(mCurrentUndoTreeNode != nullptr);
@@ -270,7 +270,7 @@ void Layers::PushToHistory()
         mCurrentCapture->layers, mCurrentLayerIndex);
 }
 
-void Layers::Undo()
+void LayerControl::Undo()
 {
     assert(mCurrentCapture.has_value());
     assert(mCurrentUndoTreeNode != nullptr);
@@ -282,7 +282,7 @@ void Layers::Undo()
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
 }
 
-void Layers::Redo()
+void LayerControl::Redo()
 {
     assert(mCurrentCapture.has_value());
     assert(mCurrentUndoTreeNode != nullptr);
@@ -308,16 +308,16 @@ void Layers::Redo()
 }
 
 // NOTE: This doesn't set last used child id
-void Layers::SetCurrentNode(Tree<Capture>& node_to_set_to)
+void LayerControl::SetCurrentNode(Tree<Capture>& node_to_set_to)
 {
     mCurrentUndoTreeNode = &node_to_set_to;
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
 }
 
-void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
-                           PreviewLayer& preview_layer,
-                           PreviewLayer& preview_layer_for_selection)
+void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
+                                 Camera& camera, PreviewLayer& preview_layer,
+                                 PreviewLayer& preview_layer_for_selection)
 {
     for (auto& layer : GetLayers())
     {
@@ -352,7 +352,7 @@ void Layers::UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
     mCurrentLayerIndexTemp = mCurrentLayerIndex;
 }
 
-void Layers::InitHistory(Camera& camera, Tool& tool)
+void LayerControl::InitHistory(Camera& camera, Tool& tool)
 {
     mCurrentCapture.emplace(tool, camera, mSelection, mPboBuff, mCanvasDims, 0);
     mUndoTree.emplace(auto{mCurrentCapture.value()});
@@ -360,7 +360,7 @@ void Layers::InitHistory(Camera& camera, Tool& tool)
     mSelection.Reset(mCanvasDims);
 }
 
-void Layers::WriteCurrentLayerTextureDataToPbo()
+void LayerControl::WriteCurrentLayerTextureDataToPbo()
 {
     GetCurrentLayer().GetTexture().Bind();
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,

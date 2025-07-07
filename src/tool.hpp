@@ -58,7 +58,7 @@ class Tool
 
     friend class UI;
     friend class Layer;
-    friend class Layers;
+    friend class LayerControl;
 
   private:
     ImVec4 mColor1;

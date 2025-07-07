@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gla_base.hpp"
+#include <glad/gl.h>
 
 #include <glm/glm.hpp>
 
@@ -22,15 +22,19 @@ class PixelBuffer
     PixelBuffer(glm::ivec2 dims, Color fill_color);
     void Bind() const;
     static void Unbind();
-    [[nodiscard]] auto Map() const -> PboMappedBuffSpan;
-    [[nodiscard]] auto BindAndMap() const -> PboMappedBuffSpan;
-    static void Unmap();
-    void BindAndUnmap() const;
+    auto Map() -> PboMappedBuffSpan;
+    auto BindAndMap() -> PboMappedBuffSpan;
+    void Unmap();
+    void BindAndUnmap();
     void Resize(glm::ivec2 dims, Color fill_color);
     void BindAndResize(glm::ivec2 dims, Color fill_color);
+    [[nodiscard]] auto GetMappedMemory() const -> PboMappedBuffSpan;
+    [[nodiscard]] auto IsMapped() const -> bool;
 
   private:
     GLuint mRendererID;
     std::size_t mSize;
+    PboMappedBuffSpan mMappedMemory;
+    bool mIsMapped{false};
 };
 } // namespace Gla

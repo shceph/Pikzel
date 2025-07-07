@@ -14,7 +14,6 @@
 #include <chrono>
 #include <cmath>
 #include <numbers>
-#include <print>
 #include <queue>
 #include <utility>
 #include <vector>
@@ -132,6 +131,7 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
 
 void Layer::Update()
 {
+    mIsEdited = false;
 }
 
 auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
@@ -274,6 +274,8 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
         .b = color.b,
         .a = color.a,
     };
+
+    mIsEdited = true;
 }
 
 void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)

@@ -16,7 +16,7 @@ class UI
 {
   public:
     UI(Project& project, Tool& tool, GLFWwindow* _window);
-    void RenderUI(Layers& layers, Camera& camera, Selection& selection,
+    void RenderUI(LayerControl& layers, Camera& camera, Selection& selection,
                   PreviewLayer& preview_layer_for_selection);
     void RenderNoProjectWindow();
     void RenderDrawWindow(unsigned int framebuffer_texture_id,
@@ -61,7 +61,7 @@ class UI
     struct RenderNodesChildrenFuncData
     {
         int node_count{0};
-        Tree<Layers::Capture>* clicked_node = nullptr;
+        Tree<LayerControl::Capture>* clicked_node = nullptr;
 
         void Reset()
         {
@@ -70,15 +70,17 @@ class UI
         }
     };
 
-    void RenderMenuBar(Layers& layers, Camera& camera, Selection& selection,
+    void RenderMenuBar(LayerControl& layers, Camera& camera,
+                       Selection& selection,
                        PreviewLayer& preview_layer_for_selection);
     void RenderSaveAsImagePopup();
     void RenderSaveAsProjectPopup();
-    void RenderNodesChildren(Layers& layers, Tree<Layers::Capture>& node);
-    void RenderUndoTreeWindow(Layers& layers);
+    void RenderNodesChildren(LayerControl& layers,
+                             Tree<LayerControl::Capture>& node);
+    void RenderUndoTreeWindow(LayerControl& layers);
     void RenderToolWindow();
-    void RenderLayerWindow(Layers& layers);
-    void RenderLayerWinContextMenu(Layers& layers);
+    void RenderLayerWindow(LayerControl& layers);
+    void RenderLayerWinContextMenu(LayerControl& layers);
     void RenderSaveErrorPopup();
     void RenderNewProjectPopup();
     void RenderOpenProjectPopup();
