@@ -45,8 +45,6 @@ class LayerControl
         std::size_t selected_layer_index;
     };
 
-    explicit LayerControl(Gla::PboMappedBuffSpan& pbo_buff);
-
     [[nodiscard]] auto GetCurrentLayer() -> Layer&;
     [[nodiscard]] auto GetCurrentLayer() const -> const Layer&;
     [[nodiscard]]
@@ -74,6 +72,7 @@ class LayerControl
                        PreviewLayer& preview_layer_for_selection);
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
+    void UpdateMappedPBOMemorySpanForAllLayers(Gla::PboMappedBuffSpan pbo_buff);
 
     [[nodiscard]] auto GetSelection() const -> const Selection&
     {
@@ -151,7 +150,7 @@ class LayerControl
     Tree<Capture>* mCurrentUndoTreeNode{nullptr};
     std::optional<Tree<Capture>> mUndoTree{std::nullopt};
     std::optional<Capture> mCurrentCapture{std::nullopt};
-    std::reference_wrapper<Gla::PboMappedBuffSpan> mPboBuff;
+    Gla::PboMappedBuffSpan mPboBuff;
     std::size_t mCurrentLayerIndex{0};
     std::size_t mCurrentLayerIndexTemp{0};
     Vec2Int mCanvasDims{0, 0};

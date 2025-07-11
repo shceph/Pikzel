@@ -192,6 +192,7 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
 void UI::Update()
 {
     mDrawWindowRendered = false;
+    mShouldDoTool = true;
 }
 
 void UI::SetupToolTextures(std::span<unsigned int> tex_ids)

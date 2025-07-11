@@ -48,9 +48,8 @@ class Layer
     };
 
     explicit Layer(Tool& tool, Camera& camera, Selection& selection,
-                   Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
-                   bool is_canvas_layer = true,
-                   bool draw_visible_pixels_only = false) noexcept;
+                   Gla::PboMappedBuffSpan pbo_buff, Vec2Int canvas_dims,
+                   bool is_canvas_layer = true) noexcept;
 
     using ShouldUpdateHistory = bool;
     auto DoCurrentTool() -> ShouldUpdateHistory;
@@ -69,7 +68,7 @@ class Layer
     }
     [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
     {
-        auto col = mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x];
+        auto col = mPboBuff[(coords.y * mCanvasDims.x) + coords.x];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
     [[nodiscard]] auto GetCanvasDims() const -> Vec2Int { return mCanvasDims; }
@@ -91,12 +90,18 @@ class Layer
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
 
+    enum DrawType : uint8_t
+    {
+        kFill,
+        kOutlline
+    };
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color when I'm using eraser.
-    void DrawCircle(Vec2Int center, int radius, bool fill,
+    void DrawCircle(Vec2Int center, int radius, DrawType draw_type,
                     Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0},
                     std::optional<Color> draw_color = std::nullopt);
     void Clear();
+    void UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff);
 
   private:
     auto HandleBrushAndEraser() -> ShouldUpdateHistory;
@@ -125,13 +130,12 @@ class Layer
     bool mIsEdited{false};
     bool mVisible{true};
     bool mLocked{false};
-    bool mDrawVisiblePixelsOnly{false};
     int mOpacity{255};
     std::string mLayerName;
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;
     std::reference_wrapper<Selection> mSelection;
-    std::reference_wrapper<Gla::PboMappedBuffSpan> mPboBuff;
+    Gla::PboMappedBuffSpan mPboBuff;
     Gla::Texture2D mTex;
 
     inline static int sConstructCounter{1};

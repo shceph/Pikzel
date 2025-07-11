@@ -90,11 +90,9 @@ auto Color::FromGlaColor(Gla::Color color) -> Color
 }
 
 Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
-             Gla::PboMappedBuffSpan& pbo_buff, Vec2Int canvas_dims,
-             bool is_canvas_layer /*= true*/,
-             bool draw_visible_pixels_only /*= false*/) noexcept
+             Gla::PboMappedBuffSpan pbo_buff, Vec2Int canvas_dims,
+             bool is_canvas_layer /*= true*/) noexcept
     : mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
-      mDrawVisiblePixelsOnly{draw_visible_pixels_only},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
       mCamera{camera}, mSelection{selection}, mPboBuff{pbo_buff},
       mTex{canvas_dims, {0.0F, 0.0F, 0.0F, 0.0F}, Gla::kNearest}
@@ -176,7 +174,11 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
         }
         else { DrawLine(canv_coord.value(), position_last_drawn, thickness); }
     }
-    else { DrawCircle(canv_coord.value(), mTool.get().GetBrushRadius(), true); }
+    else
+    {
+        DrawCircle(canv_coord.value(), mTool.get().GetBrushRadius(),
+                   DrawType::kFill);
+    }
 
     time_last_drawn = std::chrono::steady_clock::now();
     position_last_drawn = canv_coord.value();
@@ -268,7 +270,7 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
 {
     if (!mSelection.get().IsPixelSelected(coords)) { return; }
 
-    mPboBuff.get()[(coords.y * mCanvasDims.x) + coords.x] = {
+    mPboBuff[(coords.y * mCanvasDims.x) + coords.x] = {
         .r = color.r,
         .g = color.g,
         .b = color.b,
@@ -283,7 +285,7 @@ void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)
     DrawPixel(ClampToCanvasDims(coords), color);
 }
 
-void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
+void Layer::DrawCircle(Vec2Int center, int radius, DrawType draw_type,
                        Color delete_color /*= {0, 0, 0, 0}*/,
                        std::optional<Color> draw_color /*= std::nullopt*/)
 {
@@ -303,7 +305,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, bool fill,
         return;
     }
 
-    if (fill)
+    if (draw_type == DrawType::kFill)
     {
         for (int xcrd = -radius; xcrd <= radius; xcrd++)
         {
@@ -360,6 +362,11 @@ void Layer::Clear()
             DrawPixel({j, i}, {.r = 0, .g = 0, .b = 0, .a = 0});
         }
     }
+}
+
+void Layer::UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff)
+{
+    mPboBuff = pbo_buff;
 }
 
 void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/,
@@ -443,8 +450,8 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     DrawPixel(point_b1, color);
     DrawPixel(point_b2, color);
 
-    DrawCircle(point_a, thickness / 2, true);
-    DrawCircle(point_b, thickness / 2, true);
+    DrawCircle(point_a, thickness / 2, DrawType::kFill);
+    DrawCircle(point_b, thickness / 2, DrawType::kFill);
 }
 
 void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,

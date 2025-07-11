@@ -11,9 +11,7 @@ namespace Pikzel
 class PreviewLayer
 {
   public:
-    explicit PreviewLayer(Tool& tool, Camera& camera,
-                          Gla::PboMappedBuffSpan& pbo_buff,
-                          Vec2Int canvas_dims);
+    explicit PreviewLayer(Tool& tool, Camera& camera, Vec2Int canvas_dims);
 
     void UpdateCircleSize(int size);
     void Clear();
@@ -21,6 +19,9 @@ class PreviewLayer
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
     void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, Color color);
     void DrawPixel(Vec2Int coords, Color color);
+    void UpdatePBOMappedBufferSpan(Gla::PboMappedBuffSpan buff);
+
+    auto GetLayerTexture() -> Gla::Texture2D&;
 
     [[nodiscard]] auto IsPreviewLayerChanged() const -> bool
     {

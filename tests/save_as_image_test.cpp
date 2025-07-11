@@ -52,7 +52,8 @@ auto main(int argc, char* argv[]) -> int
         Gla::Color{.r = 0, .g = 0, .b = 0, .a = 0}};
     Gla::PboMappedBuffSpan span{simulated_pbo_data};
 
-    Pikzel::LayerControl layers{span};
+    Pikzel::LayerControl layers;
+    layers.UpdateMappedPBOMemorySpanForAllLayers(span);
     Pikzel::Tool tool;
     Pikzel::Camera camera;
     Pikzel::Project project{layers, tool, camera};
@@ -61,7 +62,7 @@ auto main(int argc, char* argv[]) -> int
     std::println("Made new project.");
 
     layers.GetCurrentLayer().DrawCircle(
-        project_dims / 2, project_dims.x / 2, true,
+        project_dims / 2, project_dims.x / 2, Pikzel::Layer::DrawType::kFill,
         Pikzel::Color{.r = 0, .g = 0, .b = 0, .a = 0},
         Pikzel::Color{.r = 199, .g = 19, .b = 66, .a = 255});
 

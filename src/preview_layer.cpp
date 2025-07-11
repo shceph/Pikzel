@@ -1,15 +1,15 @@
 #include "preview_layer.hpp"
+#include "gla/pixel_buffer.hpp"
 #include "tool.hpp"
 
 namespace Pikzel
 {
 constexpr Color kEraserToolPreviewColor{.r = 100, .g = 100, .b = 100, .a = 100};
 
-PreviewLayer::PreviewLayer(Tool& tool, Camera& camera,
-                           Gla::PboMappedBuffSpan& pbo_buff,
-                           Vec2Int canvas_dims)
+PreviewLayer::PreviewLayer(Tool& tool, Camera& camera, Vec2Int canvas_dims)
     : mTool{tool},
-      mLayer{mTool, camera, mSelection, pbo_buff, canvas_dims, false, true},
+      mLayer{mTool,       camera, mSelection, std::span<Gla::Color>{},
+             canvas_dims, false},
       mTranslationMat{0.0F}
 {
 }
@@ -17,7 +17,7 @@ PreviewLayer::PreviewLayer(Tool& tool, Camera& camera,
 void PreviewLayer::UpdateCircleSize(int size)
 {
     mLayer.Clear();
-    mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, size, true,
+    mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, size, Layer::DrawType::kFill,
                       kEraserToolPreviewColor);
     SetPreviewLayerChangedToTrue();
 }
@@ -44,7 +44,8 @@ void PreviewLayer::Update()
     else if (tool_type == ToolType::kBrush && mToolColor != tool_curr_color)
     {
         mToolColor = tool_curr_color;
-        mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, mBrushSize, true,
+        mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, mBrushSize,
+                          Layer::DrawType::kFill,
                           {.r = 100, .g = 100, .b = 100, .a = 100});
         SetPreviewLayerChangedToTrue();
     }
@@ -82,5 +83,15 @@ void PreviewLayer::DrawPixel(Vec2Int coords, Color color)
 {
     mLayer.DrawPixel(coords, color);
     SetPreviewLayerChangedToTrue();
+}
+
+void PreviewLayer::UpdatePBOMappedBufferSpan(Gla::PboMappedBuffSpan buff)
+{
+    mLayer.UpdateMappedPBOBufferSpan(buff);
+}
+
+auto PreviewLayer::GetLayerTexture() -> Gla::Texture2D&
+{
+    return mLayer.GetTexture();
 }
 } // namespace Pikzel

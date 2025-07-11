@@ -48,20 +48,20 @@ void PixelBuffer::Unbind()
 
 auto PixelBuffer::Map() -> PboMappedBuffSpan
 {
-    // auto* ptr =
-    //     static_cast<Color*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER,
-    //     GL_READ_WRITE));
-    // assert(ptr != nullptr);
-    // return {ptr, mSize / sizeof(Color)};
-
-    auto* ptr = static_cast<Color*>(glMapBufferRange(
-        GL_PIXEL_UNPACK_BUFFER, 0, static_cast<GLsizeiptr>(mSize),
-        GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT |
-            GL_MAP_UNSYNCHRONIZED_BIT));
+    auto* ptr =
+        static_cast<Color*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE));
     assert(ptr != nullptr);
-    mIsMapped = true;
     mMappedMemory = std::span<Color>{ptr, mSize / sizeof(Color)};
     return mMappedMemory;
+
+    // auto* ptr = static_cast<Color*>(glMapBufferRange(
+    //     GL_PIXEL_UNPACK_BUFFER, 0, static_cast<GLsizeiptr>(mSize),
+    //     GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT |
+    //         GL_MAP_UNSYNCHRONIZED_BIT));
+    // assert(ptr != nullptr);
+    // mIsMapped = true;
+    // mMappedMemory = std::span<Color>{ptr, mSize / sizeof(Color)};
+    // return mMappedMemory;
 }
 
 auto PixelBuffer::BindAndMap() -> PboMappedBuffSpan

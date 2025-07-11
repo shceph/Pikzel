@@ -16,11 +16,6 @@
 
 namespace Pikzel
 {
-LayerControl::LayerControl(Gla::PboMappedBuffSpan& pbo_buff)
-    : mPboBuff{pbo_buff}
-{
-}
-
 auto LayerControl::GetCurrentLayer() -> Layer&
 {
     assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
@@ -363,8 +358,18 @@ void LayerControl::InitHistory(Camera& camera, Tool& tool)
 void LayerControl::WriteCurrentLayerTextureDataToPbo()
 {
     GetCurrentLayer().GetTexture().Bind();
-    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE,
-                  mPboBuff.get().data());
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, mPboBuff.data());
     GetCurrentLayer().GetTexture().Unbind();
+}
+
+void LayerControl::UpdateMappedPBOMemorySpanForAllLayers(
+    Gla::PboMappedBuffSpan pbo_buff)
+{
+    mPboBuff = pbo_buff;
+
+    for (auto& layer : GetLayers())
+    {
+        layer.UpdateMappedPBOBufferSpan(pbo_buff);
+    }
 }
 } // namespace Pikzel
