@@ -61,10 +61,21 @@ auto main(int argc, char* argv[]) -> int
     project.New(project_dims);
     std::println("Made new project.");
 
+    layers.AddLayer(tool, camera);
+
     layers.GetCurrentLayer().DrawCircle(
         project_dims / 2, project_dims.x / 2, Pikzel::Layer::DrawType::kFill,
         Pikzel::Color{.r = 0, .g = 0, .b = 0, .a = 0},
         Pikzel::Color{.r = 199, .g = 19, .b = 66, .a = 255});
+    layers.GetCurrentLayer().SetOpacity(100);
+
+    layers.SetCurrentLayer(1);
+
+    layers.GetCurrentLayer().DrawCircle(
+        project_dims / 2, project_dims.x / 2, Pikzel::Layer::DrawType::kFill,
+        Pikzel::Color{.r = 0, .g = 0, .b = 0, .a = 0},
+        Pikzel::Color{.r = 18, .g = 180, .b = 100, .a = 255});
+    layers.GetCurrentLayer().SetOpacity(100);
 
     if (!project.SaveAsImage(1, full_path))
     {

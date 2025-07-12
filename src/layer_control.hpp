@@ -11,6 +11,7 @@
 #include "gla/texture.hpp"
 
 #include <GLFW/glfw3.h>
+#include <cstddef>
 #include <imgui.h>
 
 #include <list>
@@ -47,6 +48,7 @@ class LayerControl
 
     [[nodiscard]] auto GetCurrentLayer() -> Layer&;
     [[nodiscard]] auto GetCurrentLayer() const -> const Layer&;
+    void SetCurrentLayer(std::size_t layer_index);
     [[nodiscard]]
     auto GetCanvasDims() const -> Vec2Int;
     auto HandleSelectionTool(PreviewLayer& preview_layer) const

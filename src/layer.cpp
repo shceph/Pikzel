@@ -255,7 +255,8 @@ auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
 
     if (left_button_pressed) { return false; }
 
-    DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(), true);
+    DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(),
+             DrawType::kFill);
 
     mHandleRectShapeData.shape_began = false;
     return true;
@@ -364,12 +365,21 @@ void Layer::Clear()
     }
 }
 
+void Layer::GetTextureData(std::vector<Color>& buffer) const
+{
+    buffer.resize(static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y);
+    mTex.Bind();
+    glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer.data());
+    mTex.Unbind();
+}
+
 void Layer::UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff)
 {
     mPboBuff = pbo_buff;
 }
 
-void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool /*fill*/,
+void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
+                     DrawType /*draw_type*/,
                      std::optional<Color> color /*= std::nullopt*/)
 {
     Color col = color.value_or(Color::FromImVec4(mTool.get().GetColor()));

@@ -1,5 +1,6 @@
 #include "layer_control.hpp"
 #include "events.hpp"
+#include "gla/pixel_buffer.hpp"
 #include "layer.hpp"
 #include "preview_layer.hpp"
 #include "tool.hpp"
@@ -32,6 +33,12 @@ auto LayerControl::GetCurrentLayer() const -> const Layer&
     auto iter = GetLayers().begin();
     std::advance(iter, mCurrentLayerIndex);
     return *iter;
+}
+
+void LayerControl::SetCurrentLayer(std::size_t layer_index)
+{
+    assert(layer_index < GetLayerCount());
+    mCurrentLayerIndex = layer_index;
 }
 
 auto LayerControl::GetCanvasDims() const -> Vec2Int
@@ -230,14 +237,18 @@ auto LayerControl::GetDisplayedCanvas() const -> std::vector<Color>
 
     std::vector<Color> displayed_canvas{
         static_cast<std::size_t>(canvas_height * canvas_width)};
+    std::vector<Color> layer_texture_data;
 
     for (const auto& layer_traversed : std::ranges::reverse_view(GetLayers()))
     {
+        layer_traversed.GetTextureData(layer_texture_data);
+        auto canvas_dims = layer_traversed.GetCanvasDims();
+
         for (int i = 0; i < canvas_height; i++)
         {
             for (int j = 0; j < canvas_width; j++)
             {
-                Color pixel = layer_traversed.GetPixel({j, i});
+                Color pixel = layer_texture_data[(i * canvas_dims.x) + j];
 
                 Color dst_color = {
                     .r = pixel.r,

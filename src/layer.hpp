@@ -47,6 +47,12 @@ class Layer
         Vec2Int shape_begin_coords{0, 0};
     };
 
+    enum DrawType : uint8_t
+    {
+        kFill,
+        kOutlline
+    };
+
     explicit Layer(Tool& tool, Camera& camera, Selection& selection,
                    Gla::PboMappedBuffSpan pbo_buff, Vec2Int canvas_dims,
                    bool is_canvas_layer = true) noexcept;
@@ -82,6 +88,8 @@ class Layer
     }
     [[nodiscard]] auto GetTexture() -> Gla::Texture2D& { return mTex; }
 
+    void SetOpacity(int opacity) { mOpacity = opacity; }
+
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
     [[nodiscard]]
@@ -90,17 +98,13 @@ class Layer
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
 
-    enum DrawType : uint8_t
-    {
-        kFill,
-        kOutlline
-    };
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color when I'm using eraser.
     void DrawCircle(Vec2Int center, int radius, DrawType draw_type,
                     Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0},
                     std::optional<Color> draw_color = std::nullopt);
     void Clear();
+    void GetTextureData(std::vector<Color>& buffer) const;
     void UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff);
 
   private:
@@ -111,7 +115,7 @@ class Layer
     void DrawPixel(Vec2Int coords);
     void DrawPixel(Vec2Int coords, Color color);
     void DrawPixelClampCoords(Vec2Int coords, Color color);
-    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, bool fill,
+    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, DrawType draw_type,
                   std::optional<Color> color = std::nullopt);
     void DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
                        Color color);
