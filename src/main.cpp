@@ -298,7 +298,7 @@ auto HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb)
     return app_state.project.IsOpened();
 }
 
-void Update(AppState& app_state)
+void Update(AppState& app_state, Gla::PixelBuffer& pbo)
 {
     if (app_state.layers.HaveChosenDifferentLayerThisFrame())
     {
@@ -308,7 +308,7 @@ void Update(AppState& app_state)
     app_state.preview_layer->Update();
     app_state.layers.UpdateAndDraw(
         app_state.ui_state.ShouldDoTool(), app_state.tool, app_state.camera,
-        *app_state.preview_layer, *app_state.preview_layer_for_selection);
+        *app_state.preview_layer, *app_state.preview_layer_for_selection, pbo);
     app_state.ui_state.Update();
 }
 
@@ -344,7 +344,7 @@ void RenderBackground(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
 }
 
 void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
-                         Gla::Shader& shader_canvas, Gla::PixelBuffer& pbo)
+                         Gla::Shader& shader_canvas)
 {
     vao_canvas.Bind();
     shader_canvas.Bind();
@@ -359,28 +359,9 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
 
         shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
 
-        if (&layer != &app_state.layers.GetCurrentLayer() || !layer.IsEdited())
-        {
-            layer.GetTexture().Bind();
-            glDrawArrays(GL_TRIANGLES, 0, 6);
-            layer.GetTexture().Unbind();
-            continue;
-        }
-
-        auto& lay_tex = app_state.layers.GetCurrentLayerTexture();
-        pbo.Bind();
-        lay_tex.Bind();
-
-        pbo.Unmap();
-
-        lay_tex.UpdateWholeTexture(app_state.project.GetCanvasDims(), nullptr);
-
+        layer.GetTexture().Bind();
         glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        app_state.layers.UpdateMappedPBOMemorySpanForAllLayers(pbo.Map());
-
-        Gla::PixelBuffer::Unbind();
-        lay_tex.Unbind();
+        layer.GetTexture().Unbind();
     }
 
     Gla::Shader::Unbind();
@@ -592,13 +573,13 @@ void MainLoop(GLFWwindow* window)
             assert(app_state.preview_layer.has_value());
             assert(app_state.preview_layer_for_selection.has_value());
 
-            Update(app_state);
+            Update(app_state, pbo);
 
             RenderBackground(app_state, imgui_window_fb, group_bckg,
                              shader_bckg, vbo_bckg);
 
             imgui_window_fb.Bind();
-            RenderLayerTextures(app_state, vao_canvas, shader_canvas, pbo);
+            RenderLayerTextures(app_state, vao_canvas, shader_canvas);
             RenderPreviewLayerForSelection(app_state, vao_canvas, shader_canvas,
                                            pbo_prev_layer_for_selection);
             RenderPreviewLayer(app_state, vao_canvas, shader_canvas,

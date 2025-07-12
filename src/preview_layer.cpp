@@ -75,7 +75,7 @@ auto PreviewLayer::IsToolTypeChanged() const -> bool
 void PreviewLayer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
                             Color color)
 {
-    mLayer.DrawRect(upper_left, bottom_right, true, color);
+    mLayer.DrawRect(upper_left, bottom_right, Layer::DrawType::kFill, color);
     SetPreviewLayerChangedToTrue();
 }
 

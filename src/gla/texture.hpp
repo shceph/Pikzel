@@ -51,9 +51,11 @@ class TextureCubeMap : public Texture
 class Texture2D : public Texture
 {
   public:
-    Texture2D(const Texture2D&) = default;
+    // Copy constructor and copy assignment operator don't handle mLocalBuffer
+    // properly. For now I don't need it
+    Texture2D(const Texture2D&);
     Texture2D(Texture2D&&) = delete;
-    auto operator=(const Texture2D&) -> Texture2D& = default;
+    auto operator=(const Texture2D&) -> Texture2D&;
     auto operator=(Texture2D&&) -> Texture2D& = delete;
     explicit Texture2D(const std::string& path,
                        GLMinMagFilter texture_min_filter = kLinear,

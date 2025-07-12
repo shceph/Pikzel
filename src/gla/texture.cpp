@@ -106,7 +106,63 @@ void TextureCubeMap::Unbind() const
     GLCall(glBindTexture(GL_TEXTURE_CUBE_MAP, 0));
 }
 
-/* Texture2D */
+Texture2D::Texture2D(const Texture2D& other)
+    : Texture(other), mFilePath{other.mFilePath}, mLocalBuffer{nullptr},
+      mWidth{other.mWidth}, mHeight{other.mHeight}, mBPP{other.mBPP}
+{
+    mTextureID = 0;
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_2D, mTextureID));
+
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                           Gla::GLMinMagFilter::kNearest));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA,
+                        GL_UNSIGNED_BYTE, nullptr));
+
+    GLCall(glCopyImageSubData(other.mTextureID, GL_TEXTURE_2D, 0, 0, 0, 0,
+
+                              mTextureID, GL_TEXTURE_2D, 0, 0, 0, 0,
+
+                              mWidth, mHeight, 1));
+
+    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+}
+
+auto Texture2D::operator=(const Texture2D& other) -> Texture2D&
+{
+    if (this == &other) { return *this; }
+
+    mTextureID = 0;
+    mFilePath = other.mFilePath;
+    mLocalBuffer = nullptr;
+    mWidth = other.mWidth;
+    mHeight = other.mHeight;
+    mBPP = other.mBPP;
+    GLCall(glGenTextures(1, &mTextureID));
+    GLCall(glBindTexture(GL_TEXTURE_2D, mTextureID));
+
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+                           Gla::GLMinMagFilter::kNearest));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
+    GLCall(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+
+    GLCall(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, mWidth, mHeight, 0, GL_RGBA,
+                        GL_UNSIGNED_BYTE, nullptr));
+
+    GLCall(glCopyImageSubData(other.mTextureID, GL_TEXTURE_2D, 0, 0, 0, 0,
+
+                              mTextureID, GL_TEXTURE_2D, 0, 0, 0, 0,
+
+                              mWidth, mHeight, 1));
+
+    GLCall(glBindTexture(GL_TEXTURE_2D, 0));
+    return *this;
+}
 
 Texture2D::Texture2D(const std::string& path,
                      GLMinMagFilter texture_min_filter /*= LINEAR*/,

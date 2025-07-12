@@ -169,7 +169,8 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
 
         if (points.has_value())
         {
-            GetCurrentLayer().DrawRect(points->first, points->second, true);
+            GetCurrentLayer().DrawRect(points->first, points->second,
+                                       Layer::DrawType::kFill);
             preview_layer.Clear();
         }
 
@@ -286,6 +287,8 @@ void LayerControl::Undo()
     mCurrentUndoTreeNode = mCurrentUndoTreeNode->GetParent();
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
+
+    WriteCurrentLayerTextureDataToPbo();
 }
 
 void LayerControl::Redo()
@@ -311,6 +314,8 @@ void LayerControl::Redo()
     mCurrentUndoTreeNode = children[child_last_used_index].get();
     mCurrentCapture.emplace(mCurrentUndoTreeNode->GetData());
     mCurrentLayerIndex = mCurrentCapture->selected_layer_index;
+
+    WriteCurrentLayerTextureDataToPbo();
 }
 
 // NOTE: This doesn't set last used child id
@@ -323,7 +328,8 @@ void LayerControl::SetCurrentNode(Tree<Capture>& node_to_set_to)
 
 void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
                                  Camera& camera, PreviewLayer& preview_layer,
-                                 PreviewLayer& preview_layer_for_selection)
+                                 PreviewLayer& preview_layer_for_selection,
+                                 Gla::PixelBuffer& pbo)
 {
     for (auto& layer : GetLayers())
     {
@@ -333,6 +339,20 @@ void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
     if (should_do_tool)
     {
         DoCurrentTool(preview_layer, tool, preview_layer_for_selection);
+    }
+
+    if (GetCurrentLayer().IsEdited())
+    {
+        auto& lay_tex = GetCurrentLayerTexture();
+        pbo.Bind();
+        lay_tex.Bind();
+
+        pbo.Unmap();
+        lay_tex.UpdateWholeTexture(mCanvasDims, nullptr);
+        UpdateMappedPBOMemorySpanForAllLayers(pbo.Map());
+
+        lay_tex.Unbind();
+        Gla::PixelBuffer::Unbind();
     }
 
     if ((Events::IsCtrlPressed() && Events::IsKeyboardKeyPressed(GLFW_KEY_Z)) ||

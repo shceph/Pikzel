@@ -71,7 +71,8 @@ class LayerControl
     void SetCurrentNode(Tree<Capture>& node_to_set_to);
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
                        PreviewLayer& preview_layer,
-                       PreviewLayer& preview_layer_for_selection);
+                       PreviewLayer& preview_layer_for_selection,
+                       Gla::PixelBuffer& pbo);
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
     void UpdateMappedPBOMemorySpanForAllLayers(Gla::PboMappedBuffSpan pbo_buff);
