@@ -19,7 +19,7 @@ namespace Pikzel
 {
 auto LayerControl::GetCurrentLayer() -> Layer&
 {
-    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
+    assert(mCurrentLayerIndex < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, mCurrentLayerIndex);
@@ -28,7 +28,7 @@ auto LayerControl::GetCurrentLayer() -> Layer&
 
 auto LayerControl::GetCurrentLayer() const -> const Layer&
 {
-    assert(mCurrentLayerIndex >= 0 && mCurrentLayerIndex < GetLayers().size());
+    assert(mCurrentLayerIndex < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, mCurrentLayerIndex);
@@ -217,7 +217,7 @@ void LayerControl::MoveDown(std::size_t layer_index)
 
 auto LayerControl::AtIndex(std::size_t index) -> Layer&
 {
-    assert(index >= 0 && index < GetLayers().size());
+    assert(index < GetLayers().size());
 
     auto iter = GetLayers().begin();
     std::advance(iter, index);

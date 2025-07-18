@@ -25,6 +25,7 @@
 
 #include <cmath>
 #include <print>
+#include <iostream>
 #include <string>
 
 namespace
@@ -298,28 +299,10 @@ auto HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb)
     return app_state.project.IsOpened();
 }
 
-void Update(AppState& app_state, Gla::PixelBuffer& pbo)
-{
-    if (app_state.layers.HaveChosenDifferentLayerThisFrame())
-    {
-        app_state.layers.WriteCurrentLayerTextureDataToPbo();
-    }
-
-    app_state.preview_layer->Update();
-    app_state.layers.UpdateAndDraw(
-        app_state.ui_state.ShouldDoTool(), app_state.tool, app_state.camera,
-        *app_state.preview_layer, *app_state.preview_layer_for_selection, pbo);
-    app_state.ui_state.Update();
-}
-
-void RenderBackground(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
-                      Gla::Group& group_bckg, Gla::Shader& shader_bckg,
-                      Gla::VertexBuffer& vbo_bckg)
+void UpdateDrawWindowFrameBuffer(AppState& app_state,
+                                 Gla::FrameBuffer& imgui_window_fb)
 {
     static ImVec2 draw_window_dims;
-
-    auto proj_mat =
-        GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
 
     imgui_window_fb.Bind();
 
@@ -332,15 +315,42 @@ void RenderBackground(AppState& app_state, Gla::FrameBuffer& imgui_window_fb,
              .height = static_cast<int>(draw_window_dims.y)});
     }
 
+    Gla::FrameBuffer::BindToDefaultFB();
+}
+
+void Update(AppState& app_state, Gla::PixelBuffer& pbo,
+            Gla::FrameBuffer& imgui_window_fb)
+{
+    if (app_state.layers.HaveChosenDifferentLayerThisFrame())
+    {
+        app_state.layers.WriteCurrentLayerTextureDataToPbo();
+    }
+
+    app_state.preview_layer->Update();
+    app_state.layers.UpdateAndDraw(
+        app_state.ui_state.ShouldDoTool(), app_state.tool, app_state.camera,
+        *app_state.preview_layer, *app_state.preview_layer_for_selection, pbo);
+    app_state.ui_state.Update();
+
+    UpdateDrawWindowFrameBuffer(app_state, imgui_window_fb);
+}
+
+void RenderBackground(AppState& app_state, Gla::Group& group_bckg,
+                      Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_bckg)
+{
+    auto proj_mat =
+        GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
+
     Gla::Renderer::Clear();
     glClearColor(0.8, 0.8, 0.8, 1.0);
 
     group_bckg.Bind();
+    vbo_bckg.Bind();
     UpdateVboBckg(vbo_bckg, shader_bckg, proj_mat,
                   app_state.project.GetCanvasDims());
+    Gla::VertexBuffer::Unbind();
     Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangleStrip, 4);
-
-    Gla::FrameBuffer::BindToDefaultFB();
+    group_bckg.Unbind();
 }
 
 void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
@@ -360,7 +370,7 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
         shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
 
         layer.GetTexture().Bind();
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
         layer.GetTexture().Unbind();
     }
 
@@ -412,7 +422,7 @@ void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
         shader_canvas.SetUniformMat4f("u_ViewProjection", result);
         shader_canvas.SetUniform1i("u_Texture", 0);
 
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
     }
 
     preview_layer_tex.Unbind();
@@ -450,7 +460,7 @@ void RenderPreviewLayerForSelection(
     shader_canvas.SetUniformMat4f("u_ViewProjection", result);
     shader_canvas.SetUniform1i("u_Texture", 0);
 
-    glDrawArrays(GL_TRIANGLES, 0, 6);
+    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
 
     preview_layer_for_selection_tex.Unbind();
     Gla::Shader::Unbind();
@@ -573,12 +583,10 @@ void MainLoop(GLFWwindow* window)
             assert(app_state.preview_layer.has_value());
             assert(app_state.preview_layer_for_selection.has_value());
 
-            Update(app_state, pbo);
-
-            RenderBackground(app_state, imgui_window_fb, group_bckg,
-                             shader_bckg, vbo_bckg);
+            Update(app_state, pbo, imgui_window_fb);
 
             imgui_window_fb.Bind();
+            RenderBackground(app_state, group_bckg, shader_bckg, vbo_bckg);
             RenderLayerTextures(app_state, vao_canvas, shader_canvas);
             RenderPreviewLayerForSelection(app_state, vao_canvas, shader_canvas,
                                            pbo_prev_layer_for_selection);

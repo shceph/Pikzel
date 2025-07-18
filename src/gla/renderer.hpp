@@ -2,6 +2,8 @@
 
 #include "gla_base.hpp"
 
+#include <cstdint>
+
 namespace Gla
 {
 enum class DrawMode : std::uint8_t

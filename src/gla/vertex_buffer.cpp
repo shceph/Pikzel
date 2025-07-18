@@ -1,19 +1,21 @@
 #include "vertex_buffer.hpp"
 
+#include <stdexcept>
+
 namespace Gla
 {
 VertexBuffer::VertexBuffer(const void* data, std::size_t size,
                            VertexBufferUsage usage)
     : mRendererID(0), mSize(size), mUsage(usage)
 {
-    GLCall(glGenBuffers(1, &mRendererID));
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, mRendererID));
-    GLCall(glBufferData(GL_ARRAY_BUFFER, size, data, usage));
+    glGenBuffers(1, &mRendererID);
+    glBindBuffer(GL_ARRAY_BUFFER, mRendererID);
+    glBufferData(GL_ARRAY_BUFFER, size, data, usage);
 }
 
 VertexBuffer::~VertexBuffer()
 {
-    GLCall(glDeleteBuffers(1, &mRendererID));
+    glDeleteBuffers(1, &mRendererID);
 }
 
 void VertexBuffer::UpdateData(const void* data, std::size_t size,
@@ -32,13 +34,13 @@ void VertexBuffer::UpdateData(const void* data, std::size_t size,
     }
 
     Bind();
-    GLCall(glBufferSubData(GL_ARRAY_BUFFER, offset, size, data));
+    glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
 }
 
 void VertexBuffer::UpdateSize(std::size_t size) // Deletes existing data
 {
     Bind();
-    GLCall(glBufferData(GL_ARRAY_BUFFER, size, nullptr, mUsage));
+    glBufferData(GL_ARRAY_BUFFER, size, nullptr, mUsage);
     mSize = size;
 }
 
@@ -49,11 +51,11 @@ void VertexBuffer::UpdateSizeIfNeeded(std::size_t needed_size)
 
 void VertexBuffer::Bind() const
 {
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, mRendererID));
+    glBindBuffer(GL_ARRAY_BUFFER, mRendererID);
 }
 
 void VertexBuffer::Unbind()
 {
-    GLCall(glBindBuffer(GL_ARRAY_BUFFER, 0));
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 } // namespace Gla

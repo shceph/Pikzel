@@ -1,5 +1,7 @@
 #include "vertex_buffer_layout.hpp"
 
+#include <stdexcept>
+
 namespace Gla
 {
 template <typename T>

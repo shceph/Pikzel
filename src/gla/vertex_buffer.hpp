@@ -2,6 +2,8 @@
 
 #include "gla_base.hpp"
 
+#include <cstddef>
+
 namespace Gla
 {
 enum VertexBufferUsage

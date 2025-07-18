@@ -41,8 +41,8 @@ class VertexBufferLayout
     template <typename T>
     void Push(unsigned int count, unsigned int normalized = GL_FALSE);
 
-    [[nodiscard]] inline auto
-    GetElements() const -> std::vector<VertexBufferElement>
+    [[nodiscard]] inline auto GetElements() const
+        -> std::vector<VertexBufferElement>
     {
         return mElement;
     };
