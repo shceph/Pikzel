@@ -6,29 +6,26 @@
 
 #include <glm/glm.hpp>
 
-namespace Pikzel
-{
-class PreviewLayer
-{
+namespace Pikzel {
+class PreviewLayer {
   public:
-    explicit PreviewLayer(Tool& tool, Camera& camera, Vec2Int canvas_dims);
+    explicit PreviewLayer(Tool& tool, Camera& camera, Vec2 canvas_dims);
 
     void UpdateCircleSize(int size);
     void Clear();
     void Update(); // This one should run every frame
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
-    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, Color color);
-    void DrawPixel(Vec2Int coords, Color color);
+    void DrawRect(Vec2 upper_left, Vec2 bottom_right, Color color);
+    void DrawPixel(std::size_t index, Color color);
+    void DrawPixel(Vec2 coords, Color color);
     void UpdatePBOMappedBufferSpan(Gla::PboMappedBuffSpan buff);
 
     auto GetLayerTexture() -> Gla::Texture2D&;
 
-    [[nodiscard]] auto IsPreviewLayerChanged() const -> bool
-    {
+    [[nodiscard]] auto IsPreviewLayerChanged() const -> bool {
         return mPreviewLayerChanged;
     }
-    [[nodiscard]] auto ShouldApplyCursorBasedTranslation() const -> bool
-    {
+    [[nodiscard]] auto ShouldApplyCursorBasedTranslation() const -> bool {
         return mApplyCursorBasedTranslation;
     }
     void SetPreviewLayerChangedToTrue() { mPreviewLayerChanged = true; }

@@ -18,10 +18,8 @@
 #include <utility>
 #include <vector>
 
-namespace Pikzel
-{
-auto Color::operator=(const ImVec4& color) -> Color&
-{
+namespace Pikzel {
+auto Color::operator=(const ImVec4& color) -> Color& {
     r = static_cast<uint8_t>(color.x * 255);
     g = static_cast<uint8_t>(color.y * 255);
     b = static_cast<uint8_t>(color.z * 255);
@@ -29,13 +27,11 @@ auto Color::operator=(const ImVec4& color) -> Color&
     return *this;
 }
 
-auto Color::operator==(const Color& other) const -> bool
-{
+auto Color::operator==(const Color& other) const -> bool {
     return other.r == r && other.g == g && other.b == b && other.a == a;
 }
 
-auto Color::operator==(const ImVec4& other) const -> bool
-{
+auto Color::operator==(const ImVec4& other) const -> bool {
     constexpr float kTolerance = 0.0025F;
 
     return std::abs((static_cast<float>(r) / 0xff) - other.x) <= kTolerance &&
@@ -44,8 +40,7 @@ auto Color::operator==(const ImVec4& other) const -> bool
            std::abs((static_cast<float>(a) / 0xff) - other.w) <= kTolerance;
 }
 
-auto Color::BlendColor(Color color1, Color color2) -> Color
-{
+auto Color::BlendColor(Color color1, Color color2) -> Color {
     ImVec4 col1 = {
         static_cast<float>(color1.r) / 255,
         static_cast<float>(color1.g) / 255,
@@ -64,7 +59,9 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
     float alpha2 = col2.w;
     float out_alpha = alpha1 + (alpha2 * (1.0F - alpha1));
 
-    if (out_alpha == 0) { return {.r = 0, .g = 0, .b = 0, .a = 0}; }
+    if (out_alpha == 0) {
+        return {.r = 0, .g = 0, .b = 0, .a = 0};
+    }
 
     float out_r =
         (col1.x * alpha1 + col2.x * alpha2 * (1.0F - alpha1)) / out_alpha;
@@ -76,36 +73,35 @@ auto Color::BlendColor(Color color1, Color color2) -> Color
     return Color::FromImVec4({out_r, out_g, out_b, out_alpha});
 }
 
-auto Color::FromImVec4(ImVec4 color) -> Color
-{
+auto Color::FromImVec4(ImVec4 color) -> Color {
     return {.r = static_cast<uint8_t>(color.x * 0xff),
             .g = static_cast<uint8_t>(color.y * 0xff),
             .b = static_cast<uint8_t>(color.z * 0xff),
             .a = static_cast<uint8_t>(color.w * 0xff)};
 }
 
-auto Color::FromGlaColor(Gla::Color color) -> Color
-{
+auto Color::FromGlaColor(Gla::Color color) -> Color {
     return {.r = color.r, .g = color.g, .b = color.b, .a = color.a};
 }
 
 Layer::Layer(Tool& tool, Camera& camera, Selection& selection,
-             Gla::PboMappedBuffSpan pbo_buff, Vec2Int canvas_dims,
+             Gla::PboMappedBuffSpan pbo_buff, Vec2 canvas_dims,
              bool is_canvas_layer /*= true*/) noexcept
     : mCanvasDims{canvas_dims}, mIsCanvasLayer{is_canvas_layer},
       mLayerName{"Layer " + std::to_string(sConstructCounter)}, mTool{tool},
       mCamera{camera}, mSelection{selection}, mPboBuff{pbo_buff},
-      mTex{canvas_dims, {0.0F, 0.0F, 0.0F, 0.0F}, Gla::kNearest}
-{
-    if (mIsCanvasLayer) { sConstructCounter++; }
+      mTex{canvas_dims, {0.0F, 0.0F, 0.0F, 0.0F}, Gla::kNearest} {
+    if (mIsCanvasLayer) {
+        sConstructCounter++;
+    }
 }
 
-auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
-{
-    if (mLocked || !mVisible) { return false; }
+auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory {
+    if (mLocked || !mVisible) {
+        return false;
+    }
 
-    switch (mTool.get().GetToolType())
-    {
+    switch (mTool.get().GetToolType()) {
     case ToolType::kBrush:
     case ToolType::kEraser:
         return HandleBrushAndEraser();
@@ -116,10 +112,11 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
     case ToolType::kBucket:
         return HandleBucket();
         break;
+
+    // The following are handled by the LayerControl class.
     case ToolType::kRectShape:
-        return HandleRectShape();
-        break;
     case ToolType::kSelectionTool:
+    case ToolType::kMoveSelection:
     case ToolType::kToolCount:
         assert(false);
     }
@@ -127,24 +124,17 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory
     return false;
 }
 
-void Layer::Update()
-{
-    mIsEdited = false;
-}
+void Layer::Update() { mIsEdited = false; }
 
-auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
-{
+auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory {
     static bool left_button_held = false;
 
-    if (Events::IsMouseButtonHeld(Events::MouseButtons::kButtonLeft))
-    {
+    if (Events::IsMouseButtonHeld(Events::MouseButtons::kButtonLeft)) {
         left_button_held = true;
     }
 
-    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
-    {
-        if (left_button_held)
-        {
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft)) {
+        if (left_button_held) {
             left_button_held = false;
             return true;
         }
@@ -153,7 +143,9 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
     }
 
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return false; }
+    if (!canv_coord.has_value()) {
+        return false;
+    }
 
     constexpr auto kMaxDelay = std::chrono::milliseconds(100);
     static auto time_last_drawn = std::chrono::steady_clock::now();
@@ -161,21 +153,18 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
 
     if (glm::distance<2, float>(glm::vec2(canv_coord.value()),
                                 glm::vec2(position_last_drawn)) > 1 &&
-        std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay)
-    {
+        std::chrono::steady_clock::now() - time_last_drawn <= kMaxDelay) {
         int thickness = mTool.get().GetBrushRadius() == 1
                             ? 1
                             : mTool.get().GetBrushRadius() * 2;
 
-        if (mTool.get().GetToolType() == ToolType::kEraser)
-        {
+        if (mTool.get().GetToolType() == ToolType::kEraser) {
             DrawLine(canv_coord.value(), position_last_drawn, thickness,
                      Color{.r = 0, .g = 0, .b = 0, .a = 0});
+        } else {
+            DrawLine(canv_coord.value(), position_last_drawn, thickness);
         }
-        else { DrawLine(canv_coord.value(), position_last_drawn, thickness); }
-    }
-    else
-    {
+    } else {
         DrawCircle(canv_coord.value(), mTool.get().GetBrushRadius(),
                    DrawType::kFill);
     }
@@ -185,91 +174,70 @@ auto Layer::HandleBrushAndEraser() -> Layer::ShouldUpdateHistory
     return false;
 }
 
-void Layer::HandleColorPicker()
-{
-    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
-    {
+void Layer::HandleColorPicker() {
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft)) {
         return;
     }
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return; }
+    if (!canv_coord.has_value()) {
+        return;
+    }
 
     auto picked_color = GetPixel(canv_coord.value());
 
-    if (picked_color.a == 0) { return; }
+    if (picked_color.a == 0) {
+        return;
+    }
 
     mTool.get().GetColorRef().x = static_cast<float>(picked_color.r) / 0xff;
     mTool.get().GetColorRef().y = static_cast<float>(picked_color.g) / 0xff;
     mTool.get().GetColorRef().z = static_cast<float>(picked_color.b) / 0xff;
 }
 
-auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory
-{
-    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft))
-    {
+auto Layer::HandleBucket() -> Layer::ShouldUpdateHistory {
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft)) {
         return false;
     }
     auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return false; }
+    if (!canv_coord.has_value()) {
+        return false;
+    }
 
     Color clicked_color = GetPixel(canv_coord.value());
     Fill(canv_coord->x, canv_coord->y, clicked_color);
     return true;
 }
 
-auto Layer::HandleRectShape() -> Layer::ShouldUpdateHistory
-{
-    auto canv_coord = CanvasCoordsFromCursorPos();
-    if (!canv_coord.has_value()) { return false; }
-    bool left_button_pressed =
-        Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
+void Layer::DrawPixel(std::size_t index, Color color) {
+    assert(index < static_cast<std::size_t>(mCanvasDims.x * mCanvasDims.y));
 
-    /* static bool shape_began = false; */
-    /* static Vec2Int shape_begin_coords{0, 0}; */
+    if (mSelection.get().ShouldCheckForSelection()) {
+        const std::vector<bool>& selected_pixels =
+            mSelection.get().GetSelectedPixels();
 
-    if (!mHandleRectShapeData.shape_began)
-    {
-        if (left_button_pressed)
-        {
-            mHandleRectShapeData.shape_begin_coords = canv_coord.value();
-            mHandleRectShapeData.shape_began = true;
-        }
-        return false;
-    }
-
-    // Use left shift to force drawing a square
-    if (Events::IsKeyboardKeyPressed(GLFW_KEY_LEFT_SHIFT))
-    {
-        int diff_x = mHandleRectShapeData.shape_begin_coords.x - canv_coord->x;
-        int diff_y = mHandleRectShapeData.shape_begin_coords.y - canv_coord->y;
-
-        if (std::abs(diff_x) < std::abs(diff_y))
-        {
-            canv_coord->y = mHandleRectShapeData.shape_begin_coords.y - diff_x;
-        }
-        else
-        {
-            canv_coord->x = mHandleRectShapeData.shape_begin_coords.x - diff_y;
+        if (!selected_pixels[index]) {
+            return;
         }
     }
 
-    if (left_button_pressed) { return false; }
+    mPboBuff[index] = {
+        .r = color.r,
+        .g = color.g,
+        .b = color.b,
+        .a = color.a,
+    };
 
-    DrawRect(mHandleRectShapeData.shape_begin_coords, canv_coord.value(),
-             DrawType::kFill);
-
-    mHandleRectShapeData.shape_began = false;
-    return true;
+    mIsEdited = true;
 }
 
-void Layer::DrawPixel(Vec2Int coords)
-{
+void Layer::DrawPixel(Vec2 coords) {
     DrawPixel(coords, Color::FromImVec4(mTool.get().GetColor()));
 }
 
-void Layer::DrawPixel(Vec2Int coords, Color color)
-{
-    if (!mSelection.get().IsPixelSelected(coords)) { return; }
+void Layer::DrawPixel(Vec2 coords, Color color) {
+    if (!mSelection.get().IsPixelSelected(coords)) {
+        return;
+    }
 
     mPboBuff[(coords.y * mCanvasDims.x) + coords.x] = {
         .r = color.r,
@@ -281,39 +249,33 @@ void Layer::DrawPixel(Vec2Int coords, Color color)
     mIsEdited = true;
 }
 
-void Layer::DrawPixelClampCoords(Vec2Int coords, Color color)
-{
+void Layer::DrawPixelClampCoords(Vec2 coords, Color color) {
     DrawPixel(ClampToCanvasDims(coords), color);
 }
 
-void Layer::DrawCircle(Vec2Int center, int radius, DrawType draw_type,
+void Layer::DrawCircle(Vec2 center, int radius, DrawType draw_type,
                        Color delete_color /*= {0, 0, 0, 0}*/,
-                       std::optional<Color> draw_color /*= std::nullopt*/)
-{
-    if (radius < 1) { return; }
+                       std::optional<Color> draw_color /*= std::nullopt*/) {
+    if (radius < 1) {
+        return;
+    }
 
     Color draw_col = delete_color;
 
-    if (mTool.get().GetToolType() != ToolType::kEraser)
-    {
+    if (mTool.get().GetToolType() != ToolType::kEraser) {
         draw_col =
             draw_color.value_or(Color::FromImVec4(mTool.get().GetColor()));
     }
 
-    if (radius == 1)
-    {
+    if (radius == 1) {
         DrawPixel(center, draw_col);
         return;
     }
 
-    if (draw_type == DrawType::kFill)
-    {
-        for (int xcrd = -radius; xcrd <= radius; xcrd++)
-        {
-            for (int ycrd = -radius; ycrd <= radius; ycrd++)
-            {
-                if (xcrd * xcrd + ycrd * ycrd < radius * radius)
-                {
+    if (draw_type == DrawType::kFill) {
+        for (int xcrd = -radius; xcrd <= radius; xcrd++) {
+            for (int ycrd = -radius; ycrd <= radius; ycrd++) {
+                if (xcrd * xcrd + ycrd * ycrd < radius * radius) {
                     int real_x =
                         std::clamp(xcrd + center.x, 0, mCanvasDims.x - 1);
                     int real_y =
@@ -327,8 +289,7 @@ void Layer::DrawCircle(Vec2Int center, int radius, DrawType draw_type,
     }
 
     for (int x_coord = std::max(0, center.x - radius + 1);
-         x_coord < std::min(mCanvasDims.x, center.x + radius); x_coord++)
-    {
+         x_coord < std::min(mCanvasDims.x, center.x + radius); x_coord++) {
         int x_relative = x_coord - center.x;
         double y1_coord =
             std::sqrt((radius * radius) - (x_relative * x_relative));
@@ -337,51 +298,54 @@ void Layer::DrawCircle(Vec2Int center, int radius, DrawType draw_type,
         y2_coord += center.y;
 
         // If the number is round floor and ceil don't change anything
-        if (y1_coord == static_cast<int>(y1_coord)) { y1_coord--; }
-        if (y2_coord == static_cast<int>(y2_coord)) { y2_coord++; }
+        if (y1_coord == static_cast<int>(y1_coord)) {
+            y1_coord--;
+        }
+        if (y2_coord == static_cast<int>(y2_coord)) {
+            y2_coord++;
+        }
 
         int y1_floor = std::floor(y1_coord);
         int y2_ceil = std::ceil(y2_coord);
 
-        if (y1_floor < 0) { y1_floor = 0; }
-        else if (y1_floor >= mCanvasDims.y) { y1_floor = mCanvasDims.y - 1; }
+        if (y1_floor < 0) {
+            y1_floor = 0;
+        } else if (y1_floor >= mCanvasDims.y) {
+            y1_floor = mCanvasDims.y - 1;
+        }
 
-        if (y2_ceil < 0) { y2_ceil = 0; }
-        else if (y2_ceil >= mCanvasDims.y) { y2_ceil = mCanvasDims.y - 1; }
+        if (y2_ceil < 0) {
+            y2_ceil = 0;
+        } else if (y2_ceil >= mCanvasDims.y) {
+            y2_ceil = mCanvasDims.y - 1;
+        }
 
         DrawPixel({x_coord, y1_floor}, draw_col);
         DrawPixel({x_coord, y2_ceil}, draw_col);
     }
 }
 
-void Layer::Clear()
-{
-    for (int i = 0; i < mCanvasDims.y; i++)
-    {
-        for (int j = 0; j < mCanvasDims.x; j++)
-        {
+void Layer::Clear() {
+    for (int i = 0; i < mCanvasDims.y; i++) {
+        for (int j = 0; j < mCanvasDims.x; j++) {
             DrawPixel({j, i}, {.r = 0, .g = 0, .b = 0, .a = 0});
         }
     }
 }
 
-void Layer::GetTextureData(std::vector<Color>& buffer) const
-{
+void Layer::GetTextureData(std::vector<Color>& buffer) const {
     buffer.resize(static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y);
     mTex.Bind();
     glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, buffer.data());
     mTex.Unbind();
 }
 
-void Layer::UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff)
-{
+void Layer::UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff) {
     mPboBuff = pbo_buff;
 }
 
-void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
-                     DrawType /*draw_type*/,
-                     std::optional<Color> color /*= std::nullopt*/)
-{
+void Layer::DrawRect(Vec2 upper_left, Vec2 bottom_right, DrawType /*draw_type*/,
+                     std::optional<Color> color /*= std::nullopt*/) {
     Color col = color.value_or(Color::FromImVec4(mTool.get().GetColor()));
 
     std::size_t max_x = std::max(upper_left.x, bottom_right.x);
@@ -389,24 +353,21 @@ void Layer::DrawRect(Vec2Int upper_left, Vec2Int bottom_right,
     std::size_t max_y = std::max(upper_left.y, bottom_right.y);
     std::size_t min_y = std::min(upper_left.y, bottom_right.y);
 
-    for (auto i = min_y; i <= max_y; i++)
-    {
-        for (auto j = min_x; j <= max_x; j++)
-        {
+    for (auto i = min_y; i <= max_y; i++) {
+        for (auto j = min_x; j <= max_x; j++) {
             // mCanvas[i][j] = Tool::GetColor();
             DrawPixel({j, i}, col);
         }
     }
 }
 
-void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
-                          Color color)
-{
-    Vec2Int diff = point_a - point_b;
+void Layer::DrawThickLine(Vec2 point_a, Vec2 point_b, int thickness,
+                          Color color) {
+    Vec2 diff = point_a - point_b;
     auto angle = std::atan2(diff.y, diff.x) + (std::numbers::pi / 2);
     auto angle_plus_180 = angle + std::numbers::pi;
 
-    Vec2Int point_a1;
+    Vec2 point_a1;
     point_a1.x = static_cast<int>(std::cos(angle) *
                                   (static_cast<float>(thickness) / 2.0));
     point_a1.y = static_cast<int>(std::sin(angle) *
@@ -414,7 +375,7 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     point_a1 += point_a;
     point_a1 = ClampToCanvasDims(point_a1);
 
-    Vec2Int point_a2;
+    Vec2 point_a2;
     point_a2.x = static_cast<int>(std::cos(angle_plus_180) *
                                   (static_cast<float>(thickness) / 2.0));
     point_a2.y = static_cast<int>(std::sin(angle_plus_180) *
@@ -422,7 +383,7 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     point_a2 += point_a;
     point_a2 = ClampToCanvasDims(point_a2);
 
-    Vec2Int point_b1;
+    Vec2 point_b1;
     point_b1.x = static_cast<int>(std::cos(angle) *
                                   (static_cast<float>(thickness) / 2.0));
     point_b1.y = static_cast<int>(std::sin(angle) *
@@ -430,7 +391,7 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     point_b1 += point_b;
     point_b1 = ClampToCanvasDims(point_b1);
 
-    Vec2Int point_b2;
+    Vec2 point_b2;
     point_b2.x = static_cast<int>(std::cos(angle_plus_180) *
                                   (static_cast<float>(thickness) / 2.0));
     point_b2.y = static_cast<int>(std::sin(angle_plus_180) *
@@ -448,7 +409,7 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     DrawPixel(point_b1, kOutlineColor);
     DrawPixel(point_b2, kOutlineColor);
 
-    Vec2Int line_middle = (point_a1 + point_a2 + point_b1 + point_b2) / 4;
+    Vec2 line_middle = (point_a1 + point_a2 + point_b1 + point_b2) / 4;
     FillUntil(kOutlineColor, line_middle.x, line_middle.y, color);
 
     DrawLine(point_a1, point_a2, color);
@@ -464,13 +425,11 @@ void Layer::DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     DrawCircle(point_b, thickness / 2, DrawType::kFill);
 }
 
-void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
-                     std::optional<Color> color /*= std::nullopt*/)
-{
+void Layer::DrawLine(Vec2 point_a, Vec2 point_b, int thickness,
+                     std::optional<Color> color /*= std::nullopt*/) {
     Color col = color.value_or(Color::FromImVec4(mTool.get().GetColor()));
 
-    if (thickness == 1)
-    {
+    if (thickness == 1) {
         DrawPixel(point_a, col);
         DrawPixel(point_b, col);
         DrawLine(point_a, point_b, col);
@@ -486,14 +445,12 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
     int y_1 = point_b.y;
 
     bool steep = abs(y_1 - y_0) > abs(x_1 - x_0);
-    if (steep)
-    {
+    if (steep) {
         std::swap(x_0, y_0);
         std::swap(x_1, y_1);
     }
 
-    if (x_0 > x_1)
-    {
+    if (x_0 > x_1) {
         std::swap(x_0, x_1);
         std::swap(y_0, y_1);
     }
@@ -506,33 +463,29 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
 
     int offset = thickness / 2;
 
-    for (int x_coord = x_0; x_coord <= x_1; ++x_coord)
-    {
+    for (int x_coord = x_0; x_coord <= x_1; ++x_coord) {
         int draw_x = steep ? y_coord : x_coord;
         int draw_y = steep ? x_coord : y_coord;
 
         // Draw the thick line by offsetting the perpendicular direction
-        for (int i = -offset + 1; i < offset; ++i)
-        {
-            if (steep)
-            {
+        for (int i = -offset + 1; i < offset; ++i) {
+            if (steep) {
                 DrawPixel(ClampToCanvasDims({draw_x + i, draw_y}), col);
+            } else {
+                DrawPixel(ClampToCanvasDims({draw_x, draw_y + i}), col);
             }
-            else { DrawPixel(ClampToCanvasDims({draw_x, draw_y + i}), col); }
         }
 
         error -= d_y;
-        if (error < 0)
-        {
+        if (error < 0) {
             y_coord += y_step;
             error += d_x;
         }
     }
 }
 
-void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
-                     std::optional<Color> color /*= std::nullopt*/)
-{
+void Layer::DrawLine(Vec2 point_a, Vec2 point_b,
+                     std::optional<Color> color /*= std::nullopt*/) {
     Color draw_color =
         color.value_or(Color::FromImVec4(mTool.get().GetColor()));
 
@@ -542,18 +495,15 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
     int sign_y = (point_a.y < point_b.y) ? 1 : -1;
     int err = diff_x - diff_y;
 
-    while (point_a != point_b)
-    {
+    while (point_a != point_b) {
         int err2 = err;
 
-        if (err2 > -diff_y)
-        {
+        if (err2 > -diff_y) {
             err -= diff_y;
             point_a.x += sign_x;
         }
 
-        if (err2 < diff_x)
-        {
+        if (err2 < diff_x) {
             err += diff_x;
             point_a.y += sign_y;
         }
@@ -562,42 +512,45 @@ void Layer::DrawLine(Vec2Int point_a, Vec2Int point_b,
     }
 }
 
-void Layer::Fill(int x_coord, int y_coord, Color clicked_color)
-{
+void Layer::Fill(int x_coord, int y_coord, Color clicked_color) {
     Fill(x_coord, y_coord, clicked_color,
          Color::FromImVec4(mTool.get().GetColor()));
 }
 
 void Layer::Fill(int x_coord, int y_coord, Color clicked_color,
-                 Color fill_color)
-{
+                 Color fill_color) {
     if (x_coord < 0 || x_coord >= mCanvasDims.x || y_coord < 0 ||
-        y_coord >= mCanvasDims.y)
-    {
+        y_coord >= mCanvasDims.y) {
         return;
     }
 
     std::queue<std::pair<int, int>> pixel_queue;
     pixel_queue.emplace(y_coord, x_coord);
 
-    while (!pixel_queue.empty())
-    {
+    while (!pixel_queue.empty()) {
         auto& top = pixel_queue.front();
         const int row = top.first;
         const int col = top.second;
         Color pixel = GetPixel({col, row});
 
-        if (pixel == clicked_color && pixel != fill_color)
-        {
+        if (pixel == clicked_color && pixel != fill_color) {
             DrawPixel({col, row}, fill_color);
 
-            if (col + 1 < mCanvasDims.x) { pixel_queue.emplace(row, col + 1); }
+            if (col + 1 < mCanvasDims.x) {
+                pixel_queue.emplace(row, col + 1);
+            }
 
-            if (col - 1 >= 0) { pixel_queue.emplace(row, col - 1); }
+            if (col - 1 >= 0) {
+                pixel_queue.emplace(row, col - 1);
+            }
 
-            if (row + 1 < mCanvasDims.y) { pixel_queue.emplace(row + 1, col); }
+            if (row + 1 < mCanvasDims.y) {
+                pixel_queue.emplace(row + 1, col);
+            }
 
-            if (row - 1 >= 0) { pixel_queue.emplace(row - 1, col); }
+            if (row - 1 >= 0) {
+                pixel_queue.emplace(row - 1, col);
+            }
         }
 
         pixel_queue.pop();
@@ -605,11 +558,9 @@ void Layer::Fill(int x_coord, int y_coord, Color clicked_color,
 }
 
 void Layer::FillUntil(Color until_color, int x_coord, int y_coord,
-                      Color fill_color)
-{
+                      Color fill_color) {
     if (x_coord < 0 || x_coord >= mCanvasDims.x || y_coord < 0 ||
-        y_coord >= mCanvasDims.y)
-    {
+        y_coord >= mCanvasDims.y) {
         return;
     }
 
@@ -619,33 +570,38 @@ void Layer::FillUntil(Color until_color, int x_coord, int y_coord,
     std::vector<bool> visited(
         static_cast<std::size_t>(mCanvasDims.x * mCanvasDims.y), false);
 
-    while (!pixel_queue.empty())
-    {
+    while (!pixel_queue.empty()) {
         auto& top = pixel_queue.front();
         const int row = top.first;
         const int col = top.second;
         Color pixel = GetPixel({col, row});
 
-        if (pixel != until_color && !visited[(row * mCanvasDims.x) + col])
-        {
+        if (pixel != until_color && !visited[(row * mCanvasDims.x) + col]) {
             DrawPixelClampCoords({col, row}, fill_color);
             visited[(row * mCanvasDims.x) + col] = true;
 
-            if (col + 1 < mCanvasDims.x) { pixel_queue.emplace(row, col + 1); }
+            if (col + 1 < mCanvasDims.x) {
+                pixel_queue.emplace(row, col + 1);
+            }
 
-            if (col - 1 >= 0) { pixel_queue.emplace(row, col - 1); }
+            if (col - 1 >= 0) {
+                pixel_queue.emplace(row, col - 1);
+            }
 
-            if (row + 1 < mCanvasDims.y) { pixel_queue.emplace(row + 1, col); }
+            if (row + 1 < mCanvasDims.y) {
+                pixel_queue.emplace(row + 1, col);
+            }
 
-            if (row - 1 >= 0) { pixel_queue.emplace(row - 1, col); }
+            if (row - 1 >= 0) {
+                pixel_queue.emplace(row - 1, col);
+            }
         }
 
         pixel_queue.pop();
     }
 }
 
-auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
-{
+auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2> {
     double cursor_x = NAN;
     double cursor_y = NAN;
     // Cursor position relative to the Glfw window
@@ -663,8 +619,7 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
     ImVec2 canvas_bottomtright = UI::GetCanvasBottomRightCoords();
 
     if (cursor_x <= canvas_upperleft.x || cursor_x >= canvas_bottomtright.x ||
-        cursor_y <= canvas_upperleft.y || cursor_y >= canvas_bottomtright.y)
-    {
+        cursor_y <= canvas_upperleft.y || cursor_y >= canvas_bottomtright.y) {
         return std::nullopt;
     }
 
@@ -678,8 +633,7 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
         cursor_draw_win_relative / (canvas_on_screen_dims / canvas_dims_flt);
     double zoom_val = mCamera.get().GetZoomValue();
 
-    if (zoom_val != 0)
-    {
+    if (zoom_val != 0) {
         float inv_zoom = 1.0F - static_cast<float>(zoom_val);
         float new_width = canvas_dims_flt.x * inv_zoom;
         float new_height = canvas_dims_flt.y * inv_zoom;
@@ -692,16 +646,14 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>
     coords += mCamera.get().GetCenterAsVec2Int() - mCanvasDims / 2;
 
     if (coords.x < 0 || coords.x >= canvas_dims_flt.x || coords.y < 0 ||
-        coords.y >= canvas_dims_flt.y)
-    {
+        coords.y >= canvas_dims_flt.y) {
         return std::nullopt;
     }
 
     return std::make_optional(coords);
 }
 
-auto Layer::ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int
-{
+auto Layer::ClampToCanvasDims(Vec2 val_to_clamp) -> Vec2 {
     return glm::clamp(val_to_clamp, {0, 0}, mCanvasDims - 1);
 }
 } // namespace Pikzel

@@ -2,13 +2,11 @@
 
 #include <glm/glm.hpp>
 
-namespace Pikzel
-{
-using Vec2Int = glm::vec<2, int>;
+namespace Pikzel {
+using Vec2 = glm::vec<2, int>;
 
 // Don't dorget to SetCanvasDims!!!
-class Camera
-{
+class Camera {
   public:
     constexpr static double kZoomMin = -1.0;
     constexpr static double kZoomMax = 0.93;
@@ -26,16 +24,14 @@ class Camera
     // the width and the height of the canvas.
     [[nodiscard]] auto GetZoomValue() const -> double { return mZoomValue; }
     [[nodiscard]] auto GetCenter() -> glm::vec2 { return mCenter; }
-    [[nodiscard]] auto GetCenterAsVec2Int() const -> Vec2Int
-    {
-        return Vec2Int{mCenter};
+    [[nodiscard]] auto GetCenterAsVec2Int() const -> Vec2 {
+        return Vec2{mCenter};
     }
-    void SetCanvasDims(Vec2Int dims) { mCanvasDims = dims; }
+    void SetCanvasDims(Vec2 dims) { mCanvasDims = dims; }
 
   private:
     glm::vec2 mCenter;
-    glm::vec<2, double> mOldCursorPos{0, 0};
-    Vec2Int mCanvasDims;
+    Vec2 mCanvasDims;
     double mZoomValue = 0.0;
 };
 } // namespace Pikzel

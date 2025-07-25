@@ -10,10 +10,8 @@
 #include <array>
 #include <span>
 
-namespace Pikzel
-{
-class UI
-{
+namespace Pikzel {
+class UI {
   public:
     UI(Project& project, Tool& tool, GLFWwindow* _window);
     void RenderUI(LayerControl& layers, Camera& camera, Selection& selection,
@@ -30,41 +28,34 @@ class UI
 
     [[nodiscard]] auto ShouldDoTool() const -> bool;
 
-    [[nodiscard]] auto IsDrawWindowRendered() const -> bool
-    {
+    [[nodiscard]] auto IsDrawWindowRendered() const -> bool {
         return mDrawWindowRendered;
     }
 
-    [[nodiscard]] auto GetDrawWinDimensions() const -> ImVec2
-    {
+    [[nodiscard]] auto GetDrawWinDimensions() const -> ImVec2 {
         return mDrawWinDimensions;
     }
 
-    static auto GetCanvasUpperleftCoords() -> ImVec2
-    {
+    static auto GetCanvasUpperleftCoords() -> ImVec2 {
         return GetCanvasUpperleftCoordsRef();
     }
-    static auto GetCanvasBottomRightCoords() -> ImVec2
-    {
+    static auto GetCanvasBottomRightCoords() -> ImVec2 {
         return GetCanvasBottomRightCoordsRef();
     }
 
     void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
 
-    [[nodiscard]] static auto GetWindowPointer() -> GLFWwindow*
-    {
+    [[nodiscard]] static auto GetWindowPointer() -> GLFWwindow* {
         return sWindow;
     }
     void SetShouldDoToolToTrue() { mShouldDoTool = true; }
 
   private:
-    struct RenderNodesChildrenFuncData
-    {
+    struct RenderNodesChildrenFuncData {
         int node_count{0};
         Tree<LayerControl::Capture>* clicked_node = nullptr;
 
-        void Reset()
-        {
+        void Reset() {
             node_count = 0;
             clicked_node = nullptr;
         }
@@ -91,20 +82,17 @@ class UI
         ImVec4 outline_color = ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab));
     static void EndOutline();
 
-    static auto GetCanvasUpperleftCoordsRef() -> ImVec2&
-    {
+    static auto GetCanvasUpperleftCoordsRef() -> ImVec2& {
         static ImVec2 can_upper_left;
         return can_upper_left;
     }
 
-    static auto GetCanvasBottomRightCoordsRef() -> ImVec2&
-    {
+    static auto GetCanvasBottomRightCoordsRef() -> ImVec2& {
         static ImVec2 can_bottom_right;
         return can_bottom_right;
     }
 
-    auto GetSelectedItemOutlineColor() -> ImVec4&
-    {
+    auto GetSelectedItemOutlineColor() -> ImVec4& {
         return mSelectedItemOutlineColor;
     }
 

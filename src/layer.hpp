@@ -13,10 +13,8 @@
 #include <optional>
 #include <string>
 
-namespace Pikzel
-{
-struct Color
-{
+namespace Pikzel {
+struct Color {
     auto operator=(const ImVec4& color) -> Color&;
     auto operator==(const Color& other) const -> bool;
     auto operator==(const ImVec4& other) const -> bool;
@@ -32,29 +30,22 @@ static constexpr Color kColorTransparent{.r = 0, .g = 0, .b = 0, .a = 0};
 static constexpr Color kColorSelectionPreview{
     .r = 45, .g = 50, .b = 220, .a = 100};
 
-struct Vertex
-{
+struct Vertex {
     float pos_x{}, pos_y{};
     Color color{.r = 0, .g = 0, .b = 0, .a = 0};
 };
 
-class Layer
-{
+class Layer {
   public:
-    struct RectShapeData
-    {
+    struct RectShapeData {
         bool shape_began = false;
-        Vec2Int shape_begin_coords{0, 0};
+        Vec2 shape_begin_coords{0, 0};
     };
 
-    enum DrawType : uint8_t
-    {
-        kFill,
-        kOutlline
-    };
+    enum DrawType : uint8_t { kFill, kOutlline };
 
     explicit Layer(Tool& tool, Camera& camera, Selection& selection,
-                   Gla::PboMappedBuffSpan pbo_buff, Vec2Int canvas_dims,
+                   Gla::PboMappedBuffSpan pbo_buff, Vec2 canvas_dims,
                    bool is_canvas_layer = true) noexcept;
 
     using ShouldUpdateHistory = bool;
@@ -68,22 +59,18 @@ class Layer
     [[nodiscard]] auto IsVisible() const -> bool { return mVisible; }
     [[nodiscard]] auto IsLocked() const -> bool { return mLocked; }
     [[nodiscard]] auto GetOpacity() const -> int { return mOpacity; }
-    [[nodiscard]] auto GetName() const -> const std::string&
-    {
+    [[nodiscard]] auto GetName() const -> const std::string& {
         return mLayerName;
     }
-    [[nodiscard]] auto GetPixel(Vec2Int coords) const -> Color
-    {
+    [[nodiscard]] auto GetPixel(Vec2 coords) const -> Color {
         auto col = mPboBuff[(coords.y * mCanvasDims.x) + coords.x];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
-    [[nodiscard]] auto GetCanvasDims() const -> Vec2Int { return mCanvasDims; }
-    [[nodiscard]] auto IsPreviewLayer() const -> bool
-    {
+    [[nodiscard]] auto GetCanvasDims() const -> Vec2 { return mCanvasDims; }
+    [[nodiscard]] auto IsPreviewLayer() const -> bool {
         return !mIsCanvasLayer;
     }
-    [[nodiscard]] auto GetTexture() const -> const Gla::Texture2D&
-    {
+    [[nodiscard]] auto GetTexture() const -> const Gla::Texture2D& {
         return mTex;
     }
     [[nodiscard]] auto GetTexture() -> Gla::Texture2D& { return mTex; }
@@ -93,14 +80,14 @@ class Layer
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
     [[nodiscard]]
-    auto CanvasCoordsFromCursorPos() const -> std::optional<Vec2Int>;
-    auto ClampToCanvasDims(Vec2Int val_to_clamp) -> Vec2Int;
+    auto CanvasCoordsFromCursorPos() const -> std::optional<Vec2>;
+    auto ClampToCanvasDims(Vec2 val_to_clamp) -> Vec2;
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
 
     // Custom delete color can be set, I'm using this for the preview layer
     // where I want the brush to have a specific color when I'm using eraser.
-    void DrawCircle(Vec2Int center, int radius, DrawType draw_type,
+    void DrawCircle(Vec2 center, int radius, DrawType draw_type,
                     Color delete_color = {.r = 0, .g = 0, .b = 0, .a = 0},
                     std::optional<Color> draw_color = std::nullopt);
     void Clear();
@@ -111,25 +98,23 @@ class Layer
     auto HandleBrushAndEraser() -> ShouldUpdateHistory;
     void HandleColorPicker();
     auto HandleBucket() -> ShouldUpdateHistory;
-    auto HandleRectShape() -> ShouldUpdateHistory;
-    void DrawPixel(Vec2Int coords);
-    void DrawPixel(Vec2Int coords, Color color);
-    void DrawPixelClampCoords(Vec2Int coords, Color color);
-    void DrawRect(Vec2Int upper_left, Vec2Int bottom_right, DrawType draw_type,
+    void DrawPixel(std::size_t index, Color color);
+    void DrawPixel(Vec2 coords);
+    void DrawPixel(Vec2 coords, Color color);
+    void DrawPixelClampCoords(Vec2 coords, Color color);
+    void DrawRect(Vec2 upper_left, Vec2 bottom_right, DrawType draw_type,
                   std::optional<Color> color = std::nullopt);
-    void DrawThickLine(Vec2Int point_a, Vec2Int point_b, int thickness,
-                       Color color);
-    void DrawLine(Vec2Int point_a, Vec2Int point_b, int thickness,
+    void DrawThickLine(Vec2 point_a, Vec2 point_b, int thickness, Color color);
+    void DrawLine(Vec2 point_a, Vec2 point_b, int thickness,
                   std::optional<Color> color = std::nullopt);
-    void DrawLine(Vec2Int point_a, Vec2Int point_b,
+    void DrawLine(Vec2 point_a, Vec2 point_b,
                   std::optional<Color> color = std::nullopt);
     void Fill(int x_coord, int y_coord, Color clicked_color);
     void Fill(int x_coord, int y_coord, Color clicked_color, Color fill_color);
     void FillUntil(Color until_color, int x_coord, int y_coord,
                    Color fill_color);
 
-    RectShapeData mHandleRectShapeData;
-    Vec2Int mCanvasDims;
+    Vec2 mCanvasDims;
     bool mIsCanvasLayer;
     bool mIsEdited{false};
     bool mVisible{true};

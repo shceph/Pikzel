@@ -28,8 +28,7 @@
 #include <iostream>
 #include <string>
 
-namespace
-{
+namespace {
 constexpr int kWindowWidth = 1280;
 constexpr int kWindowHeight = 700;
 
@@ -37,11 +36,10 @@ constexpr int kWindowHeight = 700;
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
                               GLenum severity, GLsizei /*length*/,
-                              const GLchar* message, const void* /*userParam*/)
-{
+                              const GLchar* message,
+                              const void* /*userParam*/) {
     std::string source_str = "[Unknown]";
-    switch (source)
-    {
+    switch (source) {
     case GL_DEBUG_SOURCE_API:
         source_str = "API";
         break;
@@ -65,8 +63,7 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
     }
 
     std::string type_str = "[Unknown]";
-    switch (type)
-    {
+    switch (type) {
     case GL_DEBUG_TYPE_ERROR:
         type_str = "Error";
         break;
@@ -99,8 +96,7 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
     }
 
     std::string severity_str = "[Unknown]";
-    switch (severity)
-    {
+    switch (severity) {
     case GL_DEBUG_SEVERITY_HIGH:
         severity_str = "High";
         break;
@@ -127,16 +123,14 @@ void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
     error_count++;
 }
 
-void GlfwError(int err_id, const char* message)
-{
+void GlfwError(int err_id, const char* message) {
     std::println(std::cerr, "Glfw error id: {}\nError message: {}", err_id,
                  message);
 }
 #endif
 
-auto GetProjMat(const Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
-    -> glm::mat4
-{
+auto GetProjMat(const Pikzel::Camera& camera, Pikzel::Vec2 canvas_dims)
+    -> glm::mat4 {
     const auto width = static_cast<float>(canvas_dims.x);
     const auto height = static_cast<float>(canvas_dims.y);
     const glm::vec2 camera_top_left =
@@ -157,9 +151,8 @@ auto GetProjMat(const Pikzel::Camera& camera, Pikzel::Vec2Int canvas_dims)
 // behind the cursor, so we would know where we are drawing. Instead of updating
 // the preview layer whenever we move the cursor, which is really inefficient,
 // we just translate the preview layer in the shader
-auto GetTransMatForPreviewLayer(Pikzel::Vec2Int canvas_coord_behind_cursor,
-                                Pikzel::Vec2Int canvas_dims) -> glm::mat4
-{
+auto GetTransMatForPreviewLayer(Pikzel::Vec2 canvas_coord_behind_cursor,
+                                Pikzel::Vec2 canvas_dims) -> glm::mat4 {
     glm::mat4 translation_mat(1.0);
     auto move_distance = canvas_coord_behind_cursor - (canvas_dims / 2);
 
@@ -169,22 +162,18 @@ auto GetTransMatForPreviewLayer(Pikzel::Vec2Int canvas_coord_behind_cursor,
     return translation_mat;
 }
 
-auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool
-{
+auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool {
     constexpr float kAllowedDiff = 0.01F;
 
     return (std::abs(vec_a.x - vec_b.x) <= kAllowedDiff &&
             std::abs(vec_a.y - vec_b.y) <= kAllowedDiff);
 }
 
-struct AppState
-{
+struct AppState {
     explicit AppState(GLFWwindow* window)
         : camera{}, project{layers, tool, camera},
           ui_state{project, tool, window}, preview_layer{std::nullopt},
-          preview_layer_for_selection{std::nullopt}
-    {
-    }
+          preview_layer_for_selection{std::nullopt} {}
 
     Pikzel::Tool tool;
     Pikzel::Camera camera;
@@ -196,8 +185,7 @@ struct AppState
 };
 
 void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
-                   glm::mat4 canvas_mat, Pikzel::Vec2Int canvas_dims)
-{
+                   glm::mat4 canvas_mat, Pikzel::Vec2 canvas_dims) {
     glm::vec2 top_left = canvas_mat * glm::vec4{0, 0, 0, 1};
     glm::vec2 bottom_right = canvas_mat * glm::vec4{canvas_dims, 0, 1};
 
@@ -221,8 +209,7 @@ void UpdateVboBckg(Gla::VertexBuffer& vbo_bckg, Gla::Shader& shader_bckg,
 void CreateNewProject(AppState& app_state, Gla::Shader& shader_bckg,
                       Gla::VertexBuffer& vbo_canvas, Gla::PixelBuffer& pbo,
                       Gla::PixelBuffer& pbo_prev_layer,
-                      Gla::PixelBuffer& pbo_prev_layer_for_selection)
-{
+                      Gla::PixelBuffer& pbo_prev_layer_for_selection) {
     app_state.preview_layer.emplace(app_state.tool, app_state.camera,
                                     app_state.layers.GetCanvasDims());
     app_state.preview_layer_for_selection.emplace(
@@ -274,14 +261,12 @@ void CreateNewProject(AppState& app_state, Gla::Shader& shader_bckg,
 
 using ShouldCreateNewProject = bool;
 auto HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb)
-    -> ShouldCreateNewProject
-{
+    -> ShouldCreateNewProject {
     Pikzel::Events::Update();
 
     Pikzel::UI::NewFrame();
 
-    if (app_state.project.IsOpened())
-    {
+    if (app_state.project.IsOpened()) {
         assert(app_state.preview_layer_for_selection.has_value());
         app_state.ui_state.RenderUI(app_state.layers, app_state.camera,
                                     app_state.layers.GetSelection(),
@@ -300,15 +285,13 @@ auto HandleInputAndUI(AppState& app_state, Gla::FrameBuffer& imgui_window_fb)
 }
 
 void UpdateDrawWindowFrameBuffer(AppState& app_state,
-                                 Gla::FrameBuffer& imgui_window_fb)
-{
+                                 Gla::FrameBuffer& imgui_window_fb) {
     static ImVec2 draw_window_dims;
 
     imgui_window_fb.Bind();
 
     if (!ImVec2Equal(draw_window_dims,
-                     app_state.ui_state.GetDrawWinDimensions()))
-    {
+                     app_state.ui_state.GetDrawWinDimensions())) {
         ImVec2 draw_window_dims = app_state.ui_state.GetDrawWinDimensions();
         imgui_window_fb.Rescale(
             {.width = static_cast<int>(draw_window_dims.x),
@@ -319,10 +302,8 @@ void UpdateDrawWindowFrameBuffer(AppState& app_state,
 }
 
 void Update(AppState& app_state, Gla::PixelBuffer& pbo,
-            Gla::FrameBuffer& imgui_window_fb)
-{
-    if (app_state.layers.HaveChosenDifferentLayerThisFrame())
-    {
+            Gla::FrameBuffer& imgui_window_fb) {
+    if (app_state.layers.HaveChosenDifferentLayerThisFrame()) {
         app_state.layers.WriteCurrentLayerTextureDataToPbo();
     }
 
@@ -336,8 +317,7 @@ void Update(AppState& app_state, Gla::PixelBuffer& pbo,
 }
 
 void RenderBackground(AppState& app_state, Gla::Group& group_bckg,
-                      Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_bckg)
-{
+                      Gla::Shader& shader_bckg, Gla::VertexBuffer& vbo_bckg) {
     auto proj_mat =
         GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
 
@@ -354,8 +334,7 @@ void RenderBackground(AppState& app_state, Gla::Group& group_bckg,
 }
 
 void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
-                         Gla::Shader& shader_canvas)
-{
+                         Gla::Shader& shader_canvas) {
     vao_canvas.Bind();
     shader_canvas.Bind();
     auto proj_mat =
@@ -363,9 +342,10 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
     shader_canvas.SetUniformMat4f("u_ViewProjection", proj_mat);
     shader_canvas.SetUniform1i("u_Texture", 0);
 
-    for (const auto& layer : app_state.layers.GetLayers())
-    {
-        if (!layer.IsVisible()) { continue; }
+    for (const auto& layer : app_state.layers.GetLayers()) {
+        if (!layer.IsVisible()) {
+            continue;
+        }
 
         shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
 
@@ -380,16 +360,14 @@ void RenderLayerTextures(AppState& app_state, Gla::VertexArray& vao_canvas,
 
 void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
                         Gla::Shader& shader_canvas,
-                        Gla::PixelBuffer& pbo_prev_layer)
-{
+                        Gla::PixelBuffer& pbo_prev_layer) {
     vao_canvas.Bind();
     shader_canvas.Bind();
     Gla::Texture2D& preview_layer_tex =
         app_state.preview_layer->GetLayerTexture();
     preview_layer_tex.Bind();
 
-    if (app_state.preview_layer->IsPreviewLayerChanged())
-    {
+    if (app_state.preview_layer->IsPreviewLayerChanged()) {
         pbo_prev_layer.Bind();
 
         pbo_prev_layer.Unmap();
@@ -401,18 +379,16 @@ void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
         Gla::PixelBuffer::Unbind();
     }
 
-    std::optional<Pikzel::Vec2Int> canvas_coord_behind_cursor =
+    std::optional<Pikzel::Vec2> canvas_coord_behind_cursor =
         app_state.layers.CanvasCoordsFromCursorPos();
 
     if (canvas_coord_behind_cursor.has_value() &&
-        app_state.ui_state.ShouldDoTool())
-    {
+        app_state.ui_state.ShouldDoTool()) {
         auto proj_mat =
             GetProjMat(app_state.camera, app_state.project.GetCanvasDims());
         glm::mat4 result = proj_mat;
 
-        if (app_state.preview_layer->ShouldApplyCursorBasedTranslation())
-        {
+        if (app_state.preview_layer->ShouldApplyCursorBasedTranslation()) {
             glm::mat4 trans_mat =
                 GetTransMatForPreviewLayer(canvas_coord_behind_cursor.value(),
                                            app_state.layers.GetCanvasDims());
@@ -432,16 +408,15 @@ void RenderPreviewLayer(AppState& app_state, Gla::VertexArray& vao_canvas,
 
 void RenderPreviewLayerForSelection(
     AppState& app_state, Gla::VertexArray& vao_canvas,
-    Gla::Shader& shader_canvas, Gla::PixelBuffer& pbo_prev_layer_for_selection)
-{
+    Gla::Shader& shader_canvas,
+    Gla::PixelBuffer& pbo_prev_layer_for_selection) {
     vao_canvas.Bind();
     shader_canvas.Bind();
     Gla::Texture2D& preview_layer_for_selection_tex =
         app_state.preview_layer_for_selection->GetLayerTexture();
     preview_layer_for_selection_tex.Bind();
 
-    if (app_state.preview_layer_for_selection->IsPreviewLayerChanged())
-    {
+    if (app_state.preview_layer_for_selection->IsPreviewLayerChanged()) {
         pbo_prev_layer_for_selection.Bind();
 
         pbo_prev_layer_for_selection.Unmap();
@@ -467,46 +442,43 @@ void RenderPreviewLayerForSelection(
     Gla::VertexArray::Unbind();
 }
 
-void MainLoop(GLFWwindow* window)
-{
+void MainLoop(GLFWwindow* window) {
     AppState app_state{window};
 
     Pikzel::Events::PushToScrollCallback(
-        [&app_state](double x_offset, double y_offset)
-        {
-            if (app_state.ui_state.ShouldDoTool())
-            {
+        [&app_state](double x_offset, double y_offset) {
+            if (app_state.ui_state.ShouldDoTool()) {
                 app_state.camera.ScrollCallback(x_offset, y_offset);
             }
         });
     Pikzel::Events::PushToCursorPosCallback(
-        [&app_state](double x_offset, double y_offset)
-        {
-            if (app_state.ui_state.ShouldDoTool())
-            {
+        [&app_state](double x_offset, double y_offset) {
+            if (app_state.ui_state.ShouldDoTool()) {
                 app_state.camera.CursorPosCallback(x_offset, y_offset);
             }
         });
 
-    Gla::PixelBuffer pbo(glm::ivec2{32}, Gla::Color{});
-    Gla::PixelBuffer pbo_prev_layer(glm::ivec2{32}, Gla::Color{});
-    Gla::PixelBuffer pbo_prev_layer_for_selection(glm::ivec2{32}, Gla::Color{});
+    Gla::PixelBuffer pbo{glm::ivec2{32}, Gla::Color{}};
+    Gla::PixelBuffer pbo_prev_layer{glm::ivec2{32}, Gla::Color{}};
+    Gla::PixelBuffer pbo_prev_layer_for_selection{glm::ivec2{32}, Gla::Color{}};
     Gla::PixelBuffer::Unbind();
 
-    Gla::FrameBuffer imgui_window_fb(
-        {.width = kWindowWidth, .height = kWindowHeight});
+    Gla::FrameBuffer imgui_window_fb{
+        {.width = kWindowWidth, .height = kWindowHeight}};
 
-    Gla::Texture2D brush_tool_texture("assets/brush_tool.png",
-                                      Gla::GLMinMagFilter::kNearest, true);
-    Gla::Texture2D eraser_tool_texture("assets/eraser_tool.png",
-                                       Gla::GLMinMagFilter::kNearest);
-    Gla::Texture2D color_picker_tool_texture("assets/color_picker_tool.png",
-                                             Gla::GLMinMagFilter::kNearest);
-    Gla::Texture2D bucket_tool_texture("assets/bucket_tool.png",
-                                       Gla::GLMinMagFilter::kNearest);
-    Gla::Texture2D square_tool_texture("assets/square_tool.png");
-    Gla::Texture2D selection_tool_texture("assets/selection_tool.png",
-                                          Gla::GLMinMagFilter::kNearest);
+    Gla::Texture2D brush_tool_texture{"assets/brush_tool.png",
+                                      Gla::GLMinMagFilter::kNearest, true};
+    Gla::Texture2D eraser_tool_texture{"assets/eraser_tool.png",
+                                       Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D color_picker_tool_texture{"assets/color_picker_tool.png",
+                                             Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D bucket_tool_texture{"assets/bucket_tool.png",
+                                       Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D square_tool_texture{"assets/square_tool.png"};
+    Gla::Texture2D selection_tool_texture{"assets/selection_tool.png",
+                                          Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D move_tool_texture{"assets/move_tool.png",
+                                     Gla::GLMinMagFilter::kNearest};
 
     std::array<unsigned int,
                static_cast<std::size_t>(Pikzel::ToolType::kToolCount)>
@@ -514,6 +486,7 @@ void MainLoop(GLFWwindow* window)
             brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
             color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
             square_tool_texture.GetID(),       selection_tool_texture.GetID(),
+            move_tool_texture.GetID(),
         };
 
     Gla::Texture2D eye_opened_texture("assets/eye_opened.png");
@@ -562,8 +535,7 @@ void MainLoop(GLFWwindow* window)
 
     Gla::Timer out_of_loop_timer;
 
-    while (glfwWindowShouldClose(window) == 0)
-    {
+    while (glfwWindowShouldClose(window) == 0) {
 #ifndef NDEBUG
         Gla::Timer timer;
 #endif
@@ -571,15 +543,13 @@ void MainLoop(GLFWwindow* window)
         bool should_create_new_project =
             HandleInputAndUI(app_state, imgui_window_fb);
 
-        if (should_create_new_project)
-        {
+        if (should_create_new_project) {
             CreateNewProject(app_state, shader_bckg, vbo_canvas, pbo,
                              pbo_prev_layer, pbo_prev_layer_for_selection);
         }
 
         if (app_state.project.IsOpened() &&
-            app_state.ui_state.IsDrawWindowRendered())
-        {
+            app_state.ui_state.IsDrawWindowRendered()) {
             assert(app_state.preview_layer.has_value());
             assert(app_state.preview_layer_for_selection.has_value());
 
@@ -599,8 +569,7 @@ void MainLoop(GLFWwindow* window)
 
 #ifndef NDEBUG
         float fps = 1.0F / timer.GetTime();
-        if (out_of_loop_timer.GetTime() > 0.2)
-        {
+        if (out_of_loop_timer.GetTime() > 0.2) {
             std::string win_title = "Pikzel - FPS: " + std::to_string(fps);
             glfwSetWindowTitle(window, win_title.c_str());
             out_of_loop_timer.Reset();
@@ -610,16 +579,16 @@ void MainLoop(GLFWwindow* window)
 }
 } // namespace
 
-auto main(int argc, const char* argv[]) -> int
-{
-    if (glfwInit() == GLFW_FALSE) { return 1; }
+auto main(int argc, const char* argv[]) -> int {
+    if (glfwInit() == GLFW_FALSE) {
+        return 1;
+    }
 
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
     GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Pikzel",
                                           nullptr, nullptr);
 
-    if (window == nullptr)
-    {
+    if (window == nullptr) {
         std::println("Failed to create window");
         glfwTerminate();
         return 1;
@@ -628,8 +597,11 @@ auto main(int argc, const char* argv[]) -> int
     glfwMakeContextCurrent(window);
 
     std::span args{argv, static_cast<std::size_t>(argc)};
-    if (argc > 1 && args[1] == std::string{"no_vsync"}) { glfwSwapInterval(0); }
-    else { glfwSwapInterval(1); }
+    if (argc > 1 && args[1] == std::string{"no_vsync"}) {
+        glfwSwapInterval(0);
+    } else {
+        glfwSwapInterval(1);
+    }
 
     glfwMaximizeWindow(window);
 
@@ -644,8 +616,7 @@ auto main(int argc, const char* argv[]) -> int
 
     int version = gladLoadGL(glfwGetProcAddress);
 
-    if (version == 0)
-    {
+    if (version == 0) {
         std::println("gladLoadGL: Failed to load GL.");
         return 0;
     }

@@ -3,7 +3,6 @@
 #include "layer.hpp"
 #include "tool.hpp"
 
-#include <cstddef>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_opengl3.h>
@@ -16,11 +15,9 @@
 #include <bit>
 #include <string>
 
-namespace Pikzel
-{
+namespace Pikzel {
 UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
-    : mTool(tool), mProject(project)
-{
+    : mTool(tool), mProject(project) {
     sWindow = _window;
 
     IMGUI_CHECKVERSION();
@@ -57,8 +54,7 @@ UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
     assert(sConstructCounter < 2);
 }
 
-void UI::NewFrame()
-{
+void UI::NewFrame() {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -66,8 +62,7 @@ void UI::NewFrame()
     ImGui::DockSpaceOverViewport(ImGui::GetMainViewport()->ID, nullptr);
 }
 
-void UI::RenderAndEndFrame()
-{
+void UI::RenderAndEndFrame() {
     ImGui::Render();
     ImVec4 clear_color = ImVec4(0.8F, 0.8F, 0.8F, 1.00F);
     int display_w = 0;
@@ -84,8 +79,7 @@ void UI::RenderAndEndFrame()
     // save/restore it to make it easier to paste this code elsewhere.
     // For this specific demo app we could also call
     // glfwMakeContextCurrent(window) directly)
-    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0)
-    {
+    if ((ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) != 0) {
         GLFWwindow* backup_current_context = glfwGetCurrentContext();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
@@ -94,35 +88,46 @@ void UI::RenderAndEndFrame()
 }
 
 void UI::RenderUI(LayerControl& layers, Camera& camera, Selection& selection,
-                  PreviewLayer& preview_layer_for_selection)
-{
+                  PreviewLayer& preview_layer_for_selection) {
     RenderMenuBar(layers, camera, selection, preview_layer_for_selection);
     RenderColorWindow();
     RenderToolWindow();
     RenderLayerWindow(layers);
     RenderUndoTreeWindow(layers);
 
-    if (mRenderSaveAsImgPopup) { RenderSaveAsImagePopup(); }
-    if (mRenderSaveAsPrjPopup) { RenderSaveAsProjectPopup(); }
-    if (mRenderSaveErrorPopup) { RenderSaveErrorPopup(); }
+    if (mRenderSaveAsImgPopup) {
+        RenderSaveAsImagePopup();
+    }
+    if (mRenderSaveAsPrjPopup) {
+        RenderSaveAsProjectPopup();
+    }
+    if (mRenderSaveErrorPopup) {
+        RenderSaveErrorPopup();
+    }
 }
 
-void UI::RenderNoProjectWindow()
-{
+void UI::RenderNoProjectWindow() {
     ImGui::Begin("No project window");
 
-    if (ImGui::Selectable("New project")) { mRenderNewProjectPopup = true; }
-    if (ImGui::Selectable("Open a project")) { mRenderOpenProjectPopup = true; }
+    if (ImGui::Selectable("New project")) {
+        mRenderNewProjectPopup = true;
+    }
+    if (ImGui::Selectable("Open a project")) {
+        mRenderOpenProjectPopup = true;
+    }
 
     ImGui::End();
 
-    if (mRenderNewProjectPopup) { RenderNewProjectPopup(); }
-    if (mRenderOpenProjectPopup) { RenderOpenProjectPopup(); }
+    if (mRenderNewProjectPopup) {
+        RenderNewProjectPopup();
+    }
+    if (mRenderOpenProjectPopup) {
+        RenderOpenProjectPopup();
+    }
 }
 
 void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
-                          const char* window_name)
-{
+                          const char* window_name) {
     // TODO: A lot of code in this function does not need to run every
     // frame as it currenlty does. Fix that
     ImGui::Begin(window_name);
@@ -139,8 +144,7 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
     ImVec2 upper_left(pos.x, pos.y);
     ImVec2 bottom_right(pos.x + window_width, pos.y + window_height);
 
-    if (mProject.get().CanvasWidth() > mProject.get().CanvasHeight())
-    {
+    if (mProject.get().CanvasWidth() > mProject.get().CanvasHeight()) {
         // 'val_to_take' is the value we need to take from the lesser dimension
         // (width or height) to make the proportion of the framebuffer image
         // dimensions equal to the proportion of the canvas dimensions.
@@ -161,9 +165,7 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
         // the image
         upper_left.y -= val_to_take / 2;
         bottom_right.y += val_to_take / 2;
-    }
-    else
-    {
+    } else {
         // The equation here is like this: (window_width - val_to_take) /
         // window_height = canvas_width / canvas_height
 
@@ -189,26 +191,22 @@ void UI::RenderDrawWindow(unsigned int framebuffer_texture_id,
     GetCanvasBottomRightCoordsRef() = bottom_right;
 }
 
-void UI::Update()
-{
+void UI::Update() {
     mDrawWindowRendered = false;
     mShouldDoTool = true;
 }
 
-void UI::SetupToolTextures(std::span<unsigned int> tex_ids)
-{
+void UI::SetupToolTextures(std::span<unsigned int> tex_ids) {
     auto index = 0UZ;
 
-    for (auto tex_id : tex_ids)
-    {
+    for (auto tex_id : tex_ids) {
         mToolTextures.at(index) =
             std::bit_cast<ImTextureID>(static_cast<uintptr_t>(tex_id));
         index++;
     }
 }
 
-void UI::SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids)
-{
+void UI::SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids) {
     mEyeOpenedTextureID =
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[0]));
     mEyeClosedTextureID =
@@ -219,59 +217,65 @@ void UI::SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids)
         std::bit_cast<ImTextureID>(static_cast<uintptr_t>(layer_tex_ids[3]));
 }
 
-auto UI::ShouldDoTool() const -> bool
-{
-    return mShouldDoTool;
-}
+auto UI::ShouldDoTool() const -> bool { return mShouldDoTool; }
 
 void UI::RenderMenuBar(LayerControl& layers, Camera& camera,
                        Selection& selection,
-                       PreviewLayer& preview_layer_for_selection)
-{
+                       PreviewLayer& preview_layer_for_selection) {
     ImGui::BeginMainMenuBar();
 
-    if (ImGui::BeginMenu("File"))
-    {
-        if (ImGui::MenuItem("New"))
-        {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("New")) {
             mProject.get().CloseCurrentProject();
             mRenderNewProjectPopup = true;
         }
-        if (ImGui::MenuItem("Save as image")) { mRenderSaveAsImgPopup = true; }
-        if (ImGui::MenuItem("Save as project"))
-        {
+        if (ImGui::MenuItem("Save as image")) {
+            mRenderSaveAsImgPopup = true;
+        }
+        if (ImGui::MenuItem("Save as project")) {
             mRenderSaveAsPrjPopup = true;
         }
-        if (ImGui::MenuItem("Exit"))
-        {
+        if (ImGui::MenuItem("Exit")) {
             glfwSetWindowShouldClose(sWindow, GLFW_TRUE);
         }
         ImGui::EndMenu();
     }
 
-    if (ImGui::BeginMenu("Edit"))
-    {
-        if (ImGui::MenuItem("Undo")) { layers.MarkForUndo(); }
-        if (ImGui::MenuItem("Redo")) { layers.MarkForRedo(); }
-        if (ImGui::MenuItem("Undo Tree")) { mRenderUndoTreeWindow = true; }
+    if (ImGui::BeginMenu("Edit")) {
+        if (ImGui::MenuItem("Undo")) {
+            layers.MarkForUndo();
+        }
+        if (ImGui::MenuItem("Redo")) {
+            layers.MarkForRedo();
+        }
+        if (ImGui::MenuItem("Undo Tree")) {
+            mRenderUndoTreeWindow = true;
+        }
         ImGui::EndMenu();
     }
 
-    if (ImGui::BeginMenu("View"))
-    {
+    if (ImGui::BeginMenu("View")) {
         constexpr double kZoomAddVal = 0.1;
-        if (ImGui::MenuItem("Zoom In")) { camera.AddToZoom(kZoomAddVal); }
-        if (ImGui::MenuItem("Zoom Out")) { camera.AddToZoom(-kZoomAddVal); }
-        if (ImGui::MenuItem("Reset Camera")) { camera.ResetCamera(); }
-        if (ImGui::MenuItem("Reset Center")) { camera.ResetCenter(); }
-        if (ImGui::MenuItem("Reset Zoom")) { camera.ResetZoom(); }
+        if (ImGui::MenuItem("Zoom In")) {
+            camera.AddToZoom(kZoomAddVal);
+        }
+        if (ImGui::MenuItem("Zoom Out")) {
+            camera.AddToZoom(-kZoomAddVal);
+        }
+        if (ImGui::MenuItem("Reset Camera")) {
+            camera.ResetCamera();
+        }
+        if (ImGui::MenuItem("Reset Center")) {
+            camera.ResetCenter();
+        }
+        if (ImGui::MenuItem("Reset Zoom")) {
+            camera.ResetZoom();
+        }
         ImGui::EndMenu();
     }
 
-    if (ImGui::BeginMenu("Selection"))
-    {
-        if (ImGui::MenuItem("Clear"))
-        {
+    if (ImGui::BeginMenu("Selection")) {
+        if (ImGui::MenuItem("Clear")) {
             selection.Clear();
             preview_layer_for_selection.Clear();
         }
@@ -281,8 +285,7 @@ void UI::RenderMenuBar(LayerControl& layers, Camera& camera,
     ImGui::EndMainMenuBar();
 }
 
-void UI::RenderSaveAsImagePopup()
-{
+void UI::RenderSaveAsImagePopup() {
     mShouldDoTool = false; // Don't want to draw with a popup opened
 
     static std::array<char, 256> destination_str;
@@ -292,8 +295,7 @@ void UI::RenderSaveAsImagePopup()
     ImGui::OpenPopup("Save");
 
     if (ImGui::BeginPopupModal("Save", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Destination:");
         ImGui::InputText("##dest_input", destination_str.data(),
                          destination_str.size());
@@ -303,14 +305,12 @@ void UI::RenderSaveAsImagePopup()
         ImGui::Text("Magnify factor:");
         ImGui::InputInt("##mag_input", &magnify_factor);
 
-        if (ImGui::Button("Save"))
-        {
+        if (ImGui::Button("Save")) {
             std::string destination(destination_str.data());
             destination += '/';
             destination += file_name_str.data();
 
-            if (!mProject.get().SaveAsImage(magnify_factor, destination))
-            {
+            if (!mProject.get().SaveAsImage(magnify_factor, destination)) {
                 TriggerSaveErrorPopup();
             }
 
@@ -320,8 +320,7 @@ void UI::RenderSaveAsImagePopup()
 
         ImGui::SameLine(0.0F, 10.0F);
 
-        if (ImGui::Button("Cancel"))
-        {
+        if (ImGui::Button("Cancel")) {
             mRenderSaveAsImgPopup = false;
             ImGui::CloseCurrentPopup();
         }
@@ -330,8 +329,7 @@ void UI::RenderSaveAsImagePopup()
     }
 }
 
-void UI::RenderSaveAsProjectPopup()
-{
+void UI::RenderSaveAsProjectPopup() {
     mShouldDoTool = false;
 
     static std::array<char, 256> destination_str;
@@ -340,8 +338,7 @@ void UI::RenderSaveAsProjectPopup()
     ImGui::OpenPopup("Save");
 
     if (ImGui::BeginPopupModal("Save", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Destination:");
         ImGui::InputText("##dest_input", destination_str.data(),
                          destination_str.size());
@@ -349,8 +346,7 @@ void UI::RenderSaveAsProjectPopup()
         ImGui::InputText("##filename_input", file_name_str.data(),
                          file_name_str.size());
 
-        if (ImGui::Button("Save"))
-        {
+        if (ImGui::Button("Save")) {
             std::string destination(destination_str.data());
             destination += '/';
             destination += file_name_str.data();
@@ -361,8 +357,7 @@ void UI::RenderSaveAsProjectPopup()
 
         ImGui::SameLine(0.0F, 10.0F);
 
-        if (ImGui::Button("Cancel"))
-        {
+        if (ImGui::Button("Cancel")) {
             mRenderSaveAsPrjPopup = false;
             ImGui::CloseCurrentPopup();
         }
@@ -371,8 +366,7 @@ void UI::RenderSaveAsProjectPopup()
     }
 }
 
-void UI::RenderColorWindow()
-{
+void UI::RenderColorWindow() {
     ImGui::Begin("Color");
     ImGui::NewLine();
 
@@ -387,26 +381,32 @@ void UI::RenderColorWindow()
 
     int selected_color_slot = mTool.get().GetSelectedColorSlot();
 
-    if (selected_color_slot == Tool::kColorSlot1) { BeginOutline(); }
+    if (selected_color_slot == Tool::kColorSlot1) {
+        BeginOutline();
+    }
 
-    if (ImGui::ColorButton("Color 1", mTool.get().GetColor1(), flags))
-    {
+    if (ImGui::ColorButton("Color 1", mTool.get().GetColor1(), flags)) {
         mTool.get().SetCurrentColorToColor1();
     }
 
-    if (selected_color_slot == Tool::kColorSlot1) { EndOutline(); }
+    if (selected_color_slot == Tool::kColorSlot1) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 10.0F);
     ImGui::Text("Color 1");
 
-    if (selected_color_slot == Tool::kColorSlot2) { BeginOutline(); }
+    if (selected_color_slot == Tool::kColorSlot2) {
+        BeginOutline();
+    }
 
-    if (ImGui::ColorButton("Color 2", mTool.get().GetColor2(), flags))
-    {
+    if (ImGui::ColorButton("Color 2", mTool.get().GetColor2(), flags)) {
         mTool.get().SetCurrentColorToColor2();
     }
 
-    if (selected_color_slot == Tool::kColorSlot2) { EndOutline(); }
+    if (selected_color_slot == Tool::kColorSlot2) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 10.0F);
     ImGui::Text("Color 2");
@@ -416,8 +416,7 @@ void UI::RenderColorWindow()
     ImGui::End();
 }
 
-void UI::RenderColorPalette(ImVec4& color)
-{
+void UI::RenderColorPalette(ImVec4& color) {
     // Generate a default palette. The palette will persist and can be edited.
 
     ImGui::NewLine();
@@ -426,10 +425,8 @@ void UI::RenderColorPalette(ImVec4& color)
     static bool saved_palette_init = true;
     /* static ImVec4 saved_palette[32] = {}; */
     static std::array<ImVec4, 32> saved_palette{};
-    if (saved_palette_init)
-    {
-        for (std::size_t i = 0; i < saved_palette.size(); i++)
-        {
+    if (saved_palette_init) {
+        for (std::size_t i = 0; i < saved_palette.size(); i++) {
             ImGui::ColorConvertHSVtoRGB(static_cast<float>(i) / 31.0F, 0.8F,
                                         0.8F, saved_palette.at(i).x,
                                         saved_palette.at(i).y,
@@ -440,19 +437,16 @@ void UI::RenderColorPalette(ImVec4& color)
     }
 
     ImGui::Text("Palette");
-    for (std::size_t i = 0; i < saved_palette.size(); i++)
-    {
+    for (std::size_t i = 0; i < saved_palette.size(); i++) {
         ImGui::PushID(static_cast<int>(i));
 
-        if ((i % 8) != 0)
-        {
+        if ((i % 8) != 0) {
             ImGui::SameLine(0.0F, ImGui::GetStyle().ItemSpacing.y);
         }
 
         ImGuiColorEditFlags palette_button_flags = ImGuiColorEditFlags_NoAlpha;
         if (ImGui::ColorButton("##palette", saved_palette.at(i),
-                               palette_button_flags, ImVec2(20, 20)))
-        {
+                               palette_button_flags, ImVec2(20, 20))) {
             color = ImVec4(saved_palette.at(i).x, saved_palette.at(i).y,
                            saved_palette.at(i).z, color.w); // Preserve alpha!
         }
@@ -460,16 +454,13 @@ void UI::RenderColorPalette(ImVec4& color)
         // Allow user to drop colors into each palette entry. Note that
         // ColorButton() is already a drag source by default, unless specifying
         // the ImGuiColorEditFlags_NoDragDrop flag.
-        if (ImGui::BeginDragDropTarget())
-        {
+        if (ImGui::BeginDragDropTarget()) {
             if (const ImGuiPayload* payload =
-                    ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
-            {
+                    ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F)) {
                 memcpy(saved_palette.data(), payload->Data, sizeof(float) * 3);
             }
             if (const ImGuiPayload* payload =
-                    ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
-            {
+                    ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F)) {
                 memcpy(saved_palette.data(), payload->Data, sizeof(float) * 4);
             }
 
@@ -481,8 +472,7 @@ void UI::RenderColorPalette(ImVec4& color)
 }
 
 void UI::RenderNodesChildren(LayerControl& layers,
-                             Tree<LayerControl::Capture>& node)
-{
+                             Tree<LayerControl::Capture>& node) {
     mRenderNodesChildrenFuncData.node_count++;
     const auto& children = node.GetChildren();
     bool is_current_node = &layers.GetCurrentUndoTreeNode() == &node;
@@ -500,17 +490,13 @@ void UI::RenderNodesChildren(LayerControl& layers,
     ImGui::SetNextItemOpen(true, 1);
 
     if (ImGui::TreeNodeEx(node_id.c_str(), ImGuiTreeNodeFlags_None, "%d %s%s",
-                          lifetime_in_min, min_ago, curr))
-    {
-        if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
-        {
+                          lifetime_in_min, min_ago, curr)) {
+        if (ImGui::IsItemClicked(ImGuiMouseButton_Left)) {
             mRenderNodesChildrenFuncData.clicked_node = &node;
         }
 
-        if (has_multiple_children)
-        {
-            for (std::size_t i = 1; i < children.size(); i++)
-            {
+        if (has_multiple_children) {
+            for (std::size_t i = 1; i < children.size(); i++) {
                 RenderNodesChildren(layers, *children[i]);
             }
         }
@@ -518,19 +504,21 @@ void UI::RenderNodesChildren(LayerControl& layers,
         ImGui::TreePop();
     }
 
-    if (has_multiple_children)
-    {
+    if (has_multiple_children) {
         RenderNodesChildren(layers, *children.front());
         return;
     }
-    if (children.size() == 0) { return; }
+    if (children.size() == 0) {
+        return;
+    }
 
     RenderNodesChildren(layers, *children.front());
 }
 
-void UI::RenderUndoTreeWindow(LayerControl& layers)
-{
-    if (!mRenderUndoTreeWindow) { return; }
+void UI::RenderUndoTreeWindow(LayerControl& layers) {
+    if (!mRenderUndoTreeWindow) {
+        return;
+    }
 
     ImGui::Begin("Undo Tree", &mRenderUndoTreeWindow, ImGuiWindowFlags_None);
     mShouldDoTool = false;
@@ -540,85 +528,116 @@ void UI::RenderUndoTreeWindow(LayerControl& layers)
 
     ImGui::End();
 
-    if (mRenderNodesChildrenFuncData.clicked_node != nullptr)
-    {
+    if (mRenderNodesChildrenFuncData.clicked_node != nullptr) {
         layers.SetCurrentNode(*mRenderNodesChildrenFuncData.clicked_node);
     }
 }
 
-void UI::RenderToolWindow()
-{
+void UI::RenderToolWindow() {
     ImGui::Begin("Tools");
     ImGui::NewLine();
 
     ToolType tool_type = mTool.get().GetToolType();
 
-    if (tool_type == ToolType::kBrush) { BeginOutline(); }
+    if (tool_type == ToolType::kBrush) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib1", mToolTextures[static_cast<std::size_t>(ToolType::kBrush)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kBrush);
     }
-    if (tool_type == ToolType::kBrush) { EndOutline(); }
+    if (tool_type == ToolType::kBrush) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == ToolType::kEraser) { BeginOutline(); }
+    if (tool_type == ToolType::kEraser) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib2", mToolTextures[static_cast<std::size_t>(ToolType::kEraser)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kEraser);
     }
-    if (tool_type == ToolType::kEraser) { EndOutline(); }
+    if (tool_type == ToolType::kEraser) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == ToolType::kColorPicker) { BeginOutline(); }
+    if (tool_type == ToolType::kColorPicker) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib3",
             mToolTextures[static_cast<std::size_t>(ToolType::kColorPicker)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kColorPicker);
     }
-    if (tool_type == ToolType::kColorPicker) { EndOutline(); }
+    if (tool_type == ToolType::kColorPicker) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == ToolType::kBucket) { BeginOutline(); }
+    if (tool_type == ToolType::kBucket) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib4", mToolTextures[static_cast<std::size_t>(ToolType::kBucket)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kBucket);
     }
-    if (tool_type == ToolType::kBucket) { EndOutline(); }
+    if (tool_type == ToolType::kBucket) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == ToolType::kRectShape) { BeginOutline(); }
+    if (tool_type == ToolType::kRectShape) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib5",
             mToolTextures[static_cast<std::size_t>(ToolType::kRectShape)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kRectShape);
     }
-    if (tool_type == ToolType::kRectShape) { EndOutline(); }
+    if (tool_type == ToolType::kRectShape) {
+        EndOutline();
+    }
 
     ImGui::SameLine(0.0F, 4.0F);
 
-    if (tool_type == ToolType::kSelectionTool) { BeginOutline(); }
+    if (tool_type == ToolType::kSelectionTool) {
+        BeginOutline();
+    }
     if (ImGui::ImageButton(
             "ib6",
             mToolTextures[static_cast<std::size_t>(ToolType::kSelectionTool)],
-            {20.0F, 20.0F}))
-    {
+            {20.0F, 20.0F})) {
         mTool.get().SetToolType(ToolType::kSelectionTool);
     }
-    if (tool_type == ToolType::kSelectionTool) { EndOutline(); }
+    if (tool_type == ToolType::kSelectionTool) {
+        EndOutline();
+    }
+
+    ImGui::SameLine(0.0F, 4.0F);
+
+    if (tool_type == ToolType::kMoveSelection) {
+        BeginOutline();
+    }
+    if (ImGui::ImageButton(
+            "ib7",
+            mToolTextures[static_cast<std::size_t>(ToolType::kMoveSelection)],
+            {20.0F, 20.0F})) {
+        mTool.get().SetToolType(ToolType::kMoveSelection);
+    }
+    if (tool_type == ToolType::kMoveSelection) {
+        EndOutline();
+    }
 
     ImGui::NewLine();
 
@@ -627,20 +646,22 @@ void UI::RenderToolWindow()
                      mProject.get().CanvasWidth());
     ImGui::PopItemWidth();
 
-    if (mTool.get().GetBrushRadius() < 1) { mTool.get().SetBrushRadius(1); }
+    if (mTool.get().GetBrushRadius() < 1) {
+        mTool.get().SetBrushRadius(1);
+    }
 
     ImGui::End();
 }
 
-void UI::RenderLayerWindow(LayerControl& layers)
-{
+void UI::RenderLayerWindow(LayerControl& layers) {
     ImGui::Begin("Layers");
 
-    if (ImGui::Button("Add a layer")) { layers.MarkToAddLayer(); }
+    if (ImGui::Button("Add a layer")) {
+        layers.MarkToAddLayer();
+    }
 
     auto layer_it = layers.GetLayers().begin();
-    for (std::size_t i = 0; i < layers.GetLayers().size(); i++)
-    {
+    for (std::size_t i = 0; i < layers.GetLayers().size(); i++) {
         Layer& layer_traversed = *layer_it;
         layer_it++;
 
@@ -662,50 +683,50 @@ void UI::RenderLayerWindow(LayerControl& layers)
         // widgets as well
         constexpr ImVec2 kImageButtonDims{14.0F, 14.0F};
         if (ImGui::ImageButton((str_id_for_widgets + "_v").c_str(),
-                               visibility_tex, kImageButtonDims))
-        {
+                               visibility_tex, kImageButtonDims)) {
             layer_traversed.SwitchVisibilityState();
         }
 
         ImGui::SameLine(0.0F, 1.0F);
 
         if (ImGui::ImageButton((str_id_for_widgets + "_l").c_str(), lock_tex,
-                               kImageButtonDims))
-        {
+                               kImageButtonDims)) {
             layer_traversed.SwitchLockState();
         }
 
         bool this_is_selected_layer = (layers.mCurrentLayerIndex == i);
-        if (this_is_selected_layer) { BeginOutline(); }
+        if (this_is_selected_layer) {
+            BeginOutline();
+        }
 
         ImGui::SameLine(0.0F, 10.0F);
-        if (ImGui::Button(layer_traversed.GetName().c_str(), {100.0F, 0.0F}))
-        {
+        if (ImGui::Button(layer_traversed.GetName().c_str(), {100.0F, 0.0F})) {
             layers.mCurrentLayerIndex = i;
         }
 
-        if (this_is_selected_layer) { EndOutline(); }
+        if (this_is_selected_layer) {
+            EndOutline();
+        }
 
         ImGui::SameLine(0.0F, 10.0F);
         ImGui::PushItemWidth(100.0F);
         ImGui::PushID(static_cast<int>(i));
 
-        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0, 255)) {}
+        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0, 255)) {
+        }
 
         ImGui::PopID();
         ImGui::PopItemWidth();
 
         ImGui::SameLine(0.0F, 10.0F);
         if (ImGui::ArrowButton((str_id_for_widgets + "_abu").c_str(),
-                               ImGuiDir_Up))
-        {
+                               ImGuiDir_Up)) {
             layers.MoveUp(static_cast<int>(i));
         }
 
         ImGui::SameLine(0.0F, 1.0F);
         if (ImGui::ArrowButton((str_id_for_widgets + "_abd").c_str(),
-                               ImGuiDir_Down))
-        {
+                               ImGuiDir_Down)) {
             layers.MoveDown(static_cast<int>(i));
         }
     }
@@ -717,23 +738,19 @@ void UI::RenderLayerWindow(LayerControl& layers)
 
 // Don't forget to call this function before ImGui::End() as this function uses
 // ImGui::IsWindowHovered()
-void UI::RenderLayerWinContextMenu(LayerControl& layers)
-{
+void UI::RenderLayerWinContextMenu(LayerControl& layers) {
     // Code bellow renders popups for changing a layer's name
     static bool open_the_change_lay_name_popup = false;
 
     static std::string buff;
 
     if (ImGui::IsWindowHovered() &&
-        ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-    {
+        ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
         ImGui::OpenPopup("LayerPopup");
     }
 
-    if (ImGui::BeginPopupContextItem("LayerPopup"))
-    {
-        if (ImGui::MenuItem("Change layer name"))
-        {
+    if (ImGui::BeginPopupContextItem("LayerPopup")) {
+        if (ImGui::MenuItem("Change layer name")) {
             buff = layers.GetCurrentLayer().mLayerName;
             open_the_change_lay_name_popup = true;
         }
@@ -741,22 +758,18 @@ void UI::RenderLayerWinContextMenu(LayerControl& layers)
         ImGui::EndPopup();
     }
 
-    if (open_the_change_lay_name_popup)
-    {
+    if (open_the_change_lay_name_popup) {
         ImGui::OpenPopup("Change layer name");
     }
 
     if (ImGui::BeginPopupModal("Change layer name", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         // Don't wanna edit canvas if this popup is opened
         mShouldDoTool = false;
         ImGui::InputText("##input", &buff);
 
-        if (ImGui::Button("OK"))
-        {
-            if (buff.length() != 0)
-            {
+        if (ImGui::Button("OK")) {
+            if (buff.length() != 0) {
                 layers.GetCurrentLayer().mLayerName = buff;
             }
 
@@ -766,8 +779,7 @@ void UI::RenderLayerWinContextMenu(LayerControl& layers)
 
         ImGui::SameLine(0.0F, 10.0F);
 
-        if (ImGui::Button("Cancel"))
-        {
+        if (ImGui::Button("Cancel")) {
             ImGui::CloseCurrentPopup();
             open_the_change_lay_name_popup = false;
         }
@@ -776,20 +788,17 @@ void UI::RenderLayerWinContextMenu(LayerControl& layers)
     }
 }
 
-void UI::RenderSaveErrorPopup()
-{
+void UI::RenderSaveErrorPopup() {
     mShouldDoTool = false; // Don't want to draw with a popup opened
 
     ImGui::OpenPopup("Error: Failed to save");
 
     if (ImGui::BeginPopupModal("Error: Failed to save", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Failed to save the picture. Check your destination, "
                     "picture name and magnify factor");
 
-        if (ImGui::Button("OK"))
-        {
+        if (ImGui::Button("OK")) {
             mRenderSaveErrorPopup = false;
             ImGui::CloseCurrentPopup();
         }
@@ -798,15 +807,13 @@ void UI::RenderSaveErrorPopup()
     }
 }
 
-void UI::RenderNewProjectPopup()
-{
+void UI::RenderNewProjectPopup() {
     mShouldDoTool = false;
 
     ImGui::OpenPopup("New project");
 
     if (ImGui::BeginPopupModal("New project", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         static int height = 32;
         static int width = 32;
 
@@ -818,35 +825,33 @@ void UI::RenderNewProjectPopup()
         ImGui::SameLine(0.0F, 5.0F);
         ImGui::SliderInt("##width", &width, 8, 2048);
 
-        if (ImGui::Button("OK"))
-        {
+        if (ImGui::Button("OK")) {
             mProject.get().New({width, height});
             mRenderNewProjectPopup = false;
         }
 
         ImGui::SameLine(0.0F, 5.0F);
 
-        if (ImGui::Button("Cancel")) { mRenderNewProjectPopup = false; }
+        if (ImGui::Button("Cancel")) {
+            mRenderNewProjectPopup = false;
+        }
 
         ImGui::EndPopup();
     }
 }
 
-void UI::RenderOpenProjectPopup()
-{
+void UI::RenderOpenProjectPopup() {
     static std::array<char, 256> destination_str;
 
     ImGui::OpenPopup("Open");
 
     if (ImGui::BeginPopupModal("Open", nullptr,
-                               ImGuiWindowFlags_AlwaysAutoResize))
-    {
+                               ImGuiWindowFlags_AlwaysAutoResize)) {
         ImGui::Text("Destination:");
         ImGui::InputText("##dest_input", destination_str.data(),
                          destination_str.size());
 
-        if (ImGui::Button("Open"))
-        {
+        if (ImGui::Button("Open")) {
             std::string destination(destination_str.data());
             mProject.get().Open(destination);
             mRenderOpenProjectPopup = false;
@@ -855,8 +860,7 @@ void UI::RenderOpenProjectPopup()
 
         ImGui::SameLine(0.0F, 10.0F);
 
-        if (ImGui::Button("Cancel"))
-        {
+        if (ImGui::Button("Cancel")) {
             mRenderOpenProjectPopup = false;
             ImGui::CloseCurrentPopup();
         }
@@ -867,15 +871,13 @@ void UI::RenderOpenProjectPopup()
 
 // The outline around a control. Don't forget to call EndOutline!
 void UI::BeginOutline(
-    ImVec4 outline_color /*= ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab)*/)
-{
+    ImVec4 outline_color /*= ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab)*/) {
     ImGui::GetStyle().FrameBorderSize = 1.0F;
     ImGui::PushStyleColor(ImGuiCol_Border, outline_color);
 }
 
 // The outline around a control
-void UI::EndOutline()
-{
+void UI::EndOutline() {
     ImGui::GetStyle().FrameBorderSize = 0.0F;
     ImGui::PopStyleColor();
 }

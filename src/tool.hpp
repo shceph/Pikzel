@@ -3,21 +3,19 @@
 #include <cstdint>
 #include <imgui.h>
 
-namespace Pikzel
-{
-enum class ToolType : std::uint8_t
-{
+namespace Pikzel {
+enum class ToolType : std::uint8_t {
     kBrush,
     kEraser,
     kColorPicker,
     kBucket,
     kRectShape,
     kSelectionTool,
+    kMoveSelection,
     kToolCount,
 };
 
-class Tool
-{
+class Tool {
   public:
     Tool();
     ~Tool() = default;
@@ -40,13 +38,11 @@ class Tool
     void SetCurrentColorToColor1() { mSelectedColorSlot = kColorSlot1; }
     void SetCurrentColorToColor2() { mSelectedColorSlot = kColorSlot2; }
 
-    [[nodiscard]] auto GetSelectedColorSlot() const -> int
-    {
+    [[nodiscard]] auto GetSelectedColorSlot() const -> int {
         return mSelectedColorSlot;
     }
 
-    [[nodiscard]] auto GetToolType() const -> ToolType
-    {
+    [[nodiscard]] auto GetToolType() const -> ToolType {
         return mCurrentToolType;
     }
     void SetToolType(ToolType type) { mCurrentToolType = type; }

@@ -6,18 +6,16 @@
 
 #include <string>
 
-namespace Pikzel
-{
-using Vec2Int = glm::vec<2, int>;
+namespace Pikzel {
+using Vec2 = glm::vec<2, int>;
 
 class LayerControl;
 class Tool;
 
-class Project
-{
+class Project {
   public:
     Project(LayerControl& layers, Tool& tool, Camera& camera);
-    void New(Vec2Int canvas_dims);
+    void New(Vec2 canvas_dims);
     void Open(const std::string& project_file_dest);
     void SaveAsProject(const std::string& save_dest);
     void CloseCurrentProject();
@@ -27,8 +25,7 @@ class Project
     [[nodiscard]] auto IsOpened() const -> bool { return mProjectOpened; }
     [[nodiscard]] auto CanvasHeight() const -> int { return mCanvasHeight; }
     [[nodiscard]] auto CanvasWidth() const -> int { return mCanvasWidth; }
-    [[nodiscard]] auto GetCanvasDims() const -> Vec2Int
-    {
+    [[nodiscard]] auto GetCanvasDims() const -> Vec2 {
         return {mCanvasWidth, mCanvasHeight};
     }
 

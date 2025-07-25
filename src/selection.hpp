@@ -3,10 +3,8 @@
 #include <glm/glm.hpp>
 #include <vector>
 
-namespace Pikzel
-{
-class Selection
-{
+namespace Pikzel {
+class Selection {
   public:
     void AddToSelection(glm::ivec2 upper_left, glm::ivec2 bottom_right);
     void Clear();
@@ -14,6 +12,7 @@ class Selection
     [[nodiscard]] auto ShouldCheckForSelection() const -> bool;
     void Reset(glm::ivec2 canvas_dims);
     [[nodiscard]] auto GetSelectedPixels() const -> const std::vector<bool>&;
+    void SetShouldCheckForSelectionValue(bool val);
 
   private:
     std::vector<bool> mSelected;

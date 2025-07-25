@@ -1,13 +1,10 @@
 #include "tool.hpp"
 
-namespace Pikzel
-{
-Tool::Tool() : mColor1{0.0F, 0.0F, 0.0F, 1.0F}, mColor2{0.0F, 0.0F, 0.0F, 1.0F}
-{
-}
+namespace Pikzel {
+Tool::Tool()
+    : mColor1{0.0F, 0.0F, 0.0F, 1.0F}, mColor2{0.0F, 0.0F, 0.0F, 1.0F} {}
 
-void Tool::SetDataToDefault()
-{
+void Tool::SetDataToDefault() {
     mColor1 = {0.0F, 0.0F, 0.0F, 1.0F};
     mColor2 = {0.0F, 0.0F, 0.0F, 1.0F};
     mCurrentToolType = ToolType::kBrush;
@@ -15,10 +12,8 @@ void Tool::SetDataToDefault()
     mSelectedColorSlot = kColorSlot1;
 }
 
-auto Tool::GetColorRef() -> ImVec4&
-{
-    switch (mSelectedColorSlot)
-    {
+auto Tool::GetColorRef() -> ImVec4& {
+    switch (mSelectedColorSlot) {
     case kColorSlot1:
         return mColor1;
     case kColorSlot2:
@@ -29,10 +24,8 @@ auto Tool::GetColorRef() -> ImVec4&
     }
 }
 
-auto Tool::GetColorRef() const -> const ImVec4&
-{
-    switch (mSelectedColorSlot)
-    {
+auto Tool::GetColorRef() const -> const ImVec4& {
+    switch (mSelectedColorSlot) {
     case kColorSlot1:
         return mColor1;
     case kColorSlot2:
@@ -43,10 +36,8 @@ auto Tool::GetColorRef() const -> const ImVec4&
     }
 }
 
-auto Tool::GetColor() const -> ImVec4
-{
-    switch (mSelectedColorSlot)
-    {
+auto Tool::GetColor() const -> ImVec4 {
+    switch (mSelectedColorSlot) {
     case kColorSlot1:
         return mColor1;
     case kColorSlot2:

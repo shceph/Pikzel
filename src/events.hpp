@@ -7,13 +7,10 @@
 #include <functional>
 #include <vector>
 
-namespace Pikzel
-{
-class Events
-{
+namespace Pikzel {
+class Events {
   public:
-    enum class MouseButtons : std::uint8_t
-    {
+    enum class MouseButtons : std::uint8_t {
         kButtonLeft = GLFW_MOUSE_BUTTON_LEFT,
         kButtonRight = GLFW_MOUSE_BUTTON_RIGHT,
         kButtonMiddle = GLFW_MOUSE_BUTTON_MIDDLE,
@@ -34,41 +31,46 @@ class Events
                                       double y_pos);
     static void PushToScrollCallback(CallbackType&& callback);
     static void PushToCursorPosCallback(CallbackType&& callback);
+    static auto IsKeyboardKeyPressedDelayed(KeyboardKey key) -> bool;
     static auto IsKeyboardKeyPressed(KeyboardKey key) -> bool;
     static auto IsCtrlPressed() -> bool;
     static auto IsMouseButtonPressed(MouseButtons button) -> bool;
+    static auto IsMouseButtonPressedDelayed(MouseButtons button,
+                                            std::chrono::milliseconds delay)
+        -> bool;
     static auto IsMouseButtonHeld(MouseButtons button) -> bool;
     static void Update();
 
     static void SetWindowPtr(GLFWwindow* window) { sWindow = window; }
 
-    static auto GetLastTimeClickedArrayForEachButton() -> ArrayOfTimePoints&
-    {
+    static auto GetLastTimeClickedArrayForEachButton() -> ArrayOfTimePoints& {
         static ArrayOfTimePoints last_time_clicked;
         return last_time_clicked;
     }
 
-    static auto GetLastTimeKeyboardUsed() -> TimePointType&
-    {
+    static auto GetLastTimeKeyboardUsed() -> TimePointType& {
         static TimePointType last_time_keyboard_used{
             std::chrono::steady_clock::now()};
         return last_time_keyboard_used;
     }
 
+    static auto GetLastTimeMouseUsed() -> TimePointType& {
+        static TimePointType last_time_mouse_used{
+            std::chrono::steady_clock::now()};
+        return last_time_mouse_used;
+    }
+
     template <typename... Args>
-    static auto AreKeyboardKeysPressed(Args... args) -> bool
-    {
-        constexpr auto kDelay = std::chrono::milliseconds(130);
+    static auto AreKeyboardKeysPressed(Args... args) -> bool {
+        constexpr auto kDelay = std::chrono::milliseconds{130};
         auto& last_time_keyboard_used = GetLastTimeKeyboardUsed();
 
         if (std::chrono::steady_clock::now() - last_time_keyboard_used <=
-            kDelay)
-        {
+            kDelay) {
             return false;
         }
 
-        if (((glfwGetKey(sWindow, args) == GLFW_PRESS) && ...))
-        {
+        if (((glfwGetKey(sWindow, args) == GLFW_PRESS) && ...)) {
             last_time_keyboard_used = std::chrono::steady_clock::now();
             return true;
         }
