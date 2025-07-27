@@ -40,6 +40,11 @@ auto Color::operator==(const ImVec4& other) const -> bool {
            std::abs((static_cast<float>(a) / 0xff) - other.w) <= kTolerance;
 }
 
+auto Color::Difference(Color other) const -> int {
+    return std::abs(r - other.r) + std::abs(g - other.g) +
+           std::abs(b - other.b) + std::abs(a - other.a);
+}
+
 auto Color::BlendColor(Color color1, Color color2) -> Color {
     ImVec4 col1 = {
         static_cast<float>(color1.r) / 255,
@@ -116,6 +121,7 @@ auto Layer::DoCurrentTool() -> Layer::ShouldUpdateHistory {
     // The following are handled by the LayerControl class.
     case ToolType::kRectShape:
     case ToolType::kSelectionTool:
+    case ToolType::kColorSelection:
     case ToolType::kMoveSelection:
     case ToolType::kToolCount:
         assert(false);
@@ -607,13 +613,16 @@ auto Layer::CanvasCoordsFromCursorPos() const -> std::optional<Vec2> {
     // Cursor position relative to the Glfw window
     glfwGetCursorPos(UI::GetWindowPointer(), &cursor_x, &cursor_y);
 
-    int window_x = 0;
-    int window_y = 0;
-    // Position of the window relative to the screen
-    glfwGetWindowPos(UI::GetWindowPointer(), &window_x, &window_y);
+    // Wayland doesn't give window position info to client apps
+    if (glfwGetPlatform() != GLFW_PLATFORM_WAYLAND) {
+        int window_x = 0;
+        int window_y = 0;
+        // Position of the window relative to the screen
+        glfwGetWindowPos(UI::GetWindowPointer(), &window_x, &window_y);
 
-    cursor_x += window_x; // Getting cursor position relative to the screen
-    cursor_y += window_y;
+        cursor_x += window_x; // Getting cursor position relative to the screen
+        cursor_y += window_y;
+    }
 
     ImVec2 canvas_upperleft = UI::GetCanvasUpperleftCoords();
     ImVec2 canvas_bottomtright = UI::GetCanvasBottomRightCoords();

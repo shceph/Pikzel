@@ -19,6 +19,8 @@ struct Color {
     auto operator==(const Color& other) const -> bool;
     auto operator==(const ImVec4& other) const -> bool;
 
+    [[nodiscard]] auto Difference(Color other) const -> int;
+
     static auto BlendColor(Color color1, Color color2) -> Color;
     static auto FromImVec4(ImVec4 color) -> Color;
     static auto FromGlaColor(Gla::Color color) -> Color;
@@ -64,6 +66,11 @@ class Layer {
     }
     [[nodiscard]] auto GetPixel(Vec2 coords) const -> Color {
         auto col = mPboBuff[(coords.y * mCanvasDims.x) + coords.x];
+        return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
+    }
+    [[nodiscard]] auto GetPixel(std::size_t index) const -> Color {
+        assert(index < static_cast<std::size_t>(mCanvasDims.x * mCanvasDims.y));
+        auto col = mPboBuff[index];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
     [[nodiscard]] auto GetCanvasDims() const -> Vec2 { return mCanvasDims; }

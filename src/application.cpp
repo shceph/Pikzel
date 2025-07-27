@@ -537,6 +537,8 @@ void UI::RenderToolWindow() {
     ImGui::Begin("Tools");
     ImGui::NewLine();
 
+    ImVec2 button_dims{20.0F, 20.0F};
+
     ToolType tool_type = mTool.get().GetToolType();
 
     if (tool_type == ToolType::kBrush) {
@@ -544,7 +546,7 @@ void UI::RenderToolWindow() {
     }
     if (ImGui::ImageButton(
             "ib1", mToolTextures[static_cast<std::size_t>(ToolType::kBrush)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kBrush);
     }
     if (tool_type == ToolType::kBrush) {
@@ -558,7 +560,7 @@ void UI::RenderToolWindow() {
     }
     if (ImGui::ImageButton(
             "ib2", mToolTextures[static_cast<std::size_t>(ToolType::kEraser)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kEraser);
     }
     if (tool_type == ToolType::kEraser) {
@@ -573,7 +575,7 @@ void UI::RenderToolWindow() {
     if (ImGui::ImageButton(
             "ib3",
             mToolTextures[static_cast<std::size_t>(ToolType::kColorPicker)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kColorPicker);
     }
     if (tool_type == ToolType::kColorPicker) {
@@ -587,7 +589,7 @@ void UI::RenderToolWindow() {
     }
     if (ImGui::ImageButton(
             "ib4", mToolTextures[static_cast<std::size_t>(ToolType::kBucket)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kBucket);
     }
     if (tool_type == ToolType::kBucket) {
@@ -602,7 +604,7 @@ void UI::RenderToolWindow() {
     if (ImGui::ImageButton(
             "ib5",
             mToolTextures[static_cast<std::size_t>(ToolType::kRectShape)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kRectShape);
     }
     if (tool_type == ToolType::kRectShape) {
@@ -617,10 +619,25 @@ void UI::RenderToolWindow() {
     if (ImGui::ImageButton(
             "ib6",
             mToolTextures[static_cast<std::size_t>(ToolType::kSelectionTool)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kSelectionTool);
     }
     if (tool_type == ToolType::kSelectionTool) {
+        EndOutline();
+    }
+
+    ImGui::SameLine(0.0F, 4.0F);
+
+    if (tool_type == ToolType::kColorSelection) {
+        BeginOutline();
+    }
+    if (ImGui::ImageButton(
+            "ib7",
+            mToolTextures[static_cast<std::size_t>(ToolType::kColorSelection)],
+            button_dims)) {
+        mTool.get().SetToolType(ToolType::kColorSelection);
+    }
+    if (tool_type == ToolType::kColorSelection) {
         EndOutline();
     }
 
@@ -630,9 +647,9 @@ void UI::RenderToolWindow() {
         BeginOutline();
     }
     if (ImGui::ImageButton(
-            "ib7",
+            "ib8",
             mToolTextures[static_cast<std::size_t>(ToolType::kMoveSelection)],
-            {20.0F, 20.0F})) {
+            button_dims)) {
         mTool.get().SetToolType(ToolType::kMoveSelection);
     }
     if (tool_type == ToolType::kMoveSelection) {
@@ -642,8 +659,20 @@ void UI::RenderToolWindow() {
     ImGui::NewLine();
 
     ImGui::PushItemWidth(200.0F);
-    ImGui::SliderInt(" Brush size", &mTool.get().mBrushRadius, 1,
-                     mProject.get().CanvasWidth());
+
+    switch (tool_type) {
+    case ToolType::kBrush:
+    case ToolType::kEraser:
+        ImGui::SliderInt(" Brush size", &mTool.get().mBrushRadius, 1,
+                         mProject.get().CanvasWidth());
+        break;
+    case ToolType::kColorSelection:
+        ImGui::SliderInt(" Threshold", &mSelectionByColorThreshold, 0, 255);
+        break;
+    default:
+        break;
+    }
+
     ImGui::PopItemWidth();
 
     if (mTool.get().GetBrushRadius() < 1) {

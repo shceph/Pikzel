@@ -29,9 +29,6 @@
 #include <string>
 
 namespace {
-constexpr int kWindowWidth = 1280;
-constexpr int kWindowHeight = 700;
-
 #ifndef NDEBUG
 // NOLINTNEXTLINE(bugprone-easily-swappable-parameters)
 void GLAPIENTRY GlDebugOutput(GLenum source, GLenum type, GLuint errorId,
@@ -310,7 +307,8 @@ void Update(AppState& app_state, Gla::PixelBuffer& pbo,
     app_state.preview_layer->Update();
     app_state.layers.UpdateAndDraw(
         app_state.ui_state.ShouldDoTool(), app_state.tool, app_state.camera,
-        *app_state.preview_layer, *app_state.preview_layer_for_selection, pbo);
+        *app_state.preview_layer, *app_state.preview_layer_for_selection, pbo,
+        app_state.ui_state.GetColorSelectionThreshold());
     app_state.ui_state.Update();
 
     UpdateDrawWindowFrameBuffer(app_state, imgui_window_fb);
@@ -463,8 +461,7 @@ void MainLoop(GLFWwindow* window) {
     Gla::PixelBuffer pbo_prev_layer_for_selection{glm::ivec2{32}, Gla::Color{}};
     Gla::PixelBuffer::Unbind();
 
-    Gla::FrameBuffer imgui_window_fb{
-        {.width = kWindowWidth, .height = kWindowHeight}};
+    Gla::FrameBuffer imgui_window_fb{{.width = 32, .height = 32}};
 
     Gla::Texture2D brush_tool_texture{"assets/brush_tool.png",
                                       Gla::GLMinMagFilter::kNearest, true};
@@ -477,15 +474,21 @@ void MainLoop(GLFWwindow* window) {
     Gla::Texture2D square_tool_texture{"assets/square_tool.png"};
     Gla::Texture2D selection_tool_texture{"assets/selection_tool.png",
                                           Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D color_selection_tool_texture{"assets/color_selection.png",
+                                                Gla::GLMinMagFilter::kNearest};
     Gla::Texture2D move_tool_texture{"assets/move_tool.png",
                                      Gla::GLMinMagFilter::kNearest};
 
     std::array<unsigned int,
                static_cast<std::size_t>(Pikzel::ToolType::kToolCount)>
         tool_texture_ids = {
-            brush_tool_texture.GetID(),        eraser_tool_texture.GetID(),
-            color_picker_tool_texture.GetID(), bucket_tool_texture.GetID(),
-            square_tool_texture.GetID(),       selection_tool_texture.GetID(),
+            brush_tool_texture.GetID(),
+            eraser_tool_texture.GetID(),
+            color_picker_tool_texture.GetID(),
+            bucket_tool_texture.GetID(),
+            square_tool_texture.GetID(),
+            selection_tool_texture.GetID(),
+            color_selection_tool_texture.GetID(),
             move_tool_texture.GetID(),
         };
 
@@ -585,8 +588,7 @@ auto main(int argc, const char* argv[]) -> int {
     }
 
     glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
-    GLFWwindow* window = glfwCreateWindow(kWindowWidth, kWindowHeight, "Pikzel",
-                                          nullptr, nullptr);
+    GLFWwindow* window = glfwCreateWindow(640, 480, "Pikzel", nullptr, nullptr);
 
     if (window == nullptr) {
         std::println("Failed to create window");

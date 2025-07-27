@@ -133,6 +133,38 @@ auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer) const
     return ret;
 }
 
+void LayerControl::HandleColorSelectionTool(
+    PreviewLayer& preview_layer_for_selection, int threshold) {
+
+    if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft)) {
+        return;
+    }
+
+    std::optional<Vec2> canv_coord = CanvasCoordsFromCursorPos();
+
+    if (!canv_coord.has_value()) {
+        return;
+    }
+
+    mSelection.Clear();
+    mSelection.SetShouldCheckForSelectionValue(true);
+
+    const Layer& curr_lay = GetCurrentLayer();
+    Color clicked_color = curr_lay.GetPixel(*canv_coord);
+
+    SelectByColor(clicked_color, threshold);
+
+    preview_layer_for_selection.Clear();
+    const std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
+
+    for (std::size_t i = 0;
+         i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
+        if (selected_pixels[i]) {
+            preview_layer_for_selection.DrawPixel(i, kColorSelectionPreview);
+        }
+    }
+}
+
 void LayerControl::HandleMoveSelectionTool(PreviewLayer& preview_layer) {
     static bool should_update_prev_lay_after_moving_selection = false;
 
@@ -166,8 +198,21 @@ void LayerControl::HandleMoveSelectionTool(PreviewLayer& preview_layer) {
     }
 }
 
+void LayerControl::SelectByColor(Color col, int threshold) {
+    const Layer& curr_lay = GetCurrentLayer();
+    std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
+
+    for (std::size_t i = 0;
+         i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
+        if (col.Difference(curr_lay.GetPixel(i)) <= threshold) {
+            selected_pixels[i] = true;
+        }
+    }
+}
+
 void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
-                                 PreviewLayer& preview_layer_for_selection) {
+                                 PreviewLayer& preview_layer_for_selection,
+                                 int color_selection_threshold /*= 0*/) {
     switch (tool.GetToolType()) {
     case ToolType::kRectShape: {
         auto points =
@@ -193,6 +238,11 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
         }
         return;
     }
+
+    case ToolType::kColorSelection:
+        HandleColorSelectionTool(preview_layer_for_selection,
+                                 color_selection_threshold);
+        return;
 
     case ToolType::kMoveSelection: {
         HandleMoveSelectionTool(preview_layer);
@@ -357,19 +407,15 @@ void LayerControl::SetCurrentNode(Tree<Capture>& node_to_set_to) {
 void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
                                  Camera& camera, PreviewLayer& preview_layer,
                                  PreviewLayer& preview_layer_for_selection,
-                                 Gla::PixelBuffer& pbo) {
-    // if (mPreviousToolType == ToolType::kMoveSelection &&
-    // HasToolTypeChanged())
-    // {
-    //     preview_layer.Clear();
-    // }
-
+                                 Gla::PixelBuffer& pbo,
+                                 int color_selection_threshold) {
     for (auto& layer : GetLayers()) {
         layer.Update();
     }
 
     if (should_do_tool) {
-        DoCurrentTool(preview_layer, tool, preview_layer_for_selection);
+        DoCurrentTool(preview_layer, tool, preview_layer_for_selection,
+                      color_selection_threshold);
     }
 
     if (GetCurrentLayer().IsEdited()) {

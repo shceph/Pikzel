@@ -46,6 +46,8 @@ auto Selection::GetSelectedPixels() const -> const std::vector<bool>& {
     return mSelected;
 }
 
+auto Selection::GetSelectedPixels() -> std::vector<bool>& { return mSelected; }
+
 void Selection::SetShouldCheckForSelectionValue(bool val) {
     mCheckForSelection = val;
 }

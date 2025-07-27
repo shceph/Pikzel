@@ -49,9 +49,13 @@ class LayerControl {
         -> std::optional<std::pair<Vec2, Vec2>>;
     auto HandleSelectionTool(PreviewLayer& preview_layer) const
         -> std::optional<std::pair<Vec2, Vec2>>;
+    void HandleColorSelectionTool(PreviewLayer& preview_layer_for_selection,
+                                  int color_selection_threshold);
     void HandleMoveSelectionTool(PreviewLayer& preview_layer);
+    void SelectByColor(Color col, int threshold);
     void DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
-                       PreviewLayer& preview_layer_for_selection);
+                       PreviewLayer& preview_layer_for_selection,
+                       int color_selection_threshold = 0);
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
     void AddLayer(Tool& tool, Camera& camera);
@@ -67,7 +71,7 @@ class LayerControl {
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
                        PreviewLayer& preview_layer,
                        PreviewLayer& preview_layer_for_selection,
-                       Gla::PixelBuffer& pbo);
+                       Gla::PixelBuffer& pbo, int color_selection_threshold);
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
     void UpdateMappedPBOMemorySpanForAllLayers(Gla::PboMappedBuffSpan pbo_buff);

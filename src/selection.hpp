@@ -12,6 +12,7 @@ class Selection {
     [[nodiscard]] auto ShouldCheckForSelection() const -> bool;
     void Reset(glm::ivec2 canvas_dims);
     [[nodiscard]] auto GetSelectedPixels() const -> const std::vector<bool>&;
+    [[nodiscard]] auto GetSelectedPixels() -> std::vector<bool>&;
     void SetShouldCheckForSelectionValue(bool val);
 
   private:

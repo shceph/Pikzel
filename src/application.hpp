@@ -20,7 +20,6 @@ class UI {
     void RenderDrawWindow(unsigned int framebuffer_texture_id,
                           const char* window_name);
     void Update();
-
     void SetupToolTextures(std::span<unsigned int> tex_ids);
     void SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids);
     static void NewFrame();
@@ -36,19 +35,24 @@ class UI {
         return mDrawWinDimensions;
     }
 
-    static auto GetCanvasUpperleftCoords() -> ImVec2 {
-        return GetCanvasUpperleftCoordsRef();
-    }
-    static auto GetCanvasBottomRightCoords() -> ImVec2 {
-        return GetCanvasBottomRightCoordsRef();
+    [[nodiscard]] auto GetColorSelectionThreshold() const -> int {
+        return mSelectionByColorThreshold;
     }
 
+    void SetShouldDoToolToTrue() { mShouldDoTool = true; }
     void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
 
     [[nodiscard]] static auto GetWindowPointer() -> GLFWwindow* {
         return sWindow;
     }
-    void SetShouldDoToolToTrue() { mShouldDoTool = true; }
+
+    static auto GetCanvasUpperleftCoords() -> ImVec2 {
+        return GetCanvasUpperleftCoordsRef();
+    }
+
+    static auto GetCanvasBottomRightCoords() -> ImVec2 {
+        return GetCanvasBottomRightCoordsRef();
+    }
 
   private:
     struct RenderNodesChildrenFuncData {
@@ -119,6 +123,8 @@ class UI {
     bool mRenderOpenProjectPopup{false};
     bool mRenderUndoTreeWindow{false};
     bool mDrawWindowRendered{false};
+
+    int mSelectionByColorThreshold{0};
 
     inline static int sConstructCounter{0};
     inline static GLFWwindow* sWindow{nullptr};
