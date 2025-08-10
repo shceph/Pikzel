@@ -13,7 +13,7 @@ class PreviewLayer {
 
     void UpdateCircleSize(int size);
     void Clear();
-    void Update(); // This one should run every frame
+    void Update();
     [[nodiscard]] auto IsToolTypeChanged() const -> bool;
     void DrawRect(Vec2 upper_left, Vec2 bottom_right, Color color);
     void DrawPixel(std::size_t index, Color color);

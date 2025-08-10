@@ -153,19 +153,11 @@ void LayerControl::HandleColorSelectionTool(
     Color clicked_color = curr_lay.GetPixel(*canv_coord);
 
     SelectByColor(clicked_color, threshold);
-
-    preview_layer_for_selection.Clear();
-    const std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
-
-    for (std::size_t i = 0;
-         i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
-        if (selected_pixels[i]) {
-            preview_layer_for_selection.DrawPixel(i, kColorSelectionPreview);
-        }
-    }
+	UpdatePreviewLayerForSelection(preview_layer_for_selection);
 }
 
-void LayerControl::HandleMoveSelectionTool(PreviewLayer& preview_layer) {
+void LayerControl::HandleMoveSelectionTool(
+    PreviewLayer& preview_layer, PreviewLayer& preview_layer_for_selection) {
     static bool should_update_prev_lay_after_moving_selection = false;
 
     if (HasToolTypeChanged() || should_update_prev_lay_after_moving_selection) {
@@ -173,6 +165,10 @@ void LayerControl::HandleMoveSelectionTool(PreviewLayer& preview_layer) {
 
         const std::vector<bool>& selected_pixels =
             mSelection.GetSelectedPixels();
+
+        UpdatePreviewLayerForSelection(preview_layer_for_selection);
+
+        preview_layer.Clear();
 
         for (std::size_t i = 0;
              i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
@@ -188,7 +184,7 @@ void LayerControl::HandleMoveSelectionTool(PreviewLayer& preview_layer) {
     auto canv_coord = CanvasCoordsFromCursorPos();
 
     if (Events::IsMouseButtonPressedDelayed(Events::MouseButtons::kButtonLeft,
-                                            std::chrono::milliseconds{130}) &&
+                                            std::chrono::milliseconds{100}) &&
         canv_coord.has_value()) {
         should_update_prev_lay_after_moving_selection = true;
         Vec2 center = GetCanvasDims() / 2;
@@ -245,7 +241,7 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
         return;
 
     case ToolType::kMoveSelection: {
-        HandleMoveSelectionTool(preview_layer);
+        HandleMoveSelectionTool(preview_layer, preview_layer_for_selection);
         return;
     }
 
@@ -482,7 +478,7 @@ void LayerControl::UpdateMappedPBOMemorySpanForAllLayers(
 }
 
 void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
-    const std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
+    std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
     bool old_val = mSelection.ShouldCheckForSelection();
     mSelection.SetShouldCheckForSelectionValue(false);
 
@@ -502,6 +498,8 @@ void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
                 continue;
             }
 
+            selected_pixels[(i * mCanvasDims.x) + j] = false;
+
             Vec2 coords{j, i};
             Vec2 coords_to_move_to = coords + offset;
 
@@ -518,9 +516,23 @@ void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
 
     for (auto [coords, color] : pixels_to_overwrite) {
         curr_lay.DrawPixel(coords, color);
+        selected_pixels[(coords.y * mCanvasDims.x) + coords.x] = true;
     }
 
     mSelection.SetShouldCheckForSelectionValue(old_val);
+}
+
+void LayerControl::UpdatePreviewLayerForSelection(
+    PreviewLayer& preview_layer_for_selection) const {
+    preview_layer_for_selection.Clear();
+    const std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
+
+    for (std::size_t i = 0;
+         i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
+        if (selected_pixels[i]) {
+            preview_layer_for_selection.DrawPixel(i, kColorSelectionPreview);
+        }
+    }
 }
 
 auto LayerControl::AreCoordsInBounds(Vec2 coords) const -> bool {

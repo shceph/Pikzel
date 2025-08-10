@@ -582,7 +582,8 @@ void Layer::FillUntil(Color until_color, int x_coord, int y_coord,
         const int col = top.second;
         Color pixel = GetPixel({col, row});
 
-        if (pixel != until_color && !visited[(row * mCanvasDims.x) + col]) {
+        if (pixel != until_color && !visited[(row * mCanvasDims.x) + col] &&
+            mSelection.get().IsPixelSelected({col, row})) {
             DrawPixelClampCoords({col, row}, fill_color);
             visited[(row * mCanvasDims.x) + col] = true;
 
