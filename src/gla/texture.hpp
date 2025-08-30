@@ -7,16 +7,10 @@
 #include <array>
 #include <string>
 
-namespace Gla
-{
-enum GLMinMagFilter
-{
-    kLinear = GL_LINEAR,
-    kNearest = GL_NEAREST
-};
+namespace Gla {
+enum GLMinMagFilter { kLinear = GL_LINEAR, kNearest = GL_NEAREST };
 
-class Texture
-{
+class Texture {
   public:
     Texture() = default;
     Texture(const Texture&) = default;
@@ -34,8 +28,7 @@ class Texture
     unsigned int mTextureID{0};
 };
 
-class TextureCubeMap : public Texture
-{
+class TextureCubeMap : public Texture {
   public:
     TextureCubeMap(const TextureCubeMap&) = default;
     TextureCubeMap(TextureCubeMap&&) = delete;
@@ -49,8 +42,7 @@ class TextureCubeMap : public Texture
     void Unbind() const override;
 };
 
-class Texture2D : public Texture
-{
+class Texture2D : public Texture {
   public:
     // Copy constructor and copy assignment operator don't handle mLocalBuffer
     // properly. For now I don't need it
@@ -68,6 +60,7 @@ class Texture2D : public Texture
     void Bind(unsigned int slot = 0) const override;
     void Unbind() const override;
     static void UpdatePixel(glm::ivec2 pos, std::array<GLubyte, 4> color);
+    // If param data is null, data from bound PBO is passed instead
     void UpdateWholeTexture(glm::ivec2 dims, const void* data);
 
     [[nodiscard]] auto GetWidth() const -> int { return mWidth; }

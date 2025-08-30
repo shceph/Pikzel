@@ -1,5 +1,13 @@
 #include "preview_layer.hpp"
+
+#include <cstddef>
+#include <span>
+
 #include "gla/pixel_buffer.hpp"
+#include "gla/texture.hpp"
+
+#include "layer.hpp"
+#include "camera.hpp"
 #include "tool.hpp"
 
 namespace Pikzel {

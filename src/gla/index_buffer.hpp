@@ -2,10 +2,8 @@
 
 #include "gla_base.hpp"
 
-namespace Gla
-{
-class IndexBuffer
-{
+namespace Gla {
+class IndexBuffer {
   private:
     unsigned int mRendererID;
     unsigned int mCount;
@@ -24,9 +22,6 @@ class IndexBuffer
 
     void UpdateData(const void* data, unsigned int size) const;
 
-    [[nodiscard]] inline auto GetCount() const -> unsigned int
-    {
-        return mCount;
-    };
+    [[nodiscard]] auto GetCount() const -> unsigned int { return mCount; };
 };
 } // namespace Gla

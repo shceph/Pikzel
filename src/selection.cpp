@@ -1,6 +1,10 @@
 #include "selection.hpp"
 
+#include <cstddef>
+#include <vector>
 #include <algorithm>
+
+#include <glm/ext/vector_int2.hpp>
 
 namespace Pikzel {
 void Selection::AddToSelection(glm::ivec2 upper_left, glm::ivec2 bottom_right) {

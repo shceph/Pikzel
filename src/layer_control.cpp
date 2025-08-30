@@ -1,19 +1,34 @@
 #include "layer_control.hpp"
-#include "events.hpp"
-#include "gla/pixel_buffer.hpp"
-#include "layer.hpp"
-#include "preview_layer.hpp"
-#include "tool.hpp"
 
-#include "GLFW/glfw3.h"
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+
+#include <cstdlib>
 #include <cstddef>
-#include <glm/geometric.hpp>
-
+#include <cstdint>
+#include <cstdio>
+#include <cassert>
+#include <iostream>
+#include <print>
+#include <optional>
+#include <utility>
+#include <iterator>
 #include <algorithm>
 #include <cmath>
 #include <list>
 #include <ranges>
 #include <vector>
+
+#include <glm/common.hpp>
+
+#include "gla/pixel_buffer.hpp"
+
+#include "events.hpp"
+#include "camera.hpp"
+#include "layer.hpp"
+#include "preview_layer.hpp"
+#include "tool.hpp"
+#include "tree.hpp"
 
 namespace Pikzel {
 auto LayerControl::GetCurrentLayer() -> Layer& {
@@ -40,13 +55,14 @@ void LayerControl::SetCurrentLayer(std::size_t layer_index) {
 auto LayerControl::GetCanvasDims() const -> Vec2 { return mCanvasDims; }
 
 auto LayerControl::HandleRectShape(PreviewLayer& preview_layer,
-                                   Color tool_color) const
+                                   Color tool_color,
+                                   Layer::CanvasWindowData win_data) const
     -> std::optional<std::pair<Vec2, Vec2>> {
-    auto canv_coord = CanvasCoordsFromCursorPos();
+    auto canv_coord = CanvasCoordsFromCursorPos(win_data);
     if (!canv_coord.has_value()) {
         return std::nullopt;
     }
-    bool left_button_pressed =
+    const bool left_button_pressed =
         Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
 
     static bool shape_began = false;
@@ -86,13 +102,14 @@ auto LayerControl::HandleRectShape(PreviewLayer& preview_layer,
     return ret;
 }
 
-auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer) const
+auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer,
+                                       Layer::CanvasWindowData win_data) const
     -> std::optional<std::pair<Vec2, Vec2>> {
-    auto canv_coord = CanvasCoordsFromCursorPos();
+    auto canv_coord = CanvasCoordsFromCursorPos(win_data);
     if (!canv_coord.has_value()) {
         return std::nullopt;
     }
-    bool left_button_pressed =
+    const bool left_button_pressed =
         Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft);
 
     static bool shape_began = false;
@@ -134,13 +151,14 @@ auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer) const
 }
 
 void LayerControl::HandleColorSelectionTool(
-    PreviewLayer& preview_layer_for_selection, int threshold) {
+    PreviewLayer& preview_layer_for_selection, int threshold,
+    Layer::CanvasWindowData win_data) {
 
     if (!Events::IsMouseButtonPressed(Events::MouseButtons::kButtonLeft)) {
         return;
     }
 
-    std::optional<Vec2> canv_coord = CanvasCoordsFromCursorPos();
+    std::optional<Vec2> canv_coord = CanvasCoordsFromCursorPos(win_data);
 
     if (!canv_coord.has_value()) {
         return;
@@ -150,14 +168,15 @@ void LayerControl::HandleColorSelectionTool(
     mSelection.SetShouldCheckForSelectionValue(true);
 
     const Layer& curr_lay = GetCurrentLayer();
-    Color clicked_color = curr_lay.GetPixel(*canv_coord);
+    const Color clicked_color = curr_lay.GetPixel(*canv_coord);
 
     SelectByColor(clicked_color, threshold);
-	UpdatePreviewLayerForSelection(preview_layer_for_selection);
+    UpdatePreviewLayerForSelection(preview_layer_for_selection);
 }
 
 void LayerControl::HandleMoveSelectionTool(
-    PreviewLayer& preview_layer, PreviewLayer& preview_layer_for_selection) {
+    PreviewLayer& preview_layer, PreviewLayer& preview_layer_for_selection,
+    Layer::CanvasWindowData win_data) {
     static bool should_update_prev_lay_after_moving_selection = false;
 
     if (HasToolTypeChanged() || should_update_prev_lay_after_moving_selection) {
@@ -181,14 +200,14 @@ void LayerControl::HandleMoveSelectionTool(
         return;
     }
 
-    auto canv_coord = CanvasCoordsFromCursorPos();
+    auto canv_coord = CanvasCoordsFromCursorPos(win_data);
 
     if (Events::IsMouseButtonPressedDelayed(Events::MouseButtons::kButtonLeft,
                                             std::chrono::milliseconds{100}) &&
         canv_coord.has_value()) {
         should_update_prev_lay_after_moving_selection = true;
-        Vec2 center = GetCanvasDims() / 2;
-        Vec2 offset = *canv_coord - center;
+        const Vec2 center = GetCanvasDims() / 2;
+        const Vec2 offset = *canv_coord - center;
         MoveSelectedPixelsInCurrentLayer(offset);
         MarkHistoryForUpdate();
     }
@@ -208,11 +227,12 @@ void LayerControl::SelectByColor(Color col, int threshold) {
 
 void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
                                  PreviewLayer& preview_layer_for_selection,
+                                 Layer::CanvasWindowData win_data,
                                  int color_selection_threshold /*= 0*/) {
     switch (tool.GetToolType()) {
     case ToolType::kRectShape: {
-        auto points =
-            HandleRectShape(preview_layer, Color::FromImVec4(tool.GetColor()));
+        auto points = HandleRectShape(
+            preview_layer, Color::FromImVec4(tool.GetColor()), win_data);
 
         if (points.has_value()) {
             GetCurrentLayer().DrawRect(points->first, points->second,
@@ -224,7 +244,7 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
     }
 
     case ToolType::kSelectionTool: {
-        auto points = HandleSelectionTool(preview_layer);
+        auto points = HandleSelectionTool(preview_layer, win_data);
 
         if (points.has_value()) {
             mSelection.AddToSelection(points->first, points->second);
@@ -237,11 +257,12 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
 
     case ToolType::kColorSelection:
         HandleColorSelectionTool(preview_layer_for_selection,
-                                 color_selection_threshold);
+                                 color_selection_threshold, win_data);
         return;
 
     case ToolType::kMoveSelection: {
-        HandleMoveSelectionTool(preview_layer, preview_layer_for_selection);
+        HandleMoveSelectionTool(preview_layer, preview_layer_for_selection,
+                                win_data);
         return;
     }
 
@@ -249,14 +270,19 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
         break;
     }
 
-    if (GetCurrentLayer().DoCurrentTool()) {
+    if (GetCurrentLayer().DoCurrentTool(win_data)) {
         MarkHistoryForUpdate();
     }
 }
 
 void LayerControl::AddLayer(Tool& tool, Camera& camera) {
-    mCurrentCapture->layers.emplace_back(tool, camera, mSelection, mPboBuff,
-                                         mCanvasDims);
+    if (!mCurrentCapture.has_value()) {
+        std::println(std::cerr, "mCurrentCapture is nullopt, aborting...");
+        std::abort();
+    }
+
+    auto& cap = *mCurrentCapture;
+    cap.layers.emplace_back(tool, camera, mSelection, mPboBuff, mCanvasDims);
     MarkHistoryForUpdate();
 }
 
@@ -324,9 +350,9 @@ auto LayerControl::GetDisplayedCanvas() const -> std::vector<Color> {
 
         for (int i = 0; i < canvas_height; i++) {
             for (int j = 0; j < canvas_width; j++) {
-                Color pixel = layer_texture_data[(i * canvas_dims.x) + j];
+                const Color pixel = layer_texture_data[(i * canvas_dims.x) + j];
 
-                Color dst_color = {
+                const Color dst_color = {
                     .r = pixel.r,
                     .g = pixel.g,
                     .b = pixel.b,
@@ -371,10 +397,10 @@ void LayerControl::Redo() {
     assert(mCurrentUndoTreeNode != nullptr);
 
     auto& children = mCurrentUndoTreeNode->GetChildren();
-    std::size_t child_last_used_index =
+    const std::size_t child_last_used_index =
         mCurrentUndoTreeNode->GetLastUsedNodeIndex();
 
-    if (children.size() == 0) {
+    if (children.empty()) {
         return;
     }
 
@@ -404,6 +430,7 @@ void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
                                  Camera& camera, PreviewLayer& preview_layer,
                                  PreviewLayer& preview_layer_for_selection,
                                  Gla::PixelBuffer& pbo,
+                                 Layer::CanvasWindowData win_data,
                                  int color_selection_threshold) {
     for (auto& layer : GetLayers()) {
         layer.Update();
@@ -411,7 +438,7 @@ void LayerControl::UpdateAndDraw(bool should_do_tool, Tool& tool,
 
     if (should_do_tool) {
         DoCurrentTool(preview_layer, tool, preview_layer_for_selection,
-                      color_selection_threshold);
+                      win_data, color_selection_threshold);
     }
 
     if (GetCurrentLayer().IsEdited()) {
@@ -479,13 +506,13 @@ void LayerControl::UpdateMappedPBOMemorySpanForAllLayers(
 
 void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
     std::vector<bool>& selected_pixels = mSelection.GetSelectedPixels();
-    bool old_val = mSelection.ShouldCheckForSelection();
+    const bool old_val = mSelection.ShouldCheckForSelection();
     mSelection.SetShouldCheckForSelectionValue(false);
 
     // A fourth of the canvas size seems like a pretty optimal size; the vector
     // won't need to resize in most cases, and in the worst case it will resize
     // twice
-    Vec2 dims_one_fourth = mCanvasDims / 2;
+    const Vec2 dims_one_fourth = mCanvasDims / 2;
     std::vector<std::pair<Vec2, Color>> pixels_to_overwrite;
     pixels_to_overwrite.reserve(static_cast<std::size_t>(dims_one_fourth.x) *
                                 dims_one_fourth.y);
@@ -500,14 +527,14 @@ void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
 
             selected_pixels[(i * mCanvasDims.x) + j] = false;
 
-            Vec2 coords{j, i};
-            Vec2 coords_to_move_to = coords + offset;
+            const Vec2 coords{j, i};
+            const Vec2 coords_to_move_to = coords + offset;
 
             if (!AreCoordsInBounds(coords_to_move_to)) {
                 continue;
             }
 
-            Color pixel_to_move_color = curr_lay.GetPixel(coords);
+            const Color pixel_to_move_color = curr_lay.GetPixel(coords);
             pixels_to_overwrite.emplace_back(coords_to_move_to,
                                              pixel_to_move_color);
             curr_lay.DrawPixel(coords, kColorTransparent);

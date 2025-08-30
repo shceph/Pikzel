@@ -16,11 +16,12 @@ Checks: >
   -google-default-arguments,
   -google-readability-todo,
   -cppcoreguidelines-pro-type-union-access,
+  -cppcoreguidelines-avoid-magic-numbers,
   -hicpp-signed-bitwise,
   -readability-magic-numbers,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -misc-no-recursion,
   -readability-identifier-length,
+  -bugprone-easily-swappable-parameters,
+  -misc-no-recursion,
 
   # Have structs with public members
 

@@ -3,21 +3,21 @@
 #include "camera.hpp"
 #include "layer.hpp"
 #include "preview_layer.hpp"
-#include "project.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
 #include "tree.hpp"
 
-#include "gla/texture.hpp"
-
-#include <GLFW/glfw3.h>
 #include <cstddef>
-#include <imgui.h>
-
+#include <cassert>
 #include <list>
 #include <optional>
-#include <string>
 #include <vector>
+#include <utility>
+
+#include "gla/texture.hpp"
+#include "gla/pixel_buffer.hpp"
+
+#include <GLFW/glfw3.h>
 
 namespace Pikzel {
 class LayerControl {
@@ -45,17 +45,22 @@ class LayerControl {
     void SetCurrentLayer(std::size_t layer_index);
     [[nodiscard]]
     auto GetCanvasDims() const -> Vec2;
-    auto HandleRectShape(PreviewLayer& preview_layer, Color tool_color) const
+    auto HandleRectShape(PreviewLayer& preview_layer, Color tool_color,
+                         Layer::CanvasWindowData win_data) const
         -> std::optional<std::pair<Vec2, Vec2>>;
-    auto HandleSelectionTool(PreviewLayer& preview_layer) const
+    auto HandleSelectionTool(PreviewLayer& preview_layer,
+                             Layer::CanvasWindowData win_data) const
         -> std::optional<std::pair<Vec2, Vec2>>;
     void HandleColorSelectionTool(PreviewLayer& preview_layer_for_selection,
-                                  int color_selection_threshold);
+                                  int color_selection_threshold,
+                                  Layer::CanvasWindowData win_data);
     void HandleMoveSelectionTool(PreviewLayer& preview_layer,
-                                 PreviewLayer& preview_layer_for_selection);
+                                 PreviewLayer& preview_layer_for_selection,
+                                 Layer::CanvasWindowData win_data);
     void SelectByColor(Color col, int threshold);
     void DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
                        PreviewLayer& preview_layer_for_selection,
+                       Layer::CanvasWindowData win_data,
                        int color_selection_threshold = 0);
     void MoveUp(std::size_t layer_index);
     void MoveDown(std::size_t layer_index);
@@ -72,7 +77,8 @@ class LayerControl {
     void UpdateAndDraw(bool should_do_tool, Tool& tool, Camera& camera,
                        PreviewLayer& preview_layer,
                        PreviewLayer& preview_layer_for_selection,
-                       Gla::PixelBuffer& pbo, int color_selection_threshold);
+                       Gla::PixelBuffer& pbo, Layer::CanvasWindowData win_data,
+                       int color_selection_threshold);
     void InitHistory(Camera& camera, Tool& tool);
     void WriteCurrentLayerTextureDataToPbo();
     void UpdateMappedPBOMemorySpanForAllLayers(Gla::PboMappedBuffSpan pbo_buff);
@@ -98,9 +104,10 @@ class LayerControl {
         assert(mCurrentCapture.has_value());
         return mCurrentCapture->layers;
     }
-    [[nodiscard]] auto CanvasCoordsFromCursorPos() const
+    [[nodiscard]] auto
+    CanvasCoordsFromCursorPos(Layer::CanvasWindowData win_data) const
         -> std::optional<Vec2> {
-        return GetLayers().cbegin()->CanvasCoordsFromCursorPos();
+        return GetLayers().cbegin()->CanvasCoordsFromCursorPos(win_data);
     }
     [[nodiscard]] auto GetCurrentLayerIndex() const -> std::size_t {
         return mCurrentLayerIndex;
@@ -133,6 +140,7 @@ class LayerControl {
         return GetCurrentToolType() != mPreviousToolType;
     }
 
+    void SetCurrentLayerIndex(std::size_t idx) { mCurrentLayerIndex = idx; }
     void SetCanvasDims(Vec2 canvas_dims) { mCanvasDims = canvas_dims; }
     void MarkForUndo() { mShouldUndo = true; }
     void MarkForRedo() { mShouldRedo = true; }
@@ -164,10 +172,6 @@ class LayerControl {
     ToolType mPreviousToolType = ToolType::kBrush;
 
     friend class Layer;
-    friend class UI;
-    friend class VertexBufferControl;
-    friend void Project::New(Vec2);
-    friend void Project::Open(const std::string&);
-    friend void Project::SaveAsProject(const std::string&);
+    friend class Project;
 };
 } // namespace Pikzel

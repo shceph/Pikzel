@@ -5,11 +5,9 @@
 #include <stdexcept>
 #include <iostream>
 
-namespace Gla
-{
+namespace Gla {
 FrameBuffer::FrameBuffer(Dims dims)
-    : mFrameBufferID{0}, mTextureID{0}, mDims{dims}
-{
+    : mFrameBufferID{0}, mTextureID{0}, mDims{dims} {
     glGenFramebuffers(1, &mFrameBufferID);
     glBindFramebuffer(GL_FRAMEBUFFER, mFrameBufferID);
 
@@ -27,8 +25,7 @@ FrameBuffer::FrameBuffer(Dims dims)
 
     GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-    {
+    if (status != GL_FRAMEBUFFER_COMPLETE) {
         std::cout << "Couldn't create FrameBuffer, error code: 0x" << std::hex
                   << status;
 
@@ -38,14 +35,12 @@ FrameBuffer::FrameBuffer(Dims dims)
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-FrameBuffer::~FrameBuffer()
-{
+FrameBuffer::~FrameBuffer() {
     glDeleteFramebuffers(1, &mFrameBufferID);
     glDeleteTextures(1, &mTextureID);
 }
 
-void FrameBuffer::Rescale(Dims dims)
-{
+void FrameBuffer::Rescale(Dims dims) {
     Bind();
     mDims = dims;
 
@@ -65,8 +60,7 @@ void FrameBuffer::Rescale(Dims dims)
     glViewport(0, 0, mDims.width, mDims.height);
 }
 
-void FrameBuffer::Bind() const
-{
+void FrameBuffer::Bind() const {
     glBindFramebuffer(GL_DRAW_FRAMEBUFFER, mFrameBufferID);
     // glViewport(0, 0, m_Width, m_Height);
     //
@@ -74,8 +68,5 @@ void FrameBuffer::Bind() const
     // glBindTexture(GL_TEXTURE_2D, m_TextureID);
 }
 
-void FrameBuffer::BindToDefaultFB()
-{
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
+void FrameBuffer::BindToDefaultFB() { glBindFramebuffer(GL_FRAMEBUFFER, 0); }
 } // namespace Gla

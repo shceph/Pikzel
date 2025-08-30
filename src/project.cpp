@@ -1,16 +1,25 @@
 #include "project.hpp"
-#include "camera.hpp"
-#include "layer.hpp"
-#include "layer_control.hpp"
-#include "tool.hpp"
+
+#include <glad/gl.h>
+
+#include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <string>
+#include <vector>
+#include <iterator>
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_resize2.h>
 #include <stb/stb_image_write.h>
 
-#include <fstream>
-#include <iostream>
-#include <string>
+#include "gla/pixel_buffer.hpp"
+
+#include "camera.hpp"
+#include "layer.hpp"
+#include "layer_control.hpp"
+#include "tool.hpp"
 
 namespace Pikzel {
 Project::Project(LayerControl& layers, Tool& tool, Camera& camera)
@@ -66,7 +75,7 @@ void Project::Open(const std::string& project_file_dest) {
         return;
     }
 
-    Vec2 canvas_dims{width, height};
+    const Vec2 canvas_dims{width, height};
     Project::New(canvas_dims);
     auto& layers = mLayers.get().GetCapture().layers;
     layers.clear();
@@ -123,8 +132,8 @@ void Project::Open(const std::string& project_file_dest) {
 auto Project::SaveAsImage(int magnify_factor,
                           const std::string& save_dest) const -> bool {
     constexpr int kChannelCount = 4;
-    int arr_height = mCanvasHeight * magnify_factor;
-    int arr_width = mCanvasWidth * magnify_factor * kChannelCount;
+    const int arr_height = mCanvasHeight * magnify_factor;
+    const int arr_width = mCanvasWidth * magnify_factor * kChannelCount;
     std::vector<uint8_t> image_data(
         static_cast<size_t>(arr_height * arr_width));
 
@@ -133,7 +142,7 @@ auto Project::SaveAsImage(int magnify_factor,
 
     for (int i = 0; i < mCanvasHeight; i++) {
         for (int j = 0; j < mCanvasWidth; j++) {
-            Color pixel_color = canvas_displayed[(i * mCanvasWidth) + j];
+            const Color pixel_color = canvas_displayed[(i * mCanvasWidth) + j];
             for (int k = 0; k < magnify_factor; k++) {
                 for (int l = 0; l < magnify_factor; l++) {
                     image_data[((i * magnify_factor + k) * arr_width) +
@@ -153,8 +162,8 @@ auto Project::SaveAsImage(int magnify_factor,
         }
     }
 
-    int height = mCanvasHeight * magnify_factor;
-    int width = mCanvasWidth * magnify_factor;
+    const int height = mCanvasHeight * magnify_factor;
+    const int width = mCanvasWidth * magnify_factor;
 
     return stbi_write_png(save_dest.c_str(), width, height, kChannelCount,
                           image_data.data(), width * kChannelCount) != 0;
@@ -188,7 +197,7 @@ void Project::SaveAsProject(const std::string& save_dest) {
                       texture_data.data());
         layer.GetTexture().Unbind();
 
-        for (Gla::Color col : texture_data) {
+        for (const Gla::Color col : texture_data) {
             save_file << col.r << " ";
             save_file << col.g << " ";
             save_file << col.b << " ";

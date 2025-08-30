@@ -2,10 +2,8 @@
 
 #include "pixel_buffer.hpp"
 
-namespace Gla
-{
-class PixelBufferRing
-{
+namespace Gla {
+class PixelBufferRing {
   public:
     explicit PixelBufferRing(glm::ivec2 dims, int buffer_count = 2);
     void SwapBuffer();

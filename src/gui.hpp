@@ -1,14 +1,20 @@
 #pragma once
 
 #include "layer_control.hpp"
+#include "preview_layer.hpp"
 #include "project.hpp"
 #include "tool.hpp"
+#include "camera.hpp"
+#include "selection.hpp"
+#include "tree.hpp"
 
 #include <GLFW/glfw3.h>
 #include <imgui.h>
 
+#include <cstddef>
 #include <array>
 #include <span>
+#include <functional>
 
 namespace Pikzel {
 class UI {
@@ -22,8 +28,12 @@ class UI {
     void Update();
     void SetupToolTextures(std::span<unsigned int> tex_ids);
     void SetupLayerToolTextures(std::span<unsigned int> layer_tex_ids);
+    auto CreateCanvasWindowData() -> Layer::CanvasWindowData;
     static void NewFrame();
-    static void RenderAndEndFrame();
+    static void RenderAndEndFrame(GLFWwindow* window);
+
+    void SetShouldDoToolToTrue() { mShouldDoTool = true; }
+    void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
 
     [[nodiscard]] auto ShouldDoTool() const -> bool;
 
@@ -39,19 +49,16 @@ class UI {
         return mSelectionByColorThreshold;
     }
 
-    void SetShouldDoToolToTrue() { mShouldDoTool = true; }
-    void TriggerSaveErrorPopup() { mRenderSaveErrorPopup = true; }
-
-    [[nodiscard]] static auto GetWindowPointer() -> GLFWwindow* {
-        return sWindow;
+    [[nodiscard]] auto GetWindowPointer() const -> GLFWwindow* {
+        return mWindow;
     }
 
-    static auto GetCanvasUpperleftCoords() -> ImVec2 {
-        return GetCanvasUpperleftCoordsRef();
+    [[nodiscard]] auto GetCanvasUpperleftCoords() const -> ImVec2 {
+        return mCanvasUpperLeft;
     }
 
-    static auto GetCanvasBottomRightCoords() -> ImVec2 {
-        return GetCanvasBottomRightCoordsRef();
+    [[nodiscard]] auto GetCanvasBottomRightCoords() const -> ImVec2 {
+        return mCanvasBottomRight;
     }
 
   private:
@@ -68,12 +75,19 @@ class UI {
     void RenderMenuBar(LayerControl& layers, Camera& camera,
                        Selection& selection,
                        PreviewLayer& preview_layer_for_selection);
+    void RenderFileMenu();
+    void RenderEditMenu(LayerControl& layers);
+    static void RenderViewMenu(Camera& camera);
+    static void RenderSelectionMenu(Selection& selection,
+                                    PreviewLayer& preview_layer_for_selection);
     void RenderSaveAsImagePopup();
     void RenderSaveAsProjectPopup();
     void RenderNodesChildren(LayerControl& layers,
                              Tree<LayerControl::Capture>& node);
     void RenderUndoTreeWindow(LayerControl& layers);
     void RenderToolWindow();
+    void RenderToolButton(ToolType tool_to_render, bool is_current,
+                          const std::string& btn_id);
     void RenderLayerWindow(LayerControl& layers);
     void RenderLayerWinContextMenu(LayerControl& layers);
     void RenderSaveErrorPopup();
@@ -82,8 +96,11 @@ class UI {
 
     void RenderColorWindow();
     static void RenderColorPalette(ImVec4& color);
+
+    // The outline around a control. Don't forget to call EndOutline!
     static void BeginOutline(
         ImVec4 outline_color = ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab));
+    // The outline around a control
     static void EndOutline();
 
     static auto GetCanvasUpperleftCoordsRef() -> ImVec2& {
@@ -112,6 +129,8 @@ class UI {
     ImTextureID mLockLockedTextureID{0};
     ImTextureID mLockUnlockedTextureID{0};
 
+    ImVec2 mCanvasUpperLeft;
+    ImVec2 mCanvasBottomRight;
     ImVec2 mDrawWinDimensions;
     ImVec4 mSelectedItemOutlineColor;
 
@@ -125,8 +144,8 @@ class UI {
     bool mDrawWindowRendered{false};
 
     int mSelectionByColorThreshold{0};
+    GLFWwindow* mWindow{nullptr};
 
     inline static int sConstructCounter{0};
-    inline static GLFWwindow* sWindow{nullptr};
 };
 } // namespace Pikzel

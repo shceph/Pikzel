@@ -1,0 +1,9 @@
+CompileFlags:
+  CompilationDatabase: build
+
+Diagnostics:
+  ClangTidy:
+    # Used to enable misc-const-correctness in the editor. The defualt value is
+    # Strict. If you have performace issues with clangd in your editor, try
+    # settings this setting to Strict or just remove it.
+    FastCheckFilter: None

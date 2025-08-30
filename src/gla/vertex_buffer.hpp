@@ -4,17 +4,14 @@
 
 #include <cstddef>
 
-namespace Gla
-{
-enum VertexBufferUsage
-{
+namespace Gla {
+enum VertexBufferUsage {
     kStaticDraw = GL_STATIC_DRAW,
     kStreamDraw = GL_STREAM_DRAW,
     kDynamicDraw = GL_DYNAMIC_DRAW
 };
 
-class VertexBuffer
-{
+class VertexBuffer {
   public:
     VertexBuffer(const VertexBuffer&) = default;
     VertexBuffer(VertexBuffer&&) = delete;

@@ -1,12 +1,10 @@
 #pragma once
 #include <chrono>
 
-namespace Gla
-{
+namespace Gla {
 using namespace std::chrono_literals;
 
-class Timer
-{
+class Timer {
   public:
     Timer() : mStart(std::chrono::high_resolution_clock::now()) {}
 
@@ -17,24 +15,19 @@ class Timer
     ~Timer() = default;
 
     // Returns time in seconds
-    inline auto GetTime() -> float
-    {
+    auto GetTime() -> float {
         return std::chrono::duration<float>(
                    std::chrono::high_resolution_clock::now() - mStart)
             .count();
     }
-    inline void Reset() { mStart = std::chrono::high_resolution_clock::now(); }
+    void Reset() { mStart = std::chrono::high_resolution_clock::now(); }
 
-    static inline void CalculateDeltaTime(float frame_time)
-    {
+    static void CalculateDeltaTime(float frame_time) {
         sDeltaTime = frame_time;
     }
-    static inline auto DeltaTime() -> float { return sDeltaTime; }
+    static auto DeltaTime() -> float { return sDeltaTime; }
     // Normalized so when the FPS is 60 'DeltaTimeNormalized' returns 1.0f
-    static inline auto DeltaTimeNormalized() -> float
-    {
-        return sDeltaTime * 60.0F;
-    }
+    static auto DeltaTimeNormalized() -> float { return sDeltaTime * 60.0F; }
 
     static constexpr float kFpS60FrameTime = 1 / 60.0F;
 

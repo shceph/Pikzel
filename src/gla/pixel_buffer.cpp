@@ -4,12 +4,10 @@
 #include <print>
 #endif
 
-namespace Gla
-{
+namespace Gla {
 PixelBuffer::PixelBuffer(glm::ivec2 dims)
     : mRendererID{0}, mSize{static_cast<std::size_t>(dims.x) *
-                            static_cast<std::size_t>(dims.y) * 4}
-{
+                            static_cast<std::size_t>(dims.y) * 4} {
     glGenBuffers(1, &mRendererID);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mRendererID);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizeiptr>(mSize),
@@ -19,16 +17,14 @@ PixelBuffer::PixelBuffer(glm::ivec2 dims)
 
 PixelBuffer::PixelBuffer(glm::ivec2 dims, Color fill_color)
     : mRendererID{0}, mSize{static_cast<std::size_t>(dims.x) *
-                            static_cast<std::size_t>(dims.y) * 4}
-{
+                            static_cast<std::size_t>(dims.y) * 4} {
     glGenBuffers(1, &mRendererID);
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mRendererID);
     glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizeiptr>(mSize),
                  nullptr, GL_STREAM_DRAW);
 
     auto buff = Map();
-    for (auto& col : buff)
-    {
+    for (auto& col : buff) {
         col = fill_color;
     }
     Unmap();
@@ -36,18 +32,13 @@ PixelBuffer::PixelBuffer(glm::ivec2 dims, Color fill_color)
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
 };
 
-void PixelBuffer::Bind() const
-{
+void PixelBuffer::Bind() const {
     glBindBuffer(GL_PIXEL_UNPACK_BUFFER, mRendererID);
 }
 
-void PixelBuffer::Unbind()
-{
-    glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
-}
+void PixelBuffer::Unbind() { glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0); }
 
-auto PixelBuffer::Map() -> PboMappedBuffSpan
-{
+auto PixelBuffer::Map() -> PboMappedBuffSpan {
     auto* ptr =
         static_cast<Color*>(glMapBuffer(GL_PIXEL_UNPACK_BUFFER, GL_READ_WRITE));
     assert(ptr != nullptr);
@@ -64,49 +55,41 @@ auto PixelBuffer::Map() -> PboMappedBuffSpan
     // return mMappedMemory;
 }
 
-auto PixelBuffer::BindAndMap() -> PboMappedBuffSpan
-{
+auto PixelBuffer::BindAndMap() -> PboMappedBuffSpan {
     Bind();
     return Map();
 }
 
-void PixelBuffer::Unmap()
-{
+void PixelBuffer::Unmap() {
     glUnmapBuffer(GL_PIXEL_UNPACK_BUFFER);
     mIsMapped = false;
 }
 
-void PixelBuffer::BindAndUnmap()
-{
+void PixelBuffer::BindAndUnmap() {
     Bind();
     Unmap();
 }
 
-void PixelBuffer::Resize(glm::ivec2 dims, Color fill_color)
-{
+void PixelBuffer::Resize(glm::ivec2 dims, Color fill_color) {
     mSize = static_cast<std::size_t>(dims.x) * dims.y * 4;
     glBufferData(GL_PIXEL_UNPACK_BUFFER, static_cast<GLsizeiptr>(mSize),
                  nullptr, GL_STREAM_DRAW);
 
     auto buff = Map();
-    for (auto& col : buff)
-    {
+    for (auto& col : buff) {
         col = fill_color;
     }
     Unmap();
 }
 
-void PixelBuffer::BindAndResize(glm::ivec2 dims, Color fill_color)
-{
+void PixelBuffer::BindAndResize(glm::ivec2 dims, Color fill_color) {
     Bind();
     Resize(dims, fill_color);
 }
 
-auto PixelBuffer::GetMappedMemory() const -> PboMappedBuffSpan
-{
+auto PixelBuffer::GetMappedMemory() const -> PboMappedBuffSpan {
 #ifndef NDEBUG
-    if (!mIsMapped)
-    {
+    if (!mIsMapped) {
         std::println("GLA ERROR - PixelBuffer::GetMappedMemory(): The buffer "
                      "is not mapped");
     }
@@ -114,8 +97,5 @@ auto PixelBuffer::GetMappedMemory() const -> PboMappedBuffSpan
     return mMappedMemory;
 }
 
-auto PixelBuffer::IsMapped() const -> bool
-{
-    return mIsMapped;
-}
+auto PixelBuffer::IsMapped() const -> bool { return mIsMapped; }
 } // namespace Gla

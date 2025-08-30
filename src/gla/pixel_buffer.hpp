@@ -6,17 +6,14 @@
 
 #include <span>
 
-namespace Gla
-{
-struct Color
-{
+namespace Gla {
+struct Color {
     GLubyte r = 0, g = 0, b = 0, a = 0;
 };
 
 using PboMappedBuffSpan = std::span<Color>;
 
-class PixelBuffer
-{
+class PixelBuffer {
   public:
     explicit PixelBuffer(glm::ivec2 dims);
     PixelBuffer(glm::ivec2 dims, Color fill_color);

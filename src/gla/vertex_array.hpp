@@ -3,10 +3,8 @@
 #include "vertex_buffer.hpp"
 #include "vertex_buffer_layout.hpp"
 
-namespace Gla
-{
-class VertexArray
-{
+namespace Gla {
+class VertexArray {
   public:
     VertexArray();
     VertexArray(const VertexArray&) = default;

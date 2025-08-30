@@ -1,17 +1,25 @@
 #pragma once
 
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+
 #include "camera.hpp"
-#include "gla/pixel_buffer.hpp"
-#include "project.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
 
-#include "gla/texture.hpp"
-
 #include <imgui.h>
 
+#include <cstdint>
+#include <cstddef>
+#include <cassert>
+#include <vector>
+#include <functional>
 #include <optional>
 #include <string>
+#include <utility>
+
+#include "gla/pixel_buffer.hpp"
+#include "gla/texture.hpp"
 
 namespace Pikzel {
 struct Color {
@@ -44,6 +52,12 @@ class Layer {
         Vec2 shape_begin_coords{0, 0};
     };
 
+    struct CanvasWindowData {
+        ImVec2 win_upper_left;
+        ImVec2 win_bottom_right;
+        GLFWwindow* window{nullptr};
+    };
+
     enum DrawType : uint8_t { kFill, kOutlline };
 
     explicit Layer(Tool& tool, Camera& camera, Selection& selection,
@@ -51,7 +65,7 @@ class Layer {
                    bool is_canvas_layer = true) noexcept;
 
     using ShouldUpdateHistory = bool;
-    auto DoCurrentTool() -> ShouldUpdateHistory;
+    auto DoCurrentTool(CanvasWindowData win_data) -> ShouldUpdateHistory;
     void Update();
 
     void SwitchVisibilityState() { mVisible = !mVisible; }
@@ -69,7 +83,7 @@ class Layer {
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
     [[nodiscard]] auto GetPixel(std::size_t index) const -> Color {
-        assert(index < static_cast<std::size_t>(mCanvasDims.x * mCanvasDims.y));
+        assert(std::cmp_less(index, mCanvasDims.x * mCanvasDims.y));
         auto col = mPboBuff[index];
         return {.r = col.r, .g = col.g, .b = col.b, .a = col.a};
     }
@@ -87,7 +101,8 @@ class Layer {
     // Returns Vec2Int if the cursor is above canvas, otherwise returns
     // std::nullopt
     [[nodiscard]]
-    auto CanvasCoordsFromCursorPos() const -> std::optional<Vec2>;
+    auto CanvasCoordsFromCursorPos(CanvasWindowData win_data) const
+        -> std::optional<Vec2>;
     auto ClampToCanvasDims(Vec2 val_to_clamp) -> Vec2;
 
     static void ResetConstructCounter() { sConstructCounter = 1; }
@@ -102,9 +117,10 @@ class Layer {
     void UpdateMappedPBOBufferSpan(Gla::PboMappedBuffSpan pbo_buff);
 
   private:
-    auto HandleBrushAndEraser() -> ShouldUpdateHistory;
-    void HandleColorPicker();
-    auto HandleBucket() -> ShouldUpdateHistory;
+    auto HandleBrushAndEraser(CanvasWindowData win_data) -> ShouldUpdateHistory;
+    void HandleColorPicker(CanvasWindowData win_data);
+    auto HandleBucket(CanvasWindowData win_data) -> ShouldUpdateHistory;
+
     void DrawPixel(std::size_t index, Color color);
     void DrawPixel(Vec2 coords);
     void DrawPixel(Vec2 coords, Color color);
@@ -139,6 +155,6 @@ class Layer {
     friend class UI;
     friend class LayerControl;
     friend class PreviewLayer;
-    friend void Project::Open(const std::string&);
+    friend class Project;
 };
 } // namespace Pikzel

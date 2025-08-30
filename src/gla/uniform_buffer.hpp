@@ -1,10 +1,7 @@
 #pragma once
 
-namespace Gla
-{
-// This class is only suited for a uniform block with one 4x4 matrix
-class UniformBuffer
-{
+namespace Gla {
+class UniformBuffer {
   public:
     UniformBuffer(const UniformBuffer&) = default;
     UniformBuffer(UniformBuffer&&) = delete;

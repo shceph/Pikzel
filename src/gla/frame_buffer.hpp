@@ -2,14 +2,10 @@
 
 #include <glm/glm.hpp>
 
-namespace Gla
-{
-class FrameBuffer // For now, only stores depth, as I needed such framebuffer
-                  // for shadow mapping.
-{
+namespace Gla {
+class FrameBuffer {
   public:
-    struct Dims
-    {
+    struct Dims {
         int width;
         int height;
     };
@@ -24,8 +20,7 @@ class FrameBuffer // For now, only stores depth, as I needed such framebuffer
     void Rescale(Dims dims);
 
     void Bind() const;
-    [[nodiscard]] auto GetTextureID() const -> unsigned int
-    {
+    [[nodiscard]] auto GetTextureID() const -> unsigned int {
         return mTextureID;
     }
 

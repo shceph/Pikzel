@@ -1,11 +1,18 @@
+#include <glad/gl.h>
+#include <GLFW/glfw3.h>
+
 #include "../src/camera.hpp"
 #include "../src/gla/pixel_buffer.hpp"
 #include "../src/layer_control.hpp"
+#include "../src/layer.hpp"
 #include "../src/project.hpp"
 #include "../src/tool.hpp"
 
+#include <cstddef>
 #include <print>
 #include <span>
+#include <string>
+#include <vector>
 
 auto main(int argc, char* argv[]) -> int {
     auto args = std::span(argv, static_cast<std::size_t>(argc));
@@ -24,7 +31,7 @@ auto main(int argc, char* argv[]) -> int {
         return 1;
     }
 
-    int version = gladLoadGL(glfwGetProcAddress);
+    const int version = gladLoadGL(glfwGetProcAddress);
 
     if (version == 0) {
         std::println("gladLoadGL: Failed to load GL.");
@@ -43,11 +50,11 @@ auto main(int argc, char* argv[]) -> int {
         full_path += "/output.png";
     }
 
-    Pikzel::Vec2 project_dims{1000, 1000};
+    const Pikzel::Vec2 project_dims{1000, 1000};
     std::vector<Gla::Color> simulated_pbo_data{
         static_cast<std::size_t>(project_dims.x * project_dims.y),
         Gla::Color{.r = 0, .g = 0, .b = 0, .a = 0}};
-    Gla::PboMappedBuffSpan span{simulated_pbo_data};
+    const Gla::PboMappedBuffSpan span{simulated_pbo_data};
 
     Pikzel::LayerControl layers;
     layers.UpdateMappedPBOMemorySpanForAllLayers(span);

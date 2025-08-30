@@ -5,16 +5,13 @@
 #include <string>
 #include <unordered_map>
 
-namespace Gla
-{
-struct ShaderProgramSource
-{
+namespace Gla {
+struct ShaderProgramSource {
     std::string VertexSource;
     std::string FragmentSource;
 };
 
-class Shader
-{
+class Shader {
   public:
     Shader(const Shader&) = default;
     Shader(Shader&&) = delete;
@@ -47,12 +44,12 @@ class Shader
 
   private:
     static auto ParseShader(const std::string& filepath) -> ShaderProgramSource;
-    static auto
-    ParseShader(const ShaderProgramSource& shader_paths) -> ShaderProgramSource;
+    static auto ParseShader(const ShaderProgramSource& shader_paths)
+        -> ShaderProgramSource;
     auto CreateShader(const std::string& vertex_shader,
                       const std::string& fragment_shader) -> unsigned int;
-    auto CompileShader(unsigned int type,
-                       const std::string& source) -> unsigned int;
+    auto CompileShader(unsigned int type, const std::string& source)
+        -> unsigned int;
     auto GetUniformLocation(const std::string& name) -> int;
 
     unsigned int mRendererID;

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include <glm/ext/vector_int2.hpp>
+
 #include <vector>
 
 namespace Pikzel {

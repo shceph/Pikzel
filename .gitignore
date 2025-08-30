@@ -458,3 +458,6 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+scripts/run-cmake.sh
+scripts/run-cmake-no-clang-tidy.sh

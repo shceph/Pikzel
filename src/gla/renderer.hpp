@@ -4,18 +4,15 @@
 
 #include <cstdint>
 
-namespace Gla
-{
-enum class DrawMode : std::uint8_t
-{
+namespace Gla {
+enum class DrawMode : std::uint8_t {
     kTriangles = GL_TRIANGLES,
     kTriangleStrip = GL_TRIANGLE_STRIP,
     kLines = GL_LINES,
     kPoints = GL_POINTS
 };
 
-class Renderer
-{
+class Renderer {
   public:
     // use with index buffer
     static void DrawElements(DrawMode draw_mode, unsigned int indices_count,
