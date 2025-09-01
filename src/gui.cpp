@@ -1,5 +1,13 @@
 #include "gui.hpp"
 
+#include "camera.hpp"
+#include "layer.hpp"
+#include "layer_control.hpp"
+#include "project.hpp"
+#include "selection.hpp"
+#include "tool.hpp"
+#include "tree.hpp"
+
 #include <glad/gl.h>
 
 #include <imgui.h>
@@ -9,22 +17,18 @@
 
 #include <GLFW/glfw3.h>
 
-#include <cassert>
-#include <cstdint>
-#include <cstddef>
-#include <cstring>
-#include <span>
 #include <array>
 #include <bit>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <span>
 #include <string>
 
-#include "camera.hpp"
-#include "layer.hpp"
-#include "tool.hpp"
-#include "project.hpp"
-#include "layer_control.hpp"
-#include "selection.hpp"
-#include "tree.hpp"
+namespace {
+constexpr float kSameLineSpacing = 10.0F;
+}
 
 namespace Pikzel {
 UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
@@ -50,15 +54,15 @@ UI::UI(Project& project, Tool& tool, GLFWwindow* _window)
         ImGui::GetStyleColorVec4(ImGuiCol_SliderGrab);
 
     ImGuiStyle& style = ImGui::GetStyle();
-    style.FrameRounding = 3.0F;
-    style.GrabRounding = 3.0F;
-    style.WindowRounding = 3.0F;
-    style.ScrollbarRounding = 3.0F;
-    style.TabRounding = 3.0F;
-    style.ChildRounding = 3.0F;
-    style.PopupRounding = 3.0F;
-    /* style.FrameBorderSize = 1.0F; */
-    /* style.WindowBorderSize = 1.0F; */
+    style.FrameRounding = 3;
+    style.GrabRounding = 3;
+    style.WindowRounding = 3;
+    style.ScrollbarRounding = 3;
+    style.TabRounding = 3;
+    style.ChildRounding = 3;
+    style.PopupRounding = 3;
+    /* style.FrameBorderSize = 1; */
+    /* style.WindowBorderSize = 1; */
     /* style.ScaleAllSizes(1.5); */
 
     sConstructCounter++;
@@ -335,8 +339,11 @@ void UI::RenderSelectionMenu(Selection& selection,
 void UI::RenderSaveAsImagePopup() {
     mShouldDoTool = false; // Don't want to draw with a popup opened
 
-    static std::array<char, 256> destination_str;
-    static std::array<char, 64> file_name_str;
+    constexpr std::size_t kDestinationStrSize = 256;
+    constexpr std::size_t kFileNameStrSize = 64;
+
+    static std::array<char, kDestinationStrSize> destination_str;
+    static std::array<char, kFileNameStrSize> file_name_str;
     static int magnify_factor = 1;
 
     ImGui::OpenPopup("Save");
@@ -365,7 +372,7 @@ void UI::RenderSaveAsImagePopup() {
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
 
         if (ImGui::Button("Cancel")) {
             mRenderSaveAsImgPopup = false;
@@ -379,8 +386,11 @@ void UI::RenderSaveAsImagePopup() {
 void UI::RenderSaveAsProjectPopup() {
     mShouldDoTool = false;
 
-    static std::array<char, 256> destination_str;
-    static std::array<char, 64> file_name_str;
+    constexpr std::size_t kDestinationStrSize = 256;
+    constexpr std::size_t kFileNameStrSize = 64;
+
+    static std::array<char, kDestinationStrSize> destination_str;
+    static std::array<char, kFileNameStrSize> file_name_str;
 
     ImGui::OpenPopup("Save");
 
@@ -402,7 +412,7 @@ void UI::RenderSaveAsProjectPopup() {
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
 
         if (ImGui::Button("Cancel")) {
             mRenderSaveAsPrjPopup = false;
@@ -439,7 +449,8 @@ void UI::RenderColorWindow() {
         EndOutline();
     }
 
-    ImGui::SameLine(0.0F, 10.0F);
+    ImGui::SameLine(0.0F, kSameLineSpacing);
+
     ImGui::Text("Color 1");
 
     if (selected_color_slot == Tool::kColorSlot2) {
@@ -454,7 +465,7 @@ void UI::RenderColorWindow() {
         EndOutline();
     }
 
-    ImGui::SameLine(0.0F, 10.0F);
+    ImGui::SameLine(0.0F, kSameLineSpacing);
     ImGui::Text("Color 2");
 
     RenderColorPalette(mTool.get().GetColorRef());
@@ -462,6 +473,9 @@ void UI::RenderColorWindow() {
     ImGui::End();
 }
 
+// I copied the code from ImGui examples, and it breaks a lot of clang-tidy
+// checks i enabled. Until I improve the palette, I'll leave it as is.
+// NOLINTBEGIN
 void UI::RenderColorPalette(ImVec4& color) {
     // Generate a default palette. The palette will persist and can be edited.
 
@@ -470,7 +484,9 @@ void UI::RenderColorPalette(ImVec4& color) {
 
     static bool saved_palette_init = true;
     /* static ImVec4 saved_palette[32] = {}; */
-    static std::array<ImVec4, 32> saved_palette{};
+    constexpr std::size_t kSavedPaletteSize = 32;
+    static std::array<ImVec4, kSavedPaletteSize> saved_palette{};
+
     if (saved_palette_init) {
         for (std::size_t i = 0; i < saved_palette.size(); i++) {
             ImGui::ColorConvertHSVtoRGB(static_cast<float>(i) / 31.0F, 0.8F,
@@ -517,6 +533,7 @@ void UI::RenderColorPalette(ImVec4& color) {
         ImGui::PopID();
     }
 }
+// NOLINTEND
 
 void UI::RenderNodesChildren(LayerControl& layers,
                              Tree<LayerControl::Capture>& node) {
@@ -594,14 +611,15 @@ void UI::RenderToolWindow() {
                          "__ib" + std::to_string(i));
 
         if (i != kIEnd) {
-            ImGui::SameLine(0.0F, 4.0F);
+            ImGui::SameLine(0.0F, 4);
         }
     }
 
     ImGui::NewLine();
     ImGui::NewLine();
 
-    ImGui::PushItemWidth(200.0F);
+    constexpr float kSliderWidth = 200.0F;
+    ImGui::PushItemWidth(kSliderWidth);
 
     switch (curr_tool_type) {
     case ToolType::kBrush:
@@ -610,7 +628,8 @@ void UI::RenderToolWindow() {
                          mProject.get().CanvasWidth());
         break;
     case ToolType::kColorSelection:
-        ImGui::SliderInt(" Threshold", &mSelectionByColorThreshold, 0, 255);
+        ImGui::SliderInt(" Threshold", &mSelectionByColorThreshold, 0,
+                         UINT8_MAX);
         break;
     default:
         break;
@@ -692,7 +711,7 @@ void UI::RenderLayerWindow(LayerControl& layers) {
             BeginOutline();
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
         if (ImGui::Button(layer_traversed.GetName().c_str(), {100.0F, 0.0F})) {
             layers.SetCurrentLayerIndex(i);
         }
@@ -701,17 +720,18 @@ void UI::RenderLayerWindow(LayerControl& layers) {
             EndOutline();
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
         ImGui::PushItemWidth(100.0F);
         ImGui::PushID(static_cast<int>(i));
 
-        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0, 255)) {
+        if (ImGui::SliderInt("Opacity", &layer_traversed.mOpacity, 0,
+                             UINT8_MAX)) {
         }
 
         ImGui::PopID();
         ImGui::PopItemWidth();
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
         if (ImGui::ArrowButton((str_id_for_widgets + "_abu").c_str(),
                                ImGuiDir_Up)) {
             layers.MoveUp(static_cast<int>(i));
@@ -770,7 +790,7 @@ void UI::RenderLayerWinContextMenu(LayerControl& layers) {
             open_the_change_lay_name_popup = false;
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
 
         if (ImGui::Button("Cancel")) {
             ImGui::CloseCurrentPopup();
@@ -807,23 +827,32 @@ void UI::RenderNewProjectPopup() {
 
     if (ImGui::BeginPopupModal("New project", nullptr,
                                ImGuiWindowFlags_AlwaysAutoResize)) {
-        static int height = 32;
-        static int width = 32;
+        constexpr int kHeightDefault = 32;
+        constexpr int kWidthDefault = 32;
+        constexpr int kHeightMax = 2048;
+        constexpr int kWidthMax = 2048;
+        constexpr int kHeightMin = 8;
+        constexpr int kWidthMin = 8;
+
+        constexpr float kSpacing = 5.0F;
+
+        static int height = kHeightDefault;
+        static int width = kWidthDefault;
 
         ImGui::Text("Insert height: ");
-        ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##height", &height, 8, 2048);
+        ImGui::SameLine(0.0F, kSpacing);
+        ImGui::SliderInt("##height", &height, kHeightMin, kHeightMax);
 
         ImGui::Text("Insert width:  ");
-        ImGui::SameLine(0.0F, 5.0F);
-        ImGui::SliderInt("##width", &width, 8, 2048);
+        ImGui::SameLine(0.0F, kSpacing);
+        ImGui::SliderInt("##width", &width, kWidthMin, kWidthMax);
 
         if (ImGui::Button("OK")) {
             mProject.get().New({width, height});
             mRenderNewProjectPopup = false;
         }
 
-        ImGui::SameLine(0.0F, 5.0F);
+        ImGui::SameLine(0.0F, kSpacing);
 
         if (ImGui::Button("Cancel")) {
             mRenderNewProjectPopup = false;
@@ -834,7 +863,8 @@ void UI::RenderNewProjectPopup() {
 }
 
 void UI::RenderOpenProjectPopup() {
-    static std::array<char, 256> destination_str;
+    constexpr std::size_t kDestinationStrSize = 256;
+    static std::array<char, kDestinationStrSize> destination_str;
 
     ImGui::OpenPopup("Open");
 
@@ -851,7 +881,7 @@ void UI::RenderOpenProjectPopup() {
             ImGui::CloseCurrentPopup();
         }
 
-        ImGui::SameLine(0.0F, 10.0F);
+        ImGui::SameLine(0.0F, kSameLineSpacing);
 
         if (ImGui::Button("Cancel")) {
             mRenderOpenProjectPopup = false;

@@ -1,5 +1,9 @@
 #include "pixel_buffer_ring.hpp"
 
+#include "pixel_buffer.hpp"
+
+#include <glm/glm.hpp>
+
 namespace Gla {
 PixelBufferRing::PixelBufferRing(glm::ivec2 dims, int buffer_count)
     : mBufferCount{buffer_count} {

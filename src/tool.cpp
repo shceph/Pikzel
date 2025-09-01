@@ -7,8 +7,8 @@ Tool::Tool()
     : mColor1{0.0F, 0.0F, 0.0F, 1.0F}, mColor2{0.0F, 0.0F, 0.0F, 1.0F} {}
 
 void Tool::SetDataToDefault() {
-    mColor1 = {0.0F, 0.0F, 0.0F, 1.0F};
-    mColor2 = {0.0F, 0.0F, 0.0F, 1.0F};
+    mColor1 = ImVec4{0.0F, 0.0F, 0.0F, 1.0F};
+    mColor2 = ImVec4{0.0F, 0.0F, 0.0F, 1.0F};
     mCurrentToolType = ToolType::kBrush;
     mBrushRadius = 1;
     mSelectedColorSlot = kColorSlot1;

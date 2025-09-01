@@ -1,14 +1,16 @@
 #include "preview_layer.hpp"
 
-#include <cstddef>
-#include <span>
+#include "camera.hpp"
+#include "color.hpp"
+#include "layer.hpp"
+#include "tool.hpp"
 
 #include "gla/pixel_buffer.hpp"
 #include "gla/texture.hpp"
 
-#include "layer.hpp"
-#include "camera.hpp"
-#include "tool.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <span>
 
 namespace Pikzel {
 constexpr Color kEraserToolPreviewColor{.r = 100, .g = 100, .b = 100, .a = 100};
@@ -27,7 +29,7 @@ void PreviewLayer::UpdateCircleSize(int size) {
 }
 
 void PreviewLayer::Clear() {
-    mLayer.mOpacity = 255;
+    mLayer.mOpacity = UINT8_MAX;
     mLayer.Clear();
     SetPreviewLayerChangedToTrue();
 }
@@ -44,8 +46,7 @@ void PreviewLayer::Update() {
     } else if (tool_type == ToolType::kBrush && mToolColor != tool_curr_color) {
         mToolColor = tool_curr_color;
         mLayer.DrawCircle(mLayer.GetCanvasDims() / 2, mBrushSize,
-                          Layer::DrawType::kFill,
-                          {.r = 100, .g = 100, .b = 100, .a = 100});
+                          Layer::DrawType::kFill, kEraserToolPreviewColor);
         SetPreviewLayerChangedToTrue();
     }
 

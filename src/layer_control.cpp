@@ -1,34 +1,36 @@
 #include "layer_control.hpp"
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
-
-#include <cstdlib>
-#include <cstddef>
-#include <cstdint>
-#include <cstdio>
-#include <cassert>
-#include <iostream>
-#include <print>
-#include <optional>
-#include <utility>
-#include <iterator>
-#include <algorithm>
-#include <cmath>
-#include <list>
-#include <ranges>
-#include <vector>
-
-#include <glm/common.hpp>
-
-#include "gla/pixel_buffer.hpp"
-
-#include "events.hpp"
 #include "camera.hpp"
+#include "color.hpp"
+#include "events.hpp"
 #include "layer.hpp"
 #include "preview_layer.hpp"
 #include "tool.hpp"
 #include "tree.hpp"
+
+#include "gla/pixel_buffer.hpp"
+
+#include <glad/gl.h>
+
+#include <GLFW/glfw3.h>
+
+#include <glm/glm.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <iostream>
+#include <iterator>
+#include <list>
+#include <optional>
+#include <print>
+#include <ranges>
+#include <utility>
+#include <vector>
 
 namespace Pikzel {
 auto LayerControl::GetCurrentLayer() -> Layer& {
@@ -139,7 +141,7 @@ auto LayerControl::HandleSelectionTool(PreviewLayer& preview_layer,
     if (left_button_pressed) {
         preview_layer.Clear();
         preview_layer.DrawRect(shape_begin_coords, *canv_coord,
-                               kColorSelectionPreview);
+                               ColorConstants::kColorSelectionPreview);
 
         return std::nullopt;
     }
@@ -192,8 +194,8 @@ void LayerControl::HandleMoveSelectionTool(
         for (std::size_t i = 0;
              i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
             if (selected_pixels[i]) {
-                preview_layer.DrawPixel(
-                    i, Color{.r = 134, .g = 13, .b = 34, .a = 128});
+                preview_layer.DrawPixel(i,
+                                        ColorConstants::kMoveSelectionPreview);
             }
         }
 
@@ -202,9 +204,12 @@ void LayerControl::HandleMoveSelectionTool(
 
     auto canv_coord = CanvasCoordsFromCursorPos(win_data);
 
+    constexpr auto kMouseButtonDelay = std::chrono::milliseconds{100};
+
     if (Events::IsMouseButtonPressedDelayed(Events::MouseButtons::kButtonLeft,
-                                            std::chrono::milliseconds{100}) &&
+                                            kMouseButtonDelay) &&
         canv_coord.has_value()) {
+
         should_update_prev_lay_after_moving_selection = true;
         const Vec2 center = GetCanvasDims() / 2;
         const Vec2 offset = *canv_coord - center;
@@ -249,8 +254,9 @@ void LayerControl::DoCurrentTool(PreviewLayer& preview_layer, Tool& tool,
         if (points.has_value()) {
             mSelection.AddToSelection(points->first, points->second);
             preview_layer.Clear();
-            preview_layer_for_selection.DrawRect(points->first, points->second,
-                                                 kColorSelectionPreview);
+            preview_layer_for_selection.DrawRect(
+                points->first, points->second,
+                ColorConstants::kColorSelectionPreview);
         }
         return;
     }
@@ -531,13 +537,14 @@ void LayerControl::MoveSelectedPixelsInCurrentLayer(Vec2 offset) {
             const Vec2 coords_to_move_to = coords + offset;
 
             if (!AreCoordsInBounds(coords_to_move_to)) {
+                curr_lay.DrawPixel(coords, ColorConstants::kColorTransparent);
                 continue;
             }
 
             const Color pixel_to_move_color = curr_lay.GetPixel(coords);
             pixels_to_overwrite.emplace_back(coords_to_move_to,
                                              pixel_to_move_color);
-            curr_lay.DrawPixel(coords, kColorTransparent);
+            curr_lay.DrawPixel(coords, ColorConstants::kColorTransparent);
         }
     }
 
@@ -557,7 +564,8 @@ void LayerControl::UpdatePreviewLayerForSelection(
     for (std::size_t i = 0;
          i < static_cast<std::size_t>(mCanvasDims.x) * mCanvasDims.y; i++) {
         if (selected_pixels[i]) {
-            preview_layer_for_selection.DrawPixel(i, kColorSelectionPreview);
+            preview_layer_for_selection.DrawPixel(
+                i, ColorConstants::kColorSelectionPreview);
         }
     }
 }

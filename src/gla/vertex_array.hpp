@@ -3,6 +3,8 @@
 #include "vertex_buffer.hpp"
 #include "vertex_buffer_layout.hpp"
 
+#include <glad/gl.h>
+
 namespace Gla {
 class VertexArray {
   public:
@@ -19,6 +21,6 @@ class VertexArray {
     static void Unbind();
 
   private:
-    unsigned int mRendererID{0};
+    GLuint mRendererID{0};
 };
 } // namespace Gla

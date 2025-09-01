@@ -4,13 +4,14 @@
 
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <functional>
 #include <vector>
 
 namespace Pikzel {
 class Events {
   public:
-    enum class MouseButtons : std::uint8_t {
+    enum class MouseButtons : uint8_t {
         kButtonLeft = GLFW_MOUSE_BUTTON_LEFT,
         kButtonRight = GLFW_MOUSE_BUTTON_RIGHT,
         kButtonMiddle = GLFW_MOUSE_BUTTON_MIDDLE,

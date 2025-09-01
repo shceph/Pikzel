@@ -1,25 +1,26 @@
 #include "project.hpp"
 
-#include <glad/gl.h>
+#include "camera.hpp"
+#include "color.hpp"
+#include "layer.hpp"
+#include "layer_control.hpp"
+#include "tool.hpp"
 
-#include <cstddef>
-#include <cstdint>
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <vector>
-#include <iterator>
+#include "gla/pixel_buffer.hpp"
+
+#include <glad/gl.h>
 
 #include <stb/stb_image.h>
 #include <stb/stb_image_resize2.h>
 #include <stb/stb_image_write.h>
 
-#include "gla/pixel_buffer.hpp"
-
-#include "camera.hpp"
-#include "layer.hpp"
-#include "layer_control.hpp"
-#include "tool.hpp"
+#include <cstddef>
+#include <cstdint>
+#include <fstream>
+#include <iostream>
+#include <iterator>
+#include <string>
+#include <vector>
 
 namespace Pikzel {
 Project::Project(LayerControl& layers, Tool& tool, Camera& camera)

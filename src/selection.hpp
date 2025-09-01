@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/ext/vector_int2.hpp>
+#include <glm/glm.hpp>
 
 #include <vector>
 

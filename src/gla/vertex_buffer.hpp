@@ -1,14 +1,15 @@
 #pragma once
 
-#include "gla_base.hpp"
+#include <glad/gl.h>
 
 #include <cstddef>
+#include <cstdint>
 
 namespace Gla {
-enum VertexBufferUsage {
+enum VertexBufferUsage : std::uint16_t {
     kStaticDraw = GL_STATIC_DRAW,
     kStreamDraw = GL_STREAM_DRAW,
-    kDynamicDraw = GL_DYNAMIC_DRAW
+    kDynamicDraw = GL_DYNAMIC_DRAW,
 };
 
 class VertexBuffer {

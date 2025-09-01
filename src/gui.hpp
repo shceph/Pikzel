@@ -1,24 +1,35 @@
 #pragma once
 
+#include "camera.hpp"
 #include "layer_control.hpp"
 #include "preview_layer.hpp"
 #include "project.hpp"
-#include "tool.hpp"
-#include "camera.hpp"
 #include "selection.hpp"
+#include "tool.hpp"
 #include "tree.hpp"
 
 #include <GLFW/glfw3.h>
+
 #include <imgui.h>
 
-#include <cstddef>
 #include <array>
-#include <span>
+#include <cstddef>
+#include <cstdint>
 #include <functional>
+#include <span>
+#include <string>
 
 namespace Pikzel {
 class UI {
   public:
+    enum LayerWindowGuiTextures : uint8_t {
+        kEyeOpenedTexture,
+        kEyeClosedTexture,
+        kLockLockedTexture,
+        kLockUnlockedTexture,
+        kLayerWindowTexturesCount,
+    };
+
     UI(Project& project, Tool& tool, GLFWwindow* _window);
     void RenderUI(LayerControl& layers, Camera& camera, Selection& selection,
                   PreviewLayer& preview_layer_for_selection);

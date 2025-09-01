@@ -1,5 +1,7 @@
 #include "vertex_buffer_layout.hpp"
 
+#include <glad/gl.h>
+
 #include <stdexcept>
 
 namespace Gla {

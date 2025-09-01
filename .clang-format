@@ -11,7 +11,7 @@ SpacesInAngles: false
 SpacesInSquareBrackets: false
 
 ReflowComments: true
-SortIncludes: false
+SortIncludes: true
 
 AlignConsecutiveAssignments: false
 AlignConsecutiveDeclarations: false

@@ -1,17 +1,18 @@
 #pragma once
 
-#include <cstddef>
-#include <functional>
-
-#include <glm/ext/matrix_float4x4.hpp>
-
-#include "gla/texture.hpp"
-#include "gla/pixel_buffer.hpp"
-
+#include "camera.hpp"
+#include "color.hpp"
 #include "layer.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
-#include "camera.hpp"
+
+#include "gla/pixel_buffer.hpp"
+#include "gla/texture.hpp"
+
+#include <glm/glm.hpp>
+
+#include <cstddef>
+#include <functional>
 
 namespace Pikzel {
 class PreviewLayer {

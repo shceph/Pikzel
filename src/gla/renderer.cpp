@@ -1,14 +1,16 @@
 #include "renderer.hpp"
 
+#include <glad/gl.h>
+
 namespace Gla {
-void Renderer::DrawElements(DrawMode draw_mode, unsigned int indices_count,
+void Renderer::DrawElements(DrawMode draw_mode, GLsizei indices_count,
                             const void* indices /*= nullptr*/,
                             GLenum type /*= GL_UNSIGNED_INT*/) {
     glDrawElements(static_cast<GLenum>(draw_mode), indices_count, type,
                    indices);
 }
 
-void Renderer::DrawArrays(DrawMode draw_mode, std::size_t vertices_count) {
+void Renderer::DrawArrays(DrawMode draw_mode, GLsizei vertices_count) {
     glDrawArrays(static_cast<GLenum>(draw_mode), 0, vertices_count);
 }
 

@@ -1,18 +1,22 @@
 #pragma once
 
-#include "layer_control.hpp"
-#include "project.hpp"
-#include "tool.hpp"
 #include "camera.hpp"
 #include "gui.hpp"
+#include "layer_control.hpp"
+#include "preview_layer.hpp"
+#include "project.hpp"
+#include "tool.hpp"
 
 #include "gla/frame_buffer.hpp"
-#include "gla/vertex_buffer.hpp"
-#include "gla/shader.hpp"
 #include "gla/group.hpp"
+#include "gla/pixel_buffer.hpp"
+#include "gla/shader.hpp"
+#include "gla/texture.hpp"
+#include "gla/vertex_buffer.hpp"
 
 #include <GLFW/glfw3.h>
 
+#include <cstddef>
 #include <optional>
 #include <span>
 
@@ -95,8 +99,8 @@ class App {
                                          Gla::GLMinMagFilter::kNearest};
     Gla::Texture2D mColorSelectionToolTexture{"assets/color_selection.png",
                                               Gla::GLMinMagFilter::kNearest};
-    Gla::Texture2D mOveToolTexture{"assets/move_tool.png",
-                                   Gla::GLMinMagFilter::kNearest};
+    Gla::Texture2D mMoveToolTexture{"assets/move_tool.png",
+                                    Gla::GLMinMagFilter::kNearest};
 
     Gla::Texture2D mEyeOpenedTexture{"assets/eye_opened.png"};
     Gla::Texture2D mEyeClosedTexture{"assets/eye_closed.png"};

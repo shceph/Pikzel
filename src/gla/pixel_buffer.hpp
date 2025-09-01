@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 
+#include <cstddef>
 #include <span>
 
 namespace Gla {

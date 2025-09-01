@@ -2,10 +2,10 @@
 
 #include "camera.hpp"
 
-#include <glm/detail/type_vec2.hpp>
+#include <glm/glm.hpp>
 
-#include <string>
 #include <functional>
+#include <string>
 
 namespace Pikzel {
 using Vec2 = glm::vec<2, int>;

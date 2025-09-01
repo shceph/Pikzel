@@ -1,23 +1,24 @@
 #pragma once
 
 #include "camera.hpp"
+#include "color.hpp"
 #include "layer.hpp"
 #include "preview_layer.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
 #include "tree.hpp"
 
-#include <cstddef>
-#include <cassert>
-#include <list>
-#include <optional>
-#include <vector>
-#include <utility>
-
-#include "gla/texture.hpp"
 #include "gla/pixel_buffer.hpp"
+#include "gla/texture.hpp"
 
 #include <GLFW/glfw3.h>
+
+#include <cassert>
+#include <cstddef>
+#include <list>
+#include <optional>
+#include <utility>
+#include <vector>
 
 namespace Pikzel {
 class LayerControl {

@@ -1,14 +1,19 @@
 #pragma once
 
-#include "gla_base.hpp"
+#include <glad/gl.h>
 
 #include <glm/glm.hpp>
 
+#include <cstddef>
+#include <cstdint>
 #include <array>
 #include <string>
 
 namespace Gla {
-enum GLMinMagFilter { kLinear = GL_LINEAR, kNearest = GL_NEAREST };
+enum GLMinMagFilter : uint16_t {
+    kLinear = GL_LINEAR,
+    kNearest = GL_NEAREST,
+};
 
 class Texture {
   public:
@@ -25,17 +30,21 @@ class Texture {
     [[nodiscard]] auto GetID() const -> unsigned int { return mTextureID; }
 
   protected:
+    // NOLINTNEXTLINE(misc-non-private-member-variables-in-classes,cppcoreguidelines-non-private-member-variables-in-classes)
     unsigned int mTextureID{0};
 };
 
 class TextureCubeMap : public Texture {
   public:
+    static constexpr std::size_t kCubeMapTextureCount = 6;
+
     TextureCubeMap(const TextureCubeMap&) = default;
     TextureCubeMap(TextureCubeMap&&) = delete;
     auto operator=(const TextureCubeMap&) -> TextureCubeMap& = default;
     auto operator=(TextureCubeMap&&) -> TextureCubeMap& = delete;
     explicit TextureCubeMap(const std::string& path);
-    explicit TextureCubeMap(std::array<std::string, 6> paths);
+    explicit TextureCubeMap(
+        std::array<std::string, kCubeMapTextureCount> paths);
     ~TextureCubeMap() override;
 
     void Bind(unsigned int slot = 0) const override;

@@ -21,7 +21,5 @@ class UniformBuffer {
 
     unsigned int mRendererID;
     unsigned int mBindingPoint;
-    unsigned int mSize;
-    char* mBufferData;
 };
 } // namespace Gla

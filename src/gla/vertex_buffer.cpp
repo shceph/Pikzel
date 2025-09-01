@@ -1,5 +1,8 @@
 #include "vertex_buffer.hpp"
 
+#include <glad/gl.h>
+
+#include <cstddef>
 #include <stdexcept>
 
 namespace Gla {
@@ -8,7 +11,7 @@ VertexBuffer::VertexBuffer(const void* data, std::size_t size,
     : mRendererID(0), mSize(size), mUsage(usage) {
     glGenBuffers(1, &mRendererID);
     glBindBuffer(GL_ARRAY_BUFFER, mRendererID);
-    glBufferData(GL_ARRAY_BUFFER, size, data, usage);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(size), data, usage);
 }
 
 VertexBuffer::~VertexBuffer() { glDeleteBuffers(1, &mRendererID); }
@@ -26,13 +29,15 @@ void VertexBuffer::UpdateData(const void* data, std::size_t size,
     }
 
     Bind();
-    glBufferSubData(GL_ARRAY_BUFFER, offset, size, data);
+    glBufferSubData(GL_ARRAY_BUFFER, static_cast<GLintptr>(offset),
+                    static_cast<GLsizeiptr>(size), data);
 }
 
 void VertexBuffer::UpdateSize(std::size_t size) // Deletes existing data
 {
     Bind();
-    glBufferData(GL_ARRAY_BUFFER, size, nullptr, mUsage);
+    glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(size), nullptr,
+                 mUsage);
     mSize = size;
 }
 

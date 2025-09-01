@@ -1,6 +1,6 @@
 #pragma once
 
-#include "gla_base.hpp"
+#include <glad/gl.h>
 
 #include <cassert>
 #include <vector>

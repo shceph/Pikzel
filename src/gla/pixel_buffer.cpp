@@ -1,8 +1,15 @@
 #include "pixel_buffer.hpp"
 
+#include <glad/gl.h>
+
+#include <glm/glm.hpp>
+
+#include <cstddef>
+#include <cassert>
+#include <span>
 #ifndef NDEBUG
 #include <print>
-#endif
+#endif // NDEBUG
 
 namespace Gla {
 PixelBuffer::PixelBuffer(glm::ivec2 dims)

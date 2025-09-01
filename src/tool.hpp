@@ -1,7 +1,8 @@
 #pragma once
 
-#include <cstdint>
 #include <imgui.h>
+
+#include <cstdint>
 
 namespace Pikzel {
 enum class ToolType : std::uint8_t {

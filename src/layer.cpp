@@ -1,41 +1,41 @@
 #include "layer.hpp"
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
-
-#include <imgui.h>
-
-#include <cstddef>
-#include <cstdint>
-#include <cassert>
-#include <optional>
-#include <string>
-#include <algorithm>
-#include <chrono>
-#include <cmath>
-#include <numbers>
-#include <queue>
-#include <utility>
-#include <vector>
-
-#include <glm/fwd.hpp>
-#include <glm/ext/vector_int2.hpp>
-#include <glm/common.hpp>
+#include "camera.hpp"
+#include "color.hpp"
+#include "events.hpp"
+#include "selection.hpp"
+#include "tool.hpp"
 
 #include "gla/pixel_buffer.hpp"
 #include "gla/texture.hpp"
 
-#include "events.hpp"
-#include "tool.hpp"
-#include "camera.hpp"
-#include "selection.hpp"
+#include <glad/gl.h>
+
+#include <GLFW/glfw3.h>
+
+#include <imgui.h>
+
+#include <glm/glm.hpp>
+
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+#include <numbers>
+#include <optional>
+#include <queue>
+#include <string>
+#include <utility>
+#include <vector>
 
 namespace Pikzel {
 auto Color::operator=(const ImVec4& color) -> Color& {
-    r = static_cast<uint8_t>(color.x * 255);
-    g = static_cast<uint8_t>(color.y * 255);
-    b = static_cast<uint8_t>(color.z * 255);
-    a = static_cast<uint8_t>(color.w * 255);
+    r = static_cast<uint8_t>(color.x * UINT8_MAX);
+    g = static_cast<uint8_t>(color.y * UINT8_MAX);
+    b = static_cast<uint8_t>(color.z * UINT8_MAX);
+    a = static_cast<uint8_t>(color.w * UINT8_MAX);
     return *this;
 }
 
@@ -46,10 +46,14 @@ auto Color::operator==(const Color& other) const -> bool {
 auto Color::operator==(const ImVec4& other) const -> bool {
     constexpr float kTolerance = 0.0025F;
 
-    return std::abs((static_cast<float>(r) / 0xff) - other.x) <= kTolerance &&
-           std::abs((static_cast<float>(g) / 0xff) - other.y) <= kTolerance &&
-           std::abs((static_cast<float>(b) / 0xff) - other.z) <= kTolerance &&
-           std::abs((static_cast<float>(a) / 0xff) - other.w) <= kTolerance;
+    return std::abs((static_cast<float>(r) / UINT8_MAX) - other.x) <=
+               kTolerance &&
+           std::abs((static_cast<float>(g) / UINT8_MAX) - other.y) <=
+               kTolerance &&
+           std::abs((static_cast<float>(b) / UINT8_MAX) - other.z) <=
+               kTolerance &&
+           std::abs((static_cast<float>(a) / UINT8_MAX) - other.w) <=
+               kTolerance;
 }
 
 auto Color::Difference(Color other) const -> int {
@@ -59,17 +63,17 @@ auto Color::Difference(Color other) const -> int {
 
 auto Color::BlendColor(Color color1, Color color2) -> Color {
     const ImVec4 col1 = {
-        static_cast<float>(color1.r) / 255,
-        static_cast<float>(color1.g) / 255,
-        static_cast<float>(color1.b) / 255,
-        static_cast<float>(color1.a) / 255,
+        static_cast<float>(color1.r) / UINT8_MAX,
+        static_cast<float>(color1.g) / UINT8_MAX,
+        static_cast<float>(color1.b) / UINT8_MAX,
+        static_cast<float>(color1.a) / UINT8_MAX,
     };
 
     const ImVec4 col2 = {
-        static_cast<float>(color2.r) / 255,
-        static_cast<float>(color2.g) / 255,
-        static_cast<float>(color2.b) / 255,
-        static_cast<float>(color2.a) / 255,
+        static_cast<float>(color2.r) / UINT8_MAX,
+        static_cast<float>(color2.g) / UINT8_MAX,
+        static_cast<float>(color2.b) / UINT8_MAX,
+        static_cast<float>(color2.a) / UINT8_MAX,
     };
 
     const float alpha1 = col1.w;
@@ -91,10 +95,10 @@ auto Color::BlendColor(Color color1, Color color2) -> Color {
 }
 
 auto Color::FromImVec4(ImVec4 color) -> Color {
-    return {.r = static_cast<uint8_t>(color.x * 0xff),
-            .g = static_cast<uint8_t>(color.y * 0xff),
-            .b = static_cast<uint8_t>(color.z * 0xff),
-            .a = static_cast<uint8_t>(color.w * 0xff)};
+    return {.r = static_cast<uint8_t>(color.x * UINT8_MAX),
+            .g = static_cast<uint8_t>(color.y * UINT8_MAX),
+            .b = static_cast<uint8_t>(color.z * UINT8_MAX),
+            .a = static_cast<uint8_t>(color.w * UINT8_MAX)};
 }
 
 auto Color::FromGlaColor(Gla::Color color) -> Color {
@@ -209,9 +213,12 @@ void Layer::HandleColorPicker(CanvasWindowData win_data) {
         return;
     }
 
-    mTool.get().GetColorRef().x = static_cast<float>(picked_color.r) / 0xff;
-    mTool.get().GetColorRef().y = static_cast<float>(picked_color.g) / 0xff;
-    mTool.get().GetColorRef().z = static_cast<float>(picked_color.b) / 0xff;
+    mTool.get().GetColorRef().x =
+        static_cast<float>(picked_color.r) / UINT8_MAX;
+    mTool.get().GetColorRef().y =
+        static_cast<float>(picked_color.g) / UINT8_MAX;
+    mTool.get().GetColorRef().z =
+        static_cast<float>(picked_color.b) / UINT8_MAX;
 }
 
 auto Layer::HandleBucket(CanvasWindowData win_data)
@@ -389,34 +396,34 @@ void Layer::DrawThickLine(Vec2 point_a, Vec2 point_b, int thickness,
     auto angle_plus_180 = angle + std::numbers::pi;
 
     Vec2 point_a1;
-    point_a1.x = static_cast<int>(std::cos(angle) *
-                                  (static_cast<float>(thickness) / 2.0));
-    point_a1.y = static_cast<int>(std::sin(angle) *
-                                  (static_cast<float>(thickness) / 2.0));
+    point_a1.x =
+        static_cast<int>(std::cos(angle) * (static_cast<float>(thickness) / 2));
+    point_a1.y =
+        static_cast<int>(std::sin(angle) * (static_cast<float>(thickness) / 2));
     point_a1 += point_a;
     point_a1 = ClampToCanvasDims(point_a1);
 
     Vec2 point_a2;
     point_a2.x = static_cast<int>(std::cos(angle_plus_180) *
-                                  (static_cast<float>(thickness) / 2.0));
+                                  (static_cast<float>(thickness) / 2));
     point_a2.y = static_cast<int>(std::sin(angle_plus_180) *
-                                  (static_cast<float>(thickness) / 2.0));
+                                  (static_cast<float>(thickness) / 2));
     point_a2 += point_a;
     point_a2 = ClampToCanvasDims(point_a2);
 
     Vec2 point_b1;
-    point_b1.x = static_cast<int>(std::cos(angle) *
-                                  (static_cast<float>(thickness) / 2.0));
-    point_b1.y = static_cast<int>(std::sin(angle) *
-                                  (static_cast<float>(thickness) / 2.0));
+    point_b1.x =
+        static_cast<int>(std::cos(angle) * (static_cast<float>(thickness) / 2));
+    point_b1.y =
+        static_cast<int>(std::sin(angle) * (static_cast<float>(thickness) / 2));
     point_b1 += point_b;
     point_b1 = ClampToCanvasDims(point_b1);
 
     Vec2 point_b2;
     point_b2.x = static_cast<int>(std::cos(angle_plus_180) *
-                                  (static_cast<float>(thickness) / 2.0));
+                                  (static_cast<float>(thickness) / 2));
     point_b2.y = static_cast<int>(std::sin(angle_plus_180) *
-                                  (static_cast<float>(thickness) / 2.0));
+                                  (static_cast<float>(thickness) / 2));
     point_b2 += point_b;
     point_b2 = ClampToCanvasDims(point_b2);
 

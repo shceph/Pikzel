@@ -1,50 +1,27 @@
 #pragma once
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
-
 #include "camera.hpp"
+#include "color.hpp"
 #include "selection.hpp"
 #include "tool.hpp"
-
-#include <imgui.h>
-
-#include <cstdint>
-#include <cstddef>
-#include <cassert>
-#include <vector>
-#include <functional>
-#include <optional>
-#include <string>
-#include <utility>
 
 #include "gla/pixel_buffer.hpp"
 #include "gla/texture.hpp"
 
+#include <imgui.h>
+
+#include <GLFW/glfw3.h>
+
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
+#include <functional>
+#include <optional>
+#include <string>
+#include <utility>
+#include <vector>
+
 namespace Pikzel {
-struct Color {
-    auto operator=(const ImVec4& color) -> Color&;
-    auto operator==(const Color& other) const -> bool;
-    auto operator==(const ImVec4& other) const -> bool;
-
-    [[nodiscard]] auto Difference(Color other) const -> int;
-
-    static auto BlendColor(Color color1, Color color2) -> Color;
-    static auto FromImVec4(ImVec4 color) -> Color;
-    static auto FromGlaColor(Gla::Color color) -> Color;
-
-    uint8_t r = 0, g = 0, b = 0, a = 0;
-};
-
-static constexpr Color kColorTransparent{.r = 0, .g = 0, .b = 0, .a = 0};
-static constexpr Color kColorSelectionPreview{
-    .r = 45, .g = 50, .b = 220, .a = 100};
-
-struct Vertex {
-    float pos_x{}, pos_y{};
-    Color color{.r = 0, .g = 0, .b = 0, .a = 0};
-};
-
 class Layer {
   public:
     struct RectShapeData {
@@ -142,7 +119,7 @@ class Layer {
     bool mIsEdited{false};
     bool mVisible{true};
     bool mLocked{false};
-    int mOpacity{255};
+    int mOpacity{UINT8_MAX};
     std::string mLayerName;
     std::reference_wrapper<Tool> mTool;
     std::reference_wrapper<Camera> mCamera;

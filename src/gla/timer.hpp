@@ -27,7 +27,7 @@ class Timer {
     }
     static auto DeltaTime() -> float { return sDeltaTime; }
     // Normalized so when the FPS is 60 'DeltaTimeNormalized' returns 1.0f
-    static auto DeltaTimeNormalized() -> float { return sDeltaTime * 60.0F; }
+    // static auto DeltaTimeNormalized() -> float { return sDeltaTime * 60.0F; }
 
     static constexpr float kFpS60FrameTime = 1 / 60.0F;
 

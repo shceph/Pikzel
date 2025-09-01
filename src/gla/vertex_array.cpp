@@ -1,5 +1,13 @@
 #include "vertex_array.hpp"
 
+#include "vertex_buffer.hpp"
+#include "vertex_buffer_layout.hpp"
+
+#include <glad/gl.h>
+
+#include <cstdint>
+#include <bit>
+
 namespace Gla {
 VertexArray::VertexArray() { glGenVertexArrays(1, &mRendererID); }
 
@@ -13,13 +21,13 @@ void VertexArray::AddBuffer(const VertexBuffer& vbo,
     const auto& elements = layout.GetElements();
     unsigned int offset = 0;
 
-    for (unsigned int i = 0; i < elements.size(); i++) {
+    for (GLuint i = 0; i < elements.size(); i++) {
         const auto& element = elements[i];
 
         glEnableVertexAttribArray(i);
         glVertexAttribPointer(
-            i, element.count, element.type, element.normalized,
-            layout.GetStride(),
+            i, static_cast<GLsizei>(element.count), element.type,
+            element.normalized, static_cast<GLsizei>(layout.GetStride()),
             std::bit_cast<const void*>(static_cast<uintptr_t>(offset)));
 
         offset +=

@@ -1,23 +1,28 @@
 #include "shader.hpp"
 
-#include "gla_base.hpp"
+#include <glad/gl.h>
 
+#include <glm/glm.hpp>
+
+#include <cstdint>
+#include <vector>
 #include <fstream>
 #include <sstream>
 #include <array>
 #include <iostream>
+#include <string>
 
 namespace Gla {
 Shader::Shader(const std::string& filepath)
     : mRendererID{0}, mFilePath{filepath} {
-    ShaderProgramSource source = ParseShader(filepath);
+    const ShaderProgramSource source = ParseShader(filepath);
     mRendererID = CreateShader(source.VertexSource, source.FragmentSource);
 }
 
 Shader::Shader(const std::string& vertex_filepath,
                const std::string& fragment_filepath)
     : mRendererID{0}, mFilePath{vertex_filepath} {
-    ShaderProgramSource source = ParseShader(
+    const ShaderProgramSource source = ParseShader(
         {.VertexSource = vertex_filepath, .FragmentSource = fragment_filepath});
     mRendererID = CreateShader(source.VertexSource, source.FragmentSource);
 }
@@ -87,7 +92,7 @@ auto Shader::GetUniformLocation(const std::string& name) -> int {
         return mUniformLocationCache[name];
     }
 
-    int location = glGetUniformLocation(mRendererID, name.c_str());
+    const int location = glGetUniformLocation(mRendererID, name.c_str());
 
     if (location == -1) {
 #ifndef NDEBUG
@@ -104,7 +109,7 @@ auto Shader::GetUniformLocation(const std::string& name) -> int {
 auto Shader::ParseShader(const std::string& filepath) -> ShaderProgramSource {
     std::ifstream stream(filepath);
 
-    enum ShaderType { kNone = -1, kVertex = 0, kFragment = 1 };
+    enum ShaderType : int8_t { kNone = -1, kVertex = 0, kFragment = 1 };
 
     ShaderType type = ShaderType::kNone;
 
@@ -151,7 +156,7 @@ auto Shader::ParseShader(const ShaderProgramSource& shader_paths)
 
 auto Shader::CompileShader(unsigned int type, const std::string& source)
     -> unsigned int {
-    unsigned int shader_id = glCreateShader(type);
+    const unsigned int shader_id = glCreateShader(type);
     const char* src = source.c_str();
     glShaderSource(shader_id, 1, &src, nullptr);
     glCompileShader(shader_id);
@@ -184,10 +189,11 @@ auto Shader::CompileShader(unsigned int type, const std::string& source)
 
 auto Shader::CreateShader(const std::string& vertex_shader,
                           const std::string& fragment_shader) -> unsigned int {
-    unsigned int program = glCreateProgram();
+    const unsigned int program = glCreateProgram();
 
-    GLuint vert_shader = CompileShader(GL_VERTEX_SHADER, vertex_shader);
-    GLuint frag_shader = CompileShader(GL_FRAGMENT_SHADER, fragment_shader);
+    const GLuint vert_shader = CompileShader(GL_VERTEX_SHADER, vertex_shader);
+    const GLuint frag_shader =
+        CompileShader(GL_FRAGMENT_SHADER, fragment_shader);
 
     glAttachShader(program, vert_shader);
     glAttachShader(program, frag_shader);

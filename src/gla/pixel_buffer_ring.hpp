@@ -2,6 +2,11 @@
 
 #include "pixel_buffer.hpp"
 
+#include <glm/glm.hpp>
+
+#include <cstddef>
+#include <vector>
+
 namespace Gla {
 class PixelBufferRing {
   public:

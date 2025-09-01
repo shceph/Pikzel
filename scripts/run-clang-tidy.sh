@@ -4,11 +4,9 @@
 echo "Running clang-tidy on all project files..."
 echo "=============================================="
 
-clang-tidy -p build/ $(find src/ -name "*.cpp")
-# clang-tidy -p build/ $(find src/gla/ -name "*.cpp")
-
-clang-tidy -p build/ $(find src/ -name "*.h" -o -name "*.hpp")
-# clang-tidy -p build/ $(find src/gla/ -name "*.h" -o -name "*.hpp")
+clang-tidy -p build/ \
+	-header-filter='^src/.*' \
+	$(find src/ -name "*.cpp" -o -name "*.h" -o -name "*.hpp")
 
 echo "=============================================="
 echo "✅ Clang-tidy complete"

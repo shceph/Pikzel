@@ -1,9 +1,15 @@
 #include "texture.hpp"
 
+#include <glad/gl.h>
+
+#include <glm/glm.hpp>
+
 #include <stb/stb_image.h>
 
-#include <array>
 #include <cassert>
+#include <cstddef>
+#include <string>
+#include <array>
 #include <iostream>
 
 namespace Gla {
@@ -43,15 +49,16 @@ TextureCubeMap::TextureCubeMap(const std::string& path) {
     }
 }
 
-TextureCubeMap::TextureCubeMap(std::array<std::string, 6> paths) {
+TextureCubeMap::TextureCubeMap(
+    std::array<std::string, kCubeMapTextureCount> paths) {
     stbi_set_flip_vertically_on_load(0);
 
-    std::array<int, 6> width{};
-    std::array<int, 6> height{};
-    std::array<int, 6> channels{};
-    std::array<unsigned char*, 6> buffers{};
+    std::array<int, kCubeMapTextureCount> width{};
+    std::array<int, kCubeMapTextureCount> height{};
+    std::array<int, kCubeMapTextureCount> channels{};
+    std::array<unsigned char*, kCubeMapTextureCount> buffers{};
 
-    for (int i = 0; i < 6; i++) {
+    for (std::size_t i = 0; i < kCubeMapTextureCount; i++) {
         buffers.at(i) = stbi_load(paths.at(i).c_str(), &width.at(i),
                                   &height.at(i), &channels.at(i), 4);
     }
@@ -65,7 +72,7 @@ TextureCubeMap::TextureCubeMap(std::array<std::string, 6> paths) {
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    for (int i = 0; i < 6; i++) {
+    for (std::size_t i = 0; i < kCubeMapTextureCount; i++) {
         glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGBA,
                      width.at(i), height.at(i), 0, GL_RGBA, GL_UNSIGNED_BYTE,
                      buffers.at(i));

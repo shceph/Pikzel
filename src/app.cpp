@@ -1,39 +1,39 @@
 #include "app.hpp"
 
-#include <glad/gl.h>
-#include <GLFW/glfw3.h>
+#include "camera.hpp"
+#include "events.hpp"
+#include "tool.hpp"
 
-#include <cstdlib>
-#include <cstddef>
-#include <cassert>
-#include <span>
-#include <string>
-#include <array>
-#include <iostream>
-#include <print>
-#include <optional>
+#include "gla/frame_buffer.hpp"
+#include "gla/group.hpp"
+#include "gla/pixel_buffer.hpp"
+#include "gla/renderer.hpp"
+#include "gla/shader.hpp"
+#include "gla/texture.hpp"
+#include "gla/timer.hpp"
+#include "gla/vertex_array.hpp"
+#include "gla/vertex_buffer.hpp"
+#include "gla/vertex_buffer_layout.hpp"
+
+#include <glad/gl.h>
+
+#include <GLFW/glfw3.h>
 
 #include <imgui.h>
 
-#include <glm/ext/matrix_transform.hpp>
 #include <glm/ext/matrix_clip_space.hpp>
-#include <glm/ext/vector_int2.hpp>
-#include <glm/fwd.hpp>
+#include <glm/ext/matrix_transform.hpp>
+#include <glm/glm.hpp>
 
-#include "gla/vertex_array.hpp"
-#include "gla/renderer.hpp"
-#include "gla/texture.hpp"
-#include "gla/timer.hpp"
-#include "gla/pixel_buffer.hpp"
-#include "gla/frame_buffer.hpp"
-#include "gla/vertex_buffer.hpp"
-#include "gla/vertex_buffer_layout.hpp"
-#include "gla/group.hpp"
-#include "gla/shader.hpp"
-
-#include "tool.hpp"
-#include "events.hpp"
-#include "camera.hpp"
+#include <array>
+#include <cassert>
+#include <cstddef>
+#include <cstdlib>
+#include <iostream>
+#include <optional>
+#include <print>
+#include <span>
+#include <string>
 
 namespace {
 auto ImVec2Equal(ImVec2 vec_a, ImVec2 vec_b) -> bool {
@@ -48,14 +48,17 @@ namespace Pikzel {
 App::App(GLFWwindow* window) : mWindow{window}, mAppState{window} {}
 
 void App::MainLoop() {
+    constexpr Vec2 kCanvasDefaultDims{32};
     InitMouseCallbacks();
 
-    Gla::PixelBuffer pbo_canvas{glm::ivec2{32}, Gla::Color{}};
-    Gla::PixelBuffer pbo_prev_layer{glm::ivec2{32}, Gla::Color{}};
-    Gla::PixelBuffer pbo_prev_layer_for_selection{glm::ivec2{32}, Gla::Color{}};
+    Gla::PixelBuffer pbo_canvas{kCanvasDefaultDims, Gla::Color{}};
+    Gla::PixelBuffer pbo_prev_layer{kCanvasDefaultDims, Gla::Color{}};
+    Gla::PixelBuffer pbo_prev_layer_for_selection{kCanvasDefaultDims,
+                                                  Gla::Color{}};
     Gla::PixelBuffer::Unbind();
 
-    Gla::FrameBuffer draw_window_fbo{{.width = 32, .height = 32}};
+    Gla::FrameBuffer draw_window_fbo{
+        {.width = kCanvasDefaultDims.x, .height = kCanvasDefaultDims.y}};
 
     std::array<unsigned int, static_cast<std::size_t>(ToolType::kToolCount)>
         tool_window_tex_ids{};
@@ -73,7 +76,8 @@ void App::MainLoop() {
                               "shader/layer_tex_shader.frag"};
     Gla::Group render_group_canvas{vao_canvas, vbo_canvas, shader_canvas};
 
-    std::array<float, 8> bckg_vertices = {
+    constexpr std::size_t kCanvasBckgVertexElemensCount = 8;
+    std::array<float, kCanvasBckgVertexElemensCount> bckg_vertices = {
         -1.0F, 1.0F,
 
         1.0F,  1.0F,
@@ -124,8 +128,10 @@ void App::MainLoop() {
         glfwSwapBuffers(mWindow);
 
 #ifndef NDEBUG
-        float const fps = 1.0F / timer.GetTime();
-        if (out_of_loop_timer.GetTime() > 0.2) {
+        constexpr double kFpsUpdateInterval = 0.2;
+        const float fps = 1.0F / timer.GetTime();
+
+        if (out_of_loop_timer.GetTime() > kFpsUpdateInterval) {
             const std::string win_title =
                 "Pikzel - FPS: " + std::to_string(fps);
             glfwSetWindowTitle(mWindow, win_title.c_str());
@@ -150,19 +156,31 @@ void App::InitMouseCallbacks() {
 
 void App::LoadGuiTextures(std::span<unsigned int> tool_window_tex_ids,
                           std::span<unsigned int> layer_window_tex_ids) {
-    tool_window_tex_ids[0] = mBrushToolTexture.GetID();
-    tool_window_tex_ids[1] = mEraserToolTexture.GetID();
-    tool_window_tex_ids[2] = mColorPickerToolTexture.GetID();
-    tool_window_tex_ids[3] = mBucketToolTexture.GetID();
-    tool_window_tex_ids[4] = mSquareToolTexture.GetID();
-    tool_window_tex_ids[5] = mSelectionToolTexture.GetID();
-    tool_window_tex_ids[6] = mColorSelectionToolTexture.GetID();
-    tool_window_tex_ids[7] = mOveToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kBrush)] =
+        mBrushToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kEraser)] =
+        mEraserToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kColorPicker)] =
+        mColorPickerToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kBucket)] =
+        mBucketToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kRectShape)] =
+        mSquareToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kSelectionTool)] =
+        mSelectionToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kColorSelection)] =
+        mColorSelectionToolTexture.GetID();
+    tool_window_tex_ids[static_cast<std::size_t>(ToolType::kMoveSelection)] =
+        mMoveToolTexture.GetID();
 
-    layer_window_tex_ids[0] = mEyeOpenedTexture.GetID();
-    layer_window_tex_ids[1] = mEyeClosedTexture.GetID();
-    layer_window_tex_ids[2] = mLockLockedTexture.GetID();
-    layer_window_tex_ids[3] = mLockUnlockedTexture.GetID();
+    layer_window_tex_ids[static_cast<std::size_t>(UI::kEyeOpenedTexture)] =
+        mEyeOpenedTexture.GetID();
+    layer_window_tex_ids[static_cast<std::size_t>(UI::kEyeClosedTexture)] =
+        mEyeClosedTexture.GetID();
+    layer_window_tex_ids[static_cast<std::size_t>(UI::kLockLockedTexture)] =
+        mLockLockedTexture.GetID();
+    layer_window_tex_ids[static_cast<std::size_t>(UI::kLockUnlockedTexture)] =
+        mLockUnlockedTexture.GetID();
 
     mAppState.ui_state.SetupToolTextures(tool_window_tex_ids);
     mAppState.ui_state.SetupLayerToolTextures(layer_window_tex_ids);
@@ -318,7 +336,8 @@ void App::RenderBackground(Gla::Group& render_group_canvas_bckg) const {
         GetProjMat(mAppState.camera, mAppState.project.GetCanvasDims());
 
     Gla::Renderer::Clear();
-    glClearColor(0.8, 0.8, 0.8, 1.0);
+    constexpr glm::vec4 kClearColor{0.8F, 0.8F, 0.8F, 1.0F};
+    glClearColor(kClearColor.r, kClearColor.g, kClearColor.b, kClearColor.a);
 
     render_group_canvas_bckg.Bind();
     render_group_canvas_bckg.GetVbo().Bind();
@@ -348,7 +367,8 @@ void App::RenderLayerTextures(Gla::Group& render_group_canvas) const {
         shader_canvas.SetUniform1i("u_Opacity", layer.GetOpacity());
 
         layer.GetTexture().Bind();
-        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
+        constexpr GLsizei kVertexCount = 6;
+        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, kVertexCount);
         layer.GetTexture().Unbind();
     }
 
@@ -404,7 +424,8 @@ void App::RenderPreviewLayer(Gla::Group& render_group_canvas,
         shader_canvas.SetUniformMat4f("u_ViewProjection", result);
         shader_canvas.SetUniform1i("u_Texture", 0);
 
-        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
+        constexpr GLsizei kVertexCount = 6;
+        Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, kVertexCount);
     }
 
     preview_layer_tex.Unbind();
@@ -451,7 +472,8 @@ void App::RenderPreviewLayerForSelection(
     shader_canvas.SetUniformMat4f("u_ViewProjection", result);
     shader_canvas.SetUniform1i("u_Texture", 0);
 
-    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, 6);
+    constexpr GLsizei kVertexCount = 6;
+    Gla::Renderer::DrawArrays(Gla::DrawMode::kTriangles, kVertexCount);
 
     preview_layer_for_selection_tex.Unbind();
     Gla::Shader::Unbind();
@@ -466,7 +488,9 @@ void App::UpdateVboBckg(Gla::Group& render_group_canvas_bckg,
     const glm::vec2 top_left = canvas_mat * glm::vec4{0, 0, 0, 1};
     const glm::vec2 bottom_right = canvas_mat * glm::vec4{canvas_dims, 0, 1};
 
-    std::array<float, 8> bckg_vertices = {
+    constexpr std::size_t kCanvasBckgVertexElemensCount = 8;
+
+    std::array<float, kCanvasBckgVertexElemensCount> bckg_vertices = {
         top_left.x,     top_left.y,
 
         bottom_right.x, top_left.y,
@@ -475,8 +499,8 @@ void App::UpdateVboBckg(Gla::Group& render_group_canvas_bckg,
 
         bottom_right.x, bottom_right.y,
     };
-
-    vbo_bckg.UpdateData(bckg_vertices.data(), 8 * sizeof(float));
+    vbo_bckg.UpdateData(bckg_vertices.data(),
+                        kCanvasBckgVertexElemensCount * sizeof(float));
 
     const glm::vec2 top_left_in_uv = (top_left + glm::vec2{1}) / glm::vec2{2};
     shader_bckg.SetUniform2f("u_TopLeftInUV", top_left_in_uv.x,

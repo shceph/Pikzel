@@ -2,9 +2,9 @@
 
 #include "events.hpp"
 
-#include <algorithm>
+#include <glm/glm.hpp>
 
-#include <glm/fwd.hpp>
+#include <algorithm>
 
 namespace Pikzel {
 void Camera::AddToZoom(double val_to_add) {
@@ -25,7 +25,8 @@ void Camera::ResetCenter() { mCenter = mCanvasDims / 2; }
 void Camera::ResetZoom() { mZoomValue = kZoomDefault; }
 
 void Camera::ScrollCallback(double /*xoffset*/, double yoffset) {
-    AddToZoom(yoffset / 30);
+    constexpr double kOffsetDivisor = 30.0;
+    AddToZoom(yoffset / kOffsetDivisor);
 }
 
 void Camera::CursorPosCallback(double x_pos, double y_pos) {
